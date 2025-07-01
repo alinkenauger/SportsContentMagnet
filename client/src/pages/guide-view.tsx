@@ -273,7 +273,7 @@ export default function GuideView() {
                         <Button
                           variant="default"
                           size="sm"
-                          className="px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white shadow-md"
+                          className="px-3 py-2 bg-orange-600 hover:bg-orange-700 text-white shadow-md"
                           onClick={() => {
                             const iframe = document.querySelector('iframe');
                             if (iframe && section.timestampSeconds) {
