@@ -269,60 +269,30 @@ export default function GuideView() {
                   </div>
                   <div className="flex-1">
                     <div className="flex items-center space-x-3 mb-2">
+                      {section.timestamp && (
+                        <Button
+                          variant="default"
+                          size="sm"
+                          className="px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white shadow-md"
+                          onClick={() => {
+                            const iframe = document.querySelector('iframe');
+                            if (iframe && section.timestampSeconds) {
+                              iframe.src = `https://www.youtube.com/embed/${guide.youtubeVideoId}?start=${section.timestampSeconds}&autoplay=1`;
+                              iframe.scrollIntoView({ behavior: 'smooth' });
+                            }
+                          }}
+                        >
+                          <Play className="w-4 h-4 mr-2" />
+                          {section.timestamp}
+                        </Button>
+                      )}
                       <h3 className="text-xl font-semibold text-slate-800">
                         {section.title}
                       </h3>
                       <Badge variant="secondary" className="text-xs">
                         {section.type.charAt(0).toUpperCase() + section.type.slice(1)}
                       </Badge>
-                      {section.timestamp && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="text-xs px-2 py-1 h-auto"
-                          onClick={() => {
-                            const iframe = document.querySelector('iframe');
-                            if (iframe && section.timestampSeconds) {
-                              iframe.src = `https://www.youtube.com/embed/${guide.youtubeVideoId}?start=${section.timestampSeconds}&autoplay=1`;
-                            }
-                          }}
-                        >
-                          <Play className="w-3 h-3 mr-1" />
-                          {section.timestamp}
-                        </Button>
-                      )}
                     </div>
-                    
-                    {/* Video Screenshot for this section */}
-                    {section.timestamp && (
-                      <div className="mb-4">
-                        <div className="relative group cursor-pointer border-2 border-slate-200 rounded-lg overflow-hidden bg-slate-100 hover:border-blue-400 transition-colors">
-                          <img 
-                            src={`https://img.youtube.com/vi/${guide.youtubeVideoId}/hqdefault.jpg`}
-                            alt={`Video screenshot at ${section.timestamp}`}
-                            className="w-full h-32 object-cover"
-                            onClick={() => {
-                              const iframe = document.querySelector('iframe');
-                              if (iframe && section.timestampSeconds) {
-                                iframe.src = `https://www.youtube.com/embed/${guide.youtubeVideoId}?start=${section.timestampSeconds}&autoplay=1`;
-                                iframe.scrollIntoView({ behavior: 'smooth' });
-                              }
-                            }}
-                          />
-                          <div className="absolute inset-0 bg-black bg-opacity-30 flex items-center justify-center group-hover:bg-opacity-20 transition-all">
-                            <div className="bg-white bg-opacity-90 rounded-full p-2">
-                              <Play className="w-6 h-6 text-slate-700" />
-                            </div>
-                          </div>
-                          <div className="absolute bottom-2 right-2 bg-black bg-opacity-70 text-white px-2 py-1 rounded text-xs font-medium">
-                            {section.timestamp}
-                          </div>
-                        </div>
-                        <p className="text-xs text-slate-500 mt-1 text-center">
-                          Click to jump to this moment in the video
-                        </p>
-                      </div>
-                    )}
                     
                     <div className="prose prose-slate max-w-none">
                       <div className="whitespace-pre-wrap text-slate-700 leading-relaxed">

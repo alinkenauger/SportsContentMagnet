@@ -173,6 +173,13 @@ Changelog:
   * Fixed delete functionality for dropped elements using proper functional state updates
   * Cleaned up debug console logs for improved user experience
   * Guides now properly attribute original content creators in introduction paragraphs
+- July 01, 2025. Fixed content accuracy and enhanced guide interactivity:
+  * Resolved critical issue where guide content showed generic sports training instead of actual video content
+  * Updated golf guide with authentic golf instruction content matching "Correcting the Top 3 Misleading Golf Swing Cues"
+  * Added prominent timestamp buttons to left of section headlines for video navigation
+  * Implemented smooth scrolling to video player when timestamp buttons are clicked
+  * Removed distracting thumbnail images in favor of clean, functional timestamp navigation
+  * Enhanced button styling with blue background, shadows, and hover effects for better visibility
 - July 01, 2025. Improved content library interface with condensed layout and table format:
   * Converted guides display from card layout to structured table format
   * Added table columns for thumbnail, guide name, views, leads, landing page link, guide preview link, and edit actions
