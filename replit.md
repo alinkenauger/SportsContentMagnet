@@ -205,6 +205,9 @@ Changelog:
   * Added proper error handling and user guidance for videos without accessible captions
   * Transcription works for videos with public captions, but many modern videos are blocked
   * System provides clear error messages directing users to try videos with captions enabled
+  * **CRITICAL DISCOVERY**: YouTube Data API v3 captions endpoint requires OAuth2 authentication (not API key)
+  * Confirmed that successful tools like Glasp.co use browser extension approach to leverage user's authenticated session
+  * Updated error messaging to explain OAuth2 limitation and suggest alternative approaches
 ```
 
 ## User Preferences
