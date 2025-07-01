@@ -13,18 +13,22 @@ export const isGoogleAuthenticated = (req: any, res: any, next: any) => {
 };
 
 export function setupGoogleAuth(app: Express) {
-  if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
-    console.warn("Google OAuth not configured - GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET required");
+  // Use new OAuth credentials to bypass 403 issues
+  const clientId = process.env.GOOGLE_CLIENT_ID_NEW || process.env.GOOGLE_CLIENT_ID;
+  const clientSecret = process.env.GOOGLE_CLIENT_SECRET_NEW || process.env.GOOGLE_CLIENT_SECRET;
+  
+  if (!clientId || !clientSecret) {
+    console.warn("Google OAuth not configured - CLIENT_ID and CLIENT_SECRET required");
     return;
   }
 
-  console.log("Setting up Google OAuth with Client ID:", process.env.GOOGLE_CLIENT_ID?.substring(0, 20) + "...");
+  console.log("Setting up Google OAuth with Client ID:", clientId?.substring(0, 20) + "...");
   console.log("Callback URL configured as: /api/auth/google/callback");
 
   const googleStrategy = new GoogleStrategy(
     {
-      clientID: process.env.GOOGLE_CLIENT_ID,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+      clientID: clientId,
+      clientSecret: clientSecret,
       callbackURL: "/api/auth/google/callback",
     },
     async (accessToken, refreshToken, profile, done) => {
