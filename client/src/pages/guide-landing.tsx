@@ -16,6 +16,8 @@ interface LandingPageData {
     title: string;
     headline: string;
     description: string;
+    collectSms?: boolean;
+    smsConsentText?: string;
     customFields: Array<{
       name: string;
       label: string;
@@ -134,7 +136,27 @@ export default function GuideLanding() {
       }
     }
 
-    submitLeadMutation.mutate(formData);
+    // Validate SMS consent if phone is provided
+    if ((landingData.landingPage as any).collectSms && formData.phone && formData.phone.trim()) {
+      if (!formData.smsConsent || formData.smsConsent !== "true") {
+        toast({
+          title: "SMS Consent Required",
+          description: "Please consent to SMS messages if you want to provide your phone number",
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+
+    // Prepare submission data with SMS fields
+    const submissionData = {
+      ...formData,
+      phone: (landingData.landingPage as any).collectSms ? (formData.phone || "") : "",
+      smsConsent: ((landingData.landingPage as any).collectSms && formData.phone) ? 
+        (formData.smsConsent === "true" ? "true" : "false") : "false"
+    };
+
+    submitLeadMutation.mutate(submissionData);
   };
 
   if (isLoading) {
@@ -461,6 +483,49 @@ export default function GuideLanding() {
                       )}
                     </div>
                   ))}
+
+                  {/* SMS Collection Fields */}
+                  {(landingData.landingPage as any).collectSms && (
+                    <>
+                      <div>
+                        <Label 
+                          htmlFor="phone"
+                          style={{ fontFamily: brandingSettings?.fontFamily }}
+                        >
+                          Phone Number (Optional)
+                        </Label>
+                        <Input
+                          id="phone"
+                          type="tel"
+                          value={formData.phone || ""}
+                          onChange={(e) => handleInputChange("phone", e.target.value)}
+                          placeholder="Enter your phone number"
+                          className="mt-1"
+                          style={{ fontFamily: brandingSettings?.fontFamily }}
+                        />
+                      </div>
+
+                      {formData.phone && (
+                        <div className="flex items-start space-x-2">
+                          <input
+                            type="checkbox"
+                            id="smsConsent"
+                            checked={formData.smsConsent === "true"}
+                            onChange={(e) => handleInputChange("smsConsent", e.target.checked.toString())}
+                            className="mt-1 h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                          />
+                          <Label 
+                            htmlFor="smsConsent"
+                            className="text-xs text-slate-600 leading-tight cursor-pointer"
+                            style={{ fontFamily: brandingSettings?.fontFamily }}
+                          >
+                            {landingData.landingPage.smsConsentText || "I consent to receive text messages from this business. Message and data rates may apply. Reply STOP to opt out."}
+                            <span className="text-red-500 ml-1">*</span>
+                          </Label>
+                        </div>
+                      )}
+                    </>
+                  )}
 
                   <Button
                     type="submit"
