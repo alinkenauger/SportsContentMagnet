@@ -43,6 +43,23 @@ import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 
+const fontOptions = [
+  { value: "Inter", label: "Inter" },
+  { value: "Roboto", label: "Roboto" },
+  { value: "Open Sans", label: "Open Sans" },
+  { value: "Montserrat", label: "Montserrat" },
+  { value: "Lato", label: "Lato" },
+  { value: "Poppins", label: "Poppins" },
+];
+
+const presetColors = [
+  { name: "Ocean Blue", primary: "#2563EB", secondary: "#10B981", accent: "#F59E0B" },
+  { name: "Forest Green", primary: "#059669", secondary: "#3B82F6", accent: "#F97316" },
+  { name: "Sunset Orange", primary: "#EA580C", secondary: "#8B5CF6", accent: "#06B6D4" },
+  { name: "Royal Purple", primary: "#7C3AED", secondary: "#EF4444", accent: "#10B981" },
+  { name: "Crimson Red", primary: "#DC2626", secondary: "#6366F1", accent: "#F59E0B" },
+];
+
 export default function Settings() {
   const { toast } = useToast();
   const { user } = useAuth();
@@ -79,6 +96,37 @@ export default function Settings() {
     passwordChanged: "2024-06-15"
   });
 
+  // Branding settings
+  const [brandingForm, setBrandingForm] = useState({
+    logoUrl: "",
+    primaryColor: "#2563EB",
+    secondaryColor: "#10B981",
+    accentColor: "#F59E0B",
+    fontFamily: "Inter",
+    companyName: "",
+    tagline: "",
+  });
+
+  // Fetch branding settings
+  const { data: brandingSettings } = useQuery({
+    queryKey: ["/api/branding"],
+  });
+
+  // Load branding settings when available
+  const [brandingLoaded, setBrandingLoaded] = useState(false);
+  if (brandingSettings && !brandingLoaded) {
+    setBrandingForm({
+      logoUrl: brandingSettings.logoUrl || "",
+      primaryColor: brandingSettings.primaryColor || "#2563EB",
+      secondaryColor: brandingSettings.secondaryColor || "#10B981",
+      accentColor: brandingSettings.accentColor || "#F59E0B",
+      fontFamily: brandingSettings.fontFamily || "Inter",
+      companyName: brandingSettings.companyName || "",
+      tagline: brandingSettings.tagline || "",
+    });
+    setBrandingLoaded(true);
+  }
+
   // Update profile mutation
   const updateProfileMutation = useMutation({
     mutationFn: async (data: typeof profileForm) => {
@@ -96,6 +144,38 @@ export default function Settings() {
       toast({
         title: "Update Failed",
         description: "Failed to update profile. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Save branding mutation
+  const saveBrandingMutation = useMutation({
+    mutationFn: async (data: typeof brandingForm) => {
+      return await apiRequest("/api/branding", "POST", data);
+    },
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "Branding settings saved successfully!",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/branding"] });
+    },
+    onError: (error) => {
+      if (isUnauthorizedError(error as Error)) {
+        toast({
+          title: "Unauthorized",
+          description: "You are logged out. Logging in again...",
+          variant: "destructive",
+        });
+        setTimeout(() => {
+          window.location.href = "/api/login";
+        }, 500);
+        return;
+      }
+      toast({
+        title: "Error",
+        description: "Failed to save branding settings",
         variant: "destructive",
       });
     },
@@ -748,49 +828,175 @@ export default function Settings() {
               </Card>
             </TabsContent>
 
-            {/* Advanced Tab */}
-            <TabsContent value="advanced" className="space-y-6">
+            {/* Branding Tab */}
+            <TabsContent value="branding" className="space-y-6">
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
-                    <SettingsIcon className="w-5 h-5" />
-                    Advanced Settings
+                    <Palette className="w-5 h-5" />
+                    Brand Identity
                   </CardTitle>
-                  <CardDescription>Advanced configuration and account management options</CardDescription>
+                  <CardDescription>Customize your brand colors, fonts, and company information</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
-                  {/* Data Export */}
+                  {/* Company Information */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="companyName">Company Name</Label>
+                      <Input
+                        id="companyName"
+                        value={brandingForm.companyName}
+                        onChange={(e) => setBrandingForm(prev => ({ ...prev, companyName: e.target.value }))}
+                        placeholder="Enter your company name"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="tagline">Company Tagline</Label>
+                      <Input
+                        id="tagline"
+                        value={brandingForm.tagline}
+                        onChange={(e) => setBrandingForm(prev => ({ ...prev, tagline: e.target.value }))}
+                        placeholder="Enter your company tagline"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="logoUrl">Logo URL</Label>
+                    <Input
+                      id="logoUrl"
+                      value={brandingForm.logoUrl}
+                      onChange={(e) => setBrandingForm(prev => ({ ...prev, logoUrl: e.target.value }))}
+                      placeholder="https://example.com/logo.png"
+                    />
+                  </div>
+
+                  <Separator />
+
+                  {/* Color Settings */}
                   <div className="space-y-4">
-                    <h3 className="font-semibold">Data Export</h3>
-                    <div className="border rounded-lg p-4">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="font-medium">Export Account Data</p>
-                          <p className="text-sm text-gray-500">Download a copy of all your data including guides, leads, and analytics</p>
+                    <h3 className="font-semibold">Brand Colors</h3>
+                    <div className="grid grid-cols-3 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="primaryColor">Primary Color</Label>
+                        <div className="flex gap-2">
+                          <Input
+                            id="primaryColor"
+                            type="color"
+                            value={brandingForm.primaryColor}
+                            onChange={(e) => setBrandingForm(prev => ({ ...prev, primaryColor: e.target.value }))}
+                            className="w-12 h-10 p-1 rounded"
+                          />
+                          <Input
+                            value={brandingForm.primaryColor}
+                            onChange={(e) => setBrandingForm(prev => ({ ...prev, primaryColor: e.target.value }))}
+                            placeholder="#2563EB"
+                            className="flex-1"
+                          />
                         </div>
-                        <Button variant="outline">
-                          <FileText className="w-4 h-4 mr-2" />
-                          Export Data
-                        </Button>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="secondaryColor">Secondary Color</Label>
+                        <div className="flex gap-2">
+                          <Input
+                            id="secondaryColor"
+                            type="color"
+                            value={brandingForm.secondaryColor}
+                            onChange={(e) => setBrandingForm(prev => ({ ...prev, secondaryColor: e.target.value }))}
+                            className="w-12 h-10 p-1 rounded"
+                          />
+                          <Input
+                            value={brandingForm.secondaryColor}
+                            onChange={(e) => setBrandingForm(prev => ({ ...prev, secondaryColor: e.target.value }))}
+                            placeholder="#10B981"
+                            className="flex-1"
+                          />
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="accentColor">Accent Color</Label>
+                        <div className="flex gap-2">
+                          <Input
+                            id="accentColor"
+                            type="color"
+                            value={brandingForm.accentColor}
+                            onChange={(e) => setBrandingForm(prev => ({ ...prev, accentColor: e.target.value }))}
+                            className="w-12 h-10 p-1 rounded"
+                          />
+                          <Input
+                            value={brandingForm.accentColor}
+                            onChange={(e) => setBrandingForm(prev => ({ ...prev, accentColor: e.target.value }))}
+                            placeholder="#F59E0B"
+                            className="flex-1"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Color Presets */}
+                    <div className="space-y-2">
+                      <Label>Color Presets</Label>
+                      <div className="grid grid-cols-5 gap-2">
+                        {presetColors.map((preset, index) => (
+                          <Button
+                            key={index}
+                            variant="outline"
+                            className="h-16 p-2 border-2"
+                            onClick={() => setBrandingForm(prev => ({
+                              ...prev,
+                              primaryColor: preset.primary,
+                              secondaryColor: preset.secondary,
+                              accentColor: preset.accent
+                            }))}
+                          >
+                            <div className="space-y-1 w-full">
+                              <div className="flex gap-1 h-4">
+                                <div className="flex-1 rounded" style={{ backgroundColor: preset.primary }}></div>
+                                <div className="flex-1 rounded" style={{ backgroundColor: preset.secondary }}></div>
+                                <div className="flex-1 rounded" style={{ backgroundColor: preset.accent }}></div>
+                              </div>
+                              <p className="text-xs font-medium">{preset.name}</p>
+                            </div>
+                          </Button>
+                        ))}
                       </div>
                     </div>
                   </div>
 
-                  {/* Account Deletion */}
+                  <Separator />
+
+                  {/* Font Settings */}
                   <div className="space-y-4">
-                    <h3 className="font-semibold text-red-600">Danger Zone</h3>
-                    <div className="border border-red-200 rounded-lg p-4 bg-red-50">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="font-medium text-red-800">Delete Account</p>
-                          <p className="text-sm text-red-600">Permanently delete your account and all associated data. This action cannot be undone.</p>
-                        </div>
-                        <Button variant="destructive">
-                          <Trash2 className="w-4 h-4 mr-2" />
-                          Delete Account
-                        </Button>
-                      </div>
+                    <h3 className="font-semibold">Typography</h3>
+                    <div className="space-y-2">
+                      <Label htmlFor="fontFamily">Font Family</Label>
+                      <Select
+                        value={brandingForm.fontFamily}
+                        onValueChange={(value) => setBrandingForm(prev => ({ ...prev, fontFamily: value }))}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select a font" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {fontOptions.map((font) => (
+                            <SelectItem key={font.value} value={font.value}>
+                              {font.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
+                  </div>
+
+                  <div className="flex gap-3">
+                    <Button
+                      onClick={() => saveBrandingMutation.mutate(brandingForm)}
+                      disabled={saveBrandingMutation.isPending}
+                      className="flex-1"
+                    >
+                      <Save className="w-4 h-4 mr-2" />
+                      {saveBrandingMutation.isPending ? "Saving..." : "Save Changes"}
+                    </Button>
                   </div>
                 </CardContent>
               </Card>

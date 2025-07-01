@@ -67,6 +67,7 @@ export const guides = pgTable("guides", {
   content: jsonb("content"), // Generated guide content
   category: varchar("category"),
   tags: text("tags").array(),
+  leadTags: text("lead_tags").array(), // Tags applied to leads captured from this guide
   status: varchar("status").default("draft"), // draft, published, archived
   slug: varchar("slug").unique(),
   views: integer("views").default(0),
@@ -110,6 +111,7 @@ export const leads = pgTable("leads", {
   lastName: varchar("last_name"),
   phone: varchar("phone", { length: 20 }),
   smsConsent: boolean("sms_consent").default(false),
+  tags: text("tags").array(), // Tags applied from guide leadTags
   customFieldData: jsonb("custom_field_data"), // Responses to custom fields
   ipAddress: varchar("ip_address"),
   userAgent: text("user_agent"),
