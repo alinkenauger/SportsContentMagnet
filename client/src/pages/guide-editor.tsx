@@ -55,7 +55,7 @@ export default function GuideEditor() {
   
   const [isEditing, setIsEditing] = useState<string | null>(null);
   const [draggedElement, setDraggedElement] = useState<string | null>(null);
-  const [draggedFromToolbar, setDraggedFromToolbar] = useState<string | null>(null);
+  const [draggedFromToolbar, setDraggedFromToolbar] = useState<EditableElement['type'] | null>(null);
   const [dropZoneVisible, setDropZoneVisible] = useState(false);
   const [elements, setElements] = useState<EditableElement[]>([]);
   const [guideTitle, setGuideTitle] = useState("");
@@ -226,7 +226,13 @@ export default function GuideEditor() {
       case 'button':
         return { text: 'Button Text', url: '#', style: 'primary' };
       case 'columns':
-        return { columns: [{ width: 'half', elements: [] }, { width: 'half', elements: [] }] };
+        return { 
+          layout: '2-column',
+          columns: [
+            { id: `col-${Date.now()}-1`, width: 50, elements: [] }, 
+            { id: `col-${Date.now()}-2`, width: 50, elements: [] }
+          ] 
+        };
       case 'spacing':
         return { height: 'medium' };
       default:

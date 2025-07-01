@@ -15,7 +15,7 @@ import Settings from "@/pages/settings";
 import GuideLanding from "@/pages/guide-landing";
 import GuideDelivery from "@/pages/guide-delivery";
 import Library from "@/pages/library";
-import GuideEditor from "@/pages/guide-editor";
+import GuideEditorEnhanced from "@/pages/guide-editor-enhanced";
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -29,7 +29,7 @@ function Router() {
           <Route path="/" component={Dashboard} />
           <Route path="/create" component={CreateGuide} />
           <Route path="/library" component={ContentLibrary} />
-          <Route path="/guide-editor/:guideId" component={GuideEditor} />
+          <Route path="/guide-editor/:guideId" component={GuideEditorEnhanced} />
           <Route path="/analytics" component={Analytics} />
           <Route path="/branding" component={Branding} />
           <Route path="/settings" component={Settings} />
