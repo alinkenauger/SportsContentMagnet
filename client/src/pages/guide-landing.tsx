@@ -519,7 +519,7 @@ export default function GuideLanding() {
                             className="text-xs text-slate-600 leading-tight cursor-pointer"
                             style={{ fontFamily: brandingSettings?.fontFamily }}
                           >
-                            {landingData.landingPage.smsConsentText || "I consent to receive text messages from this business. Message and data rates may apply. Reply STOP to opt out."}
+                            {(landingData.landingPage as any).smsConsentText || "I consent to receive text messages from this business. Message and data rates may apply. Reply STOP to opt out."}
                             <span className="text-red-500 ml-1">*</span>
                           </Label>
                         </div>

@@ -21,6 +21,8 @@ export default function CreateGuide() {
     customInstructions: "",
     targetAudience: "",
     difficulty: "",
+    collectSms: false,
+    smsConsentText: "I consent to receive text messages from this business. Message and data rates may apply. Reply STOP to opt out.",
   });
   const [isProcessing, setIsProcessing] = useState(false);
   const [processingSteps, setProcessingSteps] = useState([
@@ -95,6 +97,8 @@ export default function CreateGuide() {
         customInstructions: "",
         targetAudience: "",
         difficulty: "",
+        collectSms: false,
+        smsConsentText: "I consent to receive text messages from this business. Message and data rates may apply. Reply STOP to opt out.",
       });
       
     } catch (error) {
@@ -237,6 +241,46 @@ export default function CreateGuide() {
                     className="mt-1"
                     rows={3}
                   />
+                </div>
+
+                {/* SMS Collection Settings */}
+                <div className="border-t pt-6">
+                  <h4 className="font-semibold mb-4 flex items-center space-x-2">
+                    <Settings className="w-4 h-4" />
+                    <span>SMS Collection (Optional)</span>
+                  </h4>
+                  
+                  <div className="space-y-4">
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        id="collectSms"
+                        checked={customSettings.collectSms}
+                        onChange={(e) => setCustomSettings(prev => ({ ...prev, collectSms: e.target.checked }))}
+                        className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                      />
+                      <Label htmlFor="collectSms" className="text-sm font-medium">
+                        Collect phone numbers on landing page
+                      </Label>
+                    </div>
+                    
+                    {customSettings.collectSms && (
+                      <div>
+                        <Label htmlFor="sms-consent-text">SMS Consent Text</Label>
+                        <Textarea
+                          id="sms-consent-text"
+                          value={customSettings.smsConsentText}
+                          onChange={(e) => setCustomSettings(prev => ({ ...prev, smsConsentText: e.target.value }))}
+                          placeholder="Legal consent text for SMS collection..."
+                          className="mt-1"
+                          rows={2}
+                        />
+                        <p className="text-xs text-muted-foreground mt-1">
+                          This text protects you legally when collecting phone numbers. Users must check this consent to submit their phone number.
+                        </p>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </CardContent>
             </Card>

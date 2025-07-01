@@ -39,7 +39,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/guides', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const { youtubeUrl } = req.body;
+      const { youtubeUrl, category, customInstructions, targetAudience, difficulty, collectSms, smsConsentText } = req.body;
 
       if (!youtubeUrl) {
         return res.status(400).json({ message: "YouTube URL is required" });
@@ -200,7 +200,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Landing page not found" });
       }
 
-      const { firstName, email, customFieldData } = req.body;
+      const { firstName, email, phone, smsConsent, customFieldData } = req.body;
 
       if (!email) {
         return res.status(400).json({ message: "Email is required" });
@@ -213,6 +213,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         userId: landingPage.userId,
         email,
         firstName,
+        phone: phone && phone.trim() ? phone : undefined,
+        smsConsent: phone && phone.trim() ? (smsConsent === "true") : false,
         customFieldData,
         ipAddress: req.ip,
         userAgent: req.get('User-Agent'),
