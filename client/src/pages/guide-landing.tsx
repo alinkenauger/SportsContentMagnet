@@ -51,12 +51,12 @@ export default function GuideLanding() {
   const [formData, setFormData] = useState<Record<string, string>>({});
 
   const { data: landingData, isLoading } = useQuery({
-    queryKey: ["/api/landing-pages/url", customUrl],
+    queryKey: ["/api/landing", customUrl],
   });
 
   const submitLeadMutation = useMutation({
     mutationFn: async (data: Record<string, string>) => {
-      return await apiRequest(`/api/landing-pages/${landingData?.landingPage.id}/leads`, {
+      return await apiRequest(`/api/landing/${customUrl}/submit`, {
         method: "POST",
         body: JSON.stringify(data),
       });
