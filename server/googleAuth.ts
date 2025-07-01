@@ -4,6 +4,14 @@ import type { Express } from "express";
 import { storage } from "./storage";
 
 // Google OAuth configuration for YouTube API access
+// Middleware to check if user is authenticated via Google OAuth
+export const isGoogleAuthenticated = (req: any, res: any, next: any) => {
+  if (req.isAuthenticated() && req.user) {
+    return next();
+  }
+  return res.status(401).json({ message: "Unauthorized" });
+};
+
 export function setupGoogleAuth(app: Express) {
   if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
     console.warn("Google OAuth not configured - GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET required");

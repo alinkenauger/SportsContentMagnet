@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
-import { setupGoogleAuth } from "./googleAuth";
+import { setupGoogleAuth, isGoogleAuthenticated } from "./googleAuth";
 import { analyzeVideoContent, generatePracticeGuide, personalizeGuideContent } from "./services/openai";
 import { getYouTubeVideoData, transcribeVideo } from "./services/youtube";
 import { insertGuideSchema, insertLandingPageSchema, insertLeadSchema, insertBrandingSettingsSchema, insertTrainingSettingsSchema, insertKnowledgebaseEntrySchema } from "@shared/schema";
@@ -25,15 +25,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Google auth status
-  app.get('/api/auth/google-status', isAuthenticated, async (req: any, res) => {
+  // Google auth status (works with both Replit Auth and Google OAuth)
+  app.get('/api/auth/google-status', async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
-      const googleConnection = await storage.getUserGoogleConnection(userId);
-      res.json({ connected: !!googleConnection });
+      // Check if authenticated with Google OAuth
+      if (req.isAuthenticated() && req.user && req.user.id) {
+        return res.json({ connected: true, user: { id: req.user.id, email: req.user.email } });
+      }
+      
+      // Check if authenticated with Replit Auth and has Google connection
+      if (req.user?.claims?.sub) {
+        const userId = req.user.claims.sub;
+        const googleConnection = await storage.getUserGoogleConnection(userId);
+        return res.json({ connected: !!googleConnection });
+      }
+      
+      res.status(401).json({ message: "Unauthorized" });
     } catch (error) {
       console.error("Error checking Google auth status:", error);
       res.status(500).json({ message: "Failed to check Google auth status" });
+    }
+  });
+
+  // Alternative user endpoint for Google OAuth
+  app.get('/api/auth/google-user', isGoogleAuthenticated, async (req: any, res) => {
+    try {
+      res.json(req.user);
+    } catch (error) {
+      console.error("Error fetching Google user:", error);
+      res.status(500).json({ message: "Failed to fetch user" });
     }
   });
 
