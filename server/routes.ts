@@ -179,12 +179,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return res.status(400).json({ message: "Audio file and title are required" });
         }
 
-        // For audio files, we'll use OpenAI Whisper to transcribe
-        // This would require additional setup with OpenAI's audio API
-        // For now, we'll return an error and suggest manual transcription
-        return res.status(501).json({ 
-          message: "Audio transcription not yet implemented. Please manually transcribe your audio and use the 'Text/Transcript' option instead." 
-        });
+        // Import and use audio transcription service
+        const { audioTranscription } = await import('./services/audioTranscription');
+        
+        // Check if file format is supported
+        if (!audioTranscription.isFormatSupported(req.file.path)) {
+          return res.status(400).json({ 
+            message: `Unsupported audio format. Supported formats: ${audioTranscription.getSupportedFormats().join(', ')}` 
+          });
+        }
+
+        // Transcribe the audio file
+        const transcriptionResult = await audioTranscription.transcribeFile(req.file.path);
+        
+        if (!transcriptionResult.success) {
+          return res.status(500).json({ 
+            message: `Audio transcription failed: ${transcriptionResult.error}` 
+          });
+        }
+
+        videoData = {
+          videoId: `audio-${Date.now()}`,
+          title: title,
+          description: `Transcribed from audio file: ${req.file.originalname}`,
+          thumbnailUrl: "",
+          duration: "Unknown",
+          channelTitle: "Audio Upload",
+          publishedAt: new Date().toISOString(),
+          viewCount: 0,
+          likeCount: 0
+        };
+        
+        transcript = transcriptionResult.text || "";
         
       } else if (inputMethod === "streaming") {
         const { streamingUrl, title } = req.body;

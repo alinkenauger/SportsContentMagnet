@@ -821,7 +821,7 @@ export default function Dashboard() {
                             <div className="text-blue-100 text-xl mb-2">🎧</div>
                             <div className="text-white font-medium mb-1">Drop audio file here or click to upload</div>
                             <div className="text-blue-100 text-sm">
-                              Supports MP3, WAV, M4A - podcasts, lectures, interviews
+                              Supports MP3, WAV, M4A, AAC, OGG - AI-powered transcription with Whisper
                             </div>
                           </div>
                         )}
