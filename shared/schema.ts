@@ -141,6 +141,34 @@ export const analyticsEvents = pgTable("analytics_events", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Training settings for customizing AI prompts
+export const trainingSettings = pgTable("training_settings", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").references(() => users.id).notNull().unique(),
+  customInstructions: text("custom_instructions"),
+  analysisPrompt: text("analysis_prompt"),
+  guideGenerationPrompt: text("guide_generation_prompt"),
+  personalizationPrompt: text("personalization_prompt"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Knowledgebase entries for training content
+export const knowledgebaseEntries = pgTable("knowledgebase_entries", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").references(() => users.id).notNull(),
+  title: varchar("title").notNull(),
+  content: text("content").notNull(),
+  contentType: varchar("content_type").notNull(), // 'text', 'link', 'transcription'
+  sourceUrl: varchar("source_url"), // Original URL if from link or file
+  sourceType: varchar("source_type"), // 'manual', 'url', 'file_upload'
+  fileType: varchar("file_type"), // 'audio', 'video', 'text', 'pdf', etc.
+  tags: text("tags").array(),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Relations
 export const usersRelations = relations(users, ({ many, one }) => ({
   guides: many(guides),
@@ -149,6 +177,8 @@ export const usersRelations = relations(users, ({ many, one }) => ({
   qrCodes: many(qrCodes),
   analyticsEvents: many(analyticsEvents),
   brandingSettings: one(brandingSettings),
+  trainingSettings: one(trainingSettings),
+  knowledgebaseEntries: many(knowledgebaseEntries),
 }));
 
 export const guidesRelations = relations(guides, ({ one, many }) => ({
@@ -187,6 +217,14 @@ export const brandingSettingsRelations = relations(brandingSettings, ({ one }) =
   user: one(users, { fields: [brandingSettings.userId], references: [users.id] }),
 }));
 
+export const trainingSettingsRelations = relations(trainingSettings, ({ one }) => ({
+  user: one(users, { fields: [trainingSettings.userId], references: [users.id] }),
+}));
+
+export const knowledgebaseEntriesRelations = relations(knowledgebaseEntries, ({ one }) => ({
+  user: one(users, { fields: [knowledgebaseEntries.userId], references: [users.id] }),
+}));
+
 // Insert schemas
 export const insertGuideSchema = createInsertSchema(guides).omit({
   id: true,
@@ -221,6 +259,18 @@ export const insertAnalyticsEventSchema = createInsertSchema(analyticsEvents).om
   createdAt: true,
 });
 
+export const insertTrainingSettingsSchema = createInsertSchema(trainingSettings).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertKnowledgebaseEntrySchema = createInsertSchema(knowledgebaseEntries).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 // Types
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
@@ -236,3 +286,7 @@ export type QrCode = typeof qrCodes.$inferSelect;
 export type InsertQrCode = z.infer<typeof insertQrCodeSchema>;
 export type AnalyticsEvent = typeof analyticsEvents.$inferSelect;
 export type InsertAnalyticsEvent = z.infer<typeof insertAnalyticsEventSchema>;
+export type TrainingSettings = typeof trainingSettings.$inferSelect;
+export type InsertTrainingSettings = z.infer<typeof insertTrainingSettingsSchema>;
+export type KnowledgebaseEntry = typeof knowledgebaseEntries.$inferSelect;
+export type InsertKnowledgebaseEntry = z.infer<typeof insertKnowledgebaseEntrySchema>;
