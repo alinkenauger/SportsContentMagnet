@@ -2,7 +2,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Guide } from "@shared/schema";
-import { Eye, Download, Percent, ExternalLink, Edit, MoreVertical } from "lucide-react";
+import { Eye, Download, Percent, ExternalLink, Edit, MoreVertical, BarChart3 } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
