@@ -4,7 +4,7 @@ import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import { getYouTubeVideoData, transcribeVideo } from "./services/youtube";
 import { analyzeVideoContent, generatePracticeGuide, personalizeGuideContent } from "./services/openai";
-import { insertGuideSchema, insertLandingPageSchema, insertLeadSchema, insertBrandingSettingsSchema } from "@shared/schema";
+import { insertGuideSchema, insertLandingPageSchema, insertLeadSchema, insertBrandingSettingsSchema, insertTrainingSettingsSchema, insertKnowledgebaseEntrySchema } from "@shared/schema";
 import QRCode from 'qrcode';
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -419,6 +419,106 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching leads:", error);
       res.status(500).json({ message: "Failed to fetch leads" });
+    }
+  });
+
+  // Training settings routes
+  app.get('/api/training-settings', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const settings = await storage.getTrainingSettings(userId);
+      res.json(settings);
+    } catch (error) {
+      console.error("Error fetching training settings:", error);
+      res.status(500).json({ message: "Failed to fetch training settings" });
+    }
+  });
+
+  app.post('/api/training-settings', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const settingsData = insertTrainingSettingsSchema.parse({
+        ...req.body,
+        userId
+      });
+      
+      const settings = await storage.upsertTrainingSettings(settingsData);
+      res.json(settings);
+    } catch (error) {
+      console.error("Error updating training settings:", error);
+      res.status(500).json({ message: "Failed to update training settings" });
+    }
+  });
+
+  // Knowledgebase routes
+  app.get('/api/knowledgebase', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { query } = req.query;
+      
+      let entries;
+      if (query) {
+        entries = await storage.searchKnowledgebaseEntries(userId, query as string);
+      } else {
+        entries = await storage.getKnowledgebaseEntries(userId);
+      }
+      
+      res.json(entries);
+    } catch (error) {
+      console.error("Error fetching knowledgebase entries:", error);
+      res.status(500).json({ message: "Failed to fetch knowledgebase entries" });
+    }
+  });
+
+  app.post('/api/knowledgebase', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const entryData = insertKnowledgebaseEntrySchema.parse({
+        ...req.body,
+        userId
+      });
+      
+      const entry = await storage.createKnowledgebaseEntry(entryData);
+      res.json(entry);
+    } catch (error) {
+      console.error("Error creating knowledgebase entry:", error);
+      res.status(500).json({ message: "Failed to create knowledgebase entry" });
+    }
+  });
+
+  app.put('/api/knowledgebase/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const entryData = req.body;
+      
+      const entry = await storage.updateKnowledgebaseEntry(parseInt(id), entryData);
+      res.json(entry);
+    } catch (error) {
+      console.error("Error updating knowledgebase entry:", error);
+      res.status(500).json({ message: "Failed to update knowledgebase entry" });
+    }
+  });
+
+  app.delete('/api/knowledgebase/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      await storage.deleteKnowledgebaseEntry(parseInt(id));
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting knowledgebase entry:", error);
+      res.status(500).json({ message: "Failed to delete knowledgebase entry" });
+    }
+  });
+
+  // File transcription route for knowledgebase
+  app.post('/api/transcribe', isAuthenticated, async (req: any, res) => {
+    try {
+      // For now, return a placeholder response
+      // In a real implementation, you would use a service like OpenAI Whisper
+      res.json({ text: "Transcription feature coming soon. Please enter text manually for now." });
+    } catch (error) {
+      console.error("Error transcribing file:", error);
+      res.status(500).json({ message: "Failed to transcribe file" });
     }
   });
 
