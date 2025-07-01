@@ -61,13 +61,9 @@ export default function GuideLanding() {
         body: JSON.stringify(data),
       });
     },
-    onSuccess: () => {
-      toast({
-        title: "Success!",
-        description: "Check your email for your free practice guide.",
-      });
-      // Redirect to guide delivery page
-      window.location.href = `/delivery/${landingData?.guide.id}`;
+    onSuccess: (response: any) => {
+      // Redirect immediately to guide delivery page
+      window.location.href = `/delivery/${landingData?.guide.id}?leadId=${response.lead.id}`;
     },
     onError: (error: Error) => {
       toast({

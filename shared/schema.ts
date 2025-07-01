@@ -71,6 +71,9 @@ export const guides = pgTable("guides", {
   views: integer("views").default(0),
   downloads: integer("downloads").default(0),
   conversionRate: decimal("conversion_rate", { precision: 5, scale: 2 }).default("0"),
+  ctaLink: varchar("cta_link"), // Call-to-action link for navigation
+  ctaText: varchar("cta_text"), // Text for the CTA button
+  navigationLinks: jsonb("navigation_links"), // Custom navigation links
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
