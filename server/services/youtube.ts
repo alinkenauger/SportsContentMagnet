@@ -97,7 +97,15 @@ export async function transcribeVideo(videoId: string): Promise<string> {
 
 async function getYouTubeTranscript(videoId: string): Promise<string | null> {
   try {
-    // Use youtube-transcript library to extract captions
+    // First try the official YouTube Data API v3 captions endpoint (like Glasp)
+    console.log("Attempting official YouTube API captions...");
+    const transcript = await getOfficialYouTubeTranscript(videoId);
+    if (transcript) {
+      return transcript;
+    }
+    console.log("Official API failed, trying youtube-transcript library...");
+
+    // Fallback to youtube-transcript library as secondary option
     const transcriptArray = await YoutubeTranscript.fetchTranscript(videoId, {
       lang: 'en'
     });
@@ -117,8 +125,105 @@ async function getYouTubeTranscript(videoId: string): Promise<string | null> {
     return fullTranscript;
     
   } catch (error) {
-    console.error("Error getting YouTube transcript via youtube-transcript:", error);
+    console.error("Error getting YouTube transcript:", error);
     return null;
+  }
+}
+
+async function getOfficialYouTubeTranscript(videoId: string): Promise<string | null> {
+  try {
+    if (!process.env.YOUTUBE_API_KEY) {
+      console.log("YouTube API key not available, skipping official API");
+      return null;
+    }
+
+    // Get list of caption tracks for the video
+    const captionsListUrl = `https://www.googleapis.com/youtube/v3/captions?part=snippet&videoId=${videoId}&key=${process.env.YOUTUBE_API_KEY}`;
+    
+    const captionsResponse = await fetch(captionsListUrl);
+    const captionsData = await captionsResponse.json();
+    
+    if (captionsData.error) {
+      console.error("YouTube API error:", captionsData.error);
+      return null;
+    }
+    
+    if (!captionsData.items || captionsData.items.length === 0) {
+      console.log("No captions available for video:", videoId);
+      return null;
+    }
+
+    // Find English captions (prefer manual over auto-generated)
+    let captionTrack = captionsData.items.find((track: any) => 
+      track.snippet.language === 'en' && track.snippet.trackKind === 'standard'
+    );
+    
+    if (!captionTrack) {
+      captionTrack = captionsData.items.find((track: any) => 
+        track.snippet.language === 'en' && track.snippet.trackKind === 'ASR'
+      );
+    }
+    
+    if (!captionTrack) {
+      captionTrack = captionsData.items[0]; // Use first available track
+    }
+
+    // Note: Downloading captions requires OAuth2, not just API key
+    // YouTube captions download endpoint requires authenticated user session
+    console.log("Found captions but download requires OAuth2 authentication, not available with API key only");
+    return null;
+    
+    const captionText = await captionResponse.text();
+    
+    // Parse the caption format and extract text
+    const transcript = parseCaptionFormat(captionText);
+    
+    if (transcript && transcript.length > 100) {
+      console.log(`Successfully extracted official YouTube transcript: ${transcript.length} characters`);
+      return transcript;
+    }
+    
+    return null;
+  } catch (error) {
+    console.error("Error getting official YouTube transcript:", error);
+    return null;
+  }
+}
+
+function parseCaptionFormat(captionText: string): string {
+  try {
+    // Handle SRT format
+    if (captionText.includes('-->')) {
+      const lines = captionText.split('\n');
+      const textLines: string[] = [];
+      
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i].trim();
+        
+        // Skip sequence numbers and timestamp lines
+        if (line && !line.includes('-->') && !/^\d+$/.test(line)) {
+          textLines.push(line);
+        }
+      }
+      
+      return textLines
+        .join(' ')
+        .replace(/<[^>]*>/g, '') // Remove HTML tags
+        .replace(/\[.*?\]/g, '') // Remove bracketed content
+        .replace(/\s+/g, ' ')
+        .trim();
+    }
+    
+    // Handle plain text or other formats
+    return captionText
+      .replace(/<[^>]*>/g, '')
+      .replace(/\[.*?\]/g, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+      
+  } catch (error) {
+    console.error("Error parsing caption format:", error);
+    return captionText;
   }
 }
 
