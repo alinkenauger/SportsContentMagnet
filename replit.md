@@ -216,6 +216,13 @@ Changelog:
   * Added database schema for Google connections with access/refresh tokens
   * Configured YouTube API scopes for authenticated caption access
   * Updated authentication callbacks to redirect to dashboard after successful login
+- July 01, 2025. Restructured authentication to use Google OAuth as primary method:
+  * Made Google OAuth the main authentication system instead of secondary connection
+  * Updated all auth routes to prioritize Google OAuth over Replit Auth
+  * Created hybrid authentication system supporting both Google and Replit users
+  * Simplified OAuth scopes to basic profile/email to avoid verification requirements
+  * Added universal logout functionality that works with both authentication methods
+  * Maintained backward compatibility with existing Replit Auth users
 ```
 
 ## User Preferences

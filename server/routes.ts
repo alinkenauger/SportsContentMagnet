@@ -9,16 +9,27 @@ import { insertGuideSchema, insertLandingPageSchema, insertLeadSchema, insertBra
 import QRCode from 'qrcode';
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Auth middleware
-  await setupAuth(app);
+  // Use Google OAuth as primary authentication
   setupGoogleAuth(app);
+  // Keep Replit Auth as backup/alternative
+  await setupAuth(app);
 
-  // Auth routes
-  app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
+  // Primary auth route (Google OAuth)
+  app.get('/api/auth/user', async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
-      const user = await storage.getUser(userId);
-      res.json(user);
+      // Check Google OAuth first
+      if (req.isAuthenticated() && req.user && req.user.id) {
+        return res.json(req.user);
+      }
+      
+      // Fallback to Replit Auth
+      if (req.user?.claims?.sub) {
+        const userId = req.user.claims.sub;
+        const user = await storage.getUser(userId);
+        return res.json(user);
+      }
+      
+      res.status(401).json({ message: "Unauthorized" });
     } catch (error) {
       console.error("Error fetching user:", error);
       res.status(500).json({ message: "Failed to fetch user" });

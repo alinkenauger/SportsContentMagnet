@@ -124,6 +124,17 @@ export function setupGoogleAuth(app: Express) {
     }
   );
 
+  // Universal logout (works for both Google OAuth and Replit Auth)
+  app.get("/api/auth/logout", (req, res) => {
+    req.logout((err) => {
+      if (err) {
+        console.error("Logout error:", err);
+        return res.status(500).json({ error: "Failed to logout" });
+      }
+      res.redirect("/");
+    });
+  });
+
   // Disconnect Google account
   app.post("/api/auth/google/disconnect", async (req: any, res) => {
     try {
