@@ -327,7 +327,7 @@ export default function Settings() {
             <CardHeader>
               <CardTitle>AI Training Instructions</CardTitle>
               <CardDescription>
-                Customize how the AI analyzes videos and generates practice guides for your specific coaching style.
+                Customize how your AI bot analyzes fitness videos and generates coaching guidance to match your training philosophy and style.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
@@ -389,9 +389,9 @@ export default function Settings() {
           <div className="space-y-6">
             <div className="flex justify-between items-center">
               <div>
-                <h2 className="text-2xl font-bold">Knowledgebase</h2>
+                <h2 className="text-2xl font-bold">AI Training Knowledgebase</h2>
                 <p className="text-gray-600">
-                  Add training content, links, and upload files to enhance AI responses
+                  Train your AI bot with your expertise - add workouts, training programs, books, blog posts, and coaching materials to help it provide better guidance to your viewers
                 </p>
               </div>
               <Dialog open={isAddingEntry} onOpenChange={setIsAddingEntry}>
@@ -403,9 +403,9 @@ export default function Settings() {
                 </DialogTrigger>
                 <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
                   <DialogHeader>
-                    <DialogTitle>Add Knowledgebase Entry</DialogTitle>
+                    <DialogTitle>Add Training Content for Your AI Bot</DialogTitle>
                     <DialogDescription>
-                      Add text content, links, or upload audio/video files for transcription
+                      Upload workout routines, training programs, coaching philosophy, exercise tutorials, nutrition guides, or any content that will help your AI bot provide better guidance to your viewers
                     </DialogDescription>
                   </DialogHeader>
                   
@@ -457,7 +457,7 @@ export default function Settings() {
                         <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
                           <Upload className="h-8 w-8 mx-auto mb-2 text-gray-400" />
                           <p className="text-sm text-gray-600 mb-2">
-                            Upload audio, video, or text files
+                            Upload workout videos, training audio, PDFs of programs, or any fitness content
                           </p>
                           <input
                             type="file"
@@ -482,7 +482,7 @@ export default function Settings() {
                       <Label htmlFor="entryContent">Content</Label>
                       <Textarea
                         id="entryContent"
-                        placeholder="Enter your content here..."
+                        placeholder="Add your training content, workout descriptions, coaching tips, or any expertise that will help the AI understand your coaching style..."
                         value={newEntry.content}
                         onChange={(e) => setNewEntry({ ...newEntry, content: e.target.value })}
                         rows={8}
@@ -515,9 +515,9 @@ export default function Settings() {
                 <Card>
                   <CardContent className="py-8 text-center">
                     <Book className="h-12 w-12 mx-auto mb-4 text-gray-400" />
-                    <h3 className="text-lg font-medium mb-2">No entries yet</h3>
+                    <h3 className="text-lg font-medium mb-2">No training content yet</h3>
                     <p className="text-gray-600 mb-4">
-                      Start building your knowledgebase by adding training content
+                      Add your workouts, training programs, coaching philosophy, and expertise to train your AI bot to provide better guidance to your viewers
                     </p>
                     <Button onClick={() => setIsAddingEntry(true)}>
                       <Plus className="h-4 w-4 mr-2" />

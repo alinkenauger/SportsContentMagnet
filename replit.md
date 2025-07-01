@@ -129,6 +129,11 @@ Changelog:
   * Ensured default landing page forms include First Name (required) and Email (required)
   * Added backend routes for public guide discovery
   * Updated guide delivery page with library navigation
+- July 01, 2025. Enhanced AI training language and clarity:
+  * Updated knowledgebase descriptions to emphasize AI bot training for fitness content
+  * Clarified that system helps train AI with workouts, training programs, coaching philosophy
+  * Improved UI text to focus on helping AI provide better guidance to viewers
+  * Added specific examples like exercise tutorials, nutrition guides, and coaching materials
 ```
 
 ## User Preferences
