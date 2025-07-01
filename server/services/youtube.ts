@@ -1,3 +1,5 @@
+import { YoutubeTranscript } from 'youtube-transcript';
+
 export interface YouTubeVideoData {
   videoId: string;
   title: string;
@@ -62,37 +64,93 @@ export async function getYouTubeVideoData(url: string): Promise<YouTubeVideoData
 }
 
 export async function transcribeVideo(videoId: string): Promise<string> {
-  // For now, we'll return a mock transcript since implementing full video transcription
-  // would require additional services like speech-to-text APIs
-  // In a real implementation, this would:
-  // 1. Download the video audio
-  // 2. Use a speech-to-text service (like OpenAI Whisper, Google Speech-to-Text, etc.)
-  // 3. Return the full transcript with timestamps
-  
-  const mockTranscripts: Record<string, string> = {
-    default: `
-Welcome to today's training session. In this video, we're going to cover five essential fundamentals that every player needs to master.
+  try {
+    console.log(`Attempting to transcribe video: ${videoId}`);
+    
+    // First, try to get captions using youtube-transcript library
+    const transcript = await getYouTubeTranscript(videoId);
+    if (transcript && transcript.length > 100) { // Ensure we got meaningful content
+      console.log(`Successfully extracted transcript: ${transcript.length} characters`);
+      return transcript;
+    }
+    
+    // If no captions available or transcript too short, use OpenAI Whisper
+    console.log("No captions found, attempting Whisper transcription...");
+    const whisperTranscript = await transcribeWithWhisper(videoId);
+    if (whisperTranscript) {
+      return whisperTranscript;
+    }
+    
+    throw new Error("Unable to transcribe video. Please ensure the video has captions enabled or is publicly accessible.");
+    
+  } catch (error) {
+    console.error("Transcription error:", error);
+    throw new Error("Failed to transcribe video: " + (error as Error).message);
+  }
+}
 
-First, let's talk about proper stance and positioning. Your feet should be shoulder-width apart, knees slightly bent, and your weight evenly distributed. This gives you the stability and balance you need for quick movements.
+async function getYouTubeTranscript(videoId: string): Promise<string | null> {
+  try {
+    // Use youtube-transcript library to extract captions
+    const transcriptArray = await YoutubeTranscript.fetchTranscript(videoId, {
+      lang: 'en'
+    });
+    
+    if (!transcriptArray || transcriptArray.length === 0) {
+      console.log("No transcript found via youtube-transcript");
+      return null;
+    }
 
-The second fundamental is ball handling. Keep your eyes up, not on the ball. Use your fingertips, not your palms, and practice both hands equally. Start slow and gradually increase your speed as you build confidence.
+    // Combine all transcript segments into a single text
+    const fullTranscript = transcriptArray
+      .map(item => item.text)
+      .join(' ')
+      .replace(/\s+/g, ' ') // Normalize whitespace
+      .trim();
 
-Third, we have footwork drills. Quick feet equal quick plays. Practice ladder drills, cone drills, and agility exercises daily. Your footwork is the foundation of all your movements on the field.
+    return fullTranscript;
+    
+  } catch (error) {
+    console.error("Error getting YouTube transcript via youtube-transcript:", error);
+    return null;
+  }
+}
 
-Fourth is communication. Sports are team activities. Call out plays, communicate with your teammates, and always be aware of what's happening around you. Good communication can make the difference between a good play and a great play.
+async function transcribeWithWhisper(videoId: string): Promise<string | null> {
+  try {
+    const ytdl = await import('ytdl-core');
+    const OpenAI = await import('openai');
+    
+    if (!process.env.OPENAI_API_KEY) {
+      console.error("OpenAI API key not available for Whisper transcription");
+      return null;
+    }
 
-Finally, let's cover conditioning and endurance. You can have all the skills in the world, but if you're tired in the fourth quarter, those skills won't help you. Build your cardiovascular endurance through running, interval training, and sport-specific drills.
+    const openai = new OpenAI.default({
+      apiKey: process.env.OPENAI_API_KEY,
+    });
 
-Remember, mastering these fundamentals takes time and practice. Don't get discouraged if you don't see immediate results. Stay consistent, stay focused, and keep working hard. The results will come.
+    // Check if video is available
+    const videoInfo = await ytdl.default.getInfo(videoId);
+    if (!videoInfo) {
+      console.error("Could not get video info for Whisper transcription");
+      return null;
+    }
 
-Practice these drills for 15-20 minutes each day, and you'll see improvement in your game within just a few weeks. Thanks for watching, and I'll see you in the next video!
-    `
-  };
-
-  // Simulate API delay
-  await new Promise(resolve => setTimeout(resolve, 2000));
-
-  return mockTranscripts[videoId] || mockTranscripts.default;
+    // Note: Full Whisper integration would require:
+    // 1. Downloading video audio using ytdl-core
+    // 2. Converting to audio format (MP3/WAV)
+    // 3. Uploading to OpenAI Whisper API
+    // 4. Getting transcription result
+    
+    // For now, we'll indicate this needs implementation
+    console.log("Whisper transcription would require audio download and processing");
+    return null;
+    
+  } catch (error) {
+    console.error("Error with Whisper transcription:", error);
+    return null;
+  }
 }
 
 export function parseDuration(duration: string): number {
