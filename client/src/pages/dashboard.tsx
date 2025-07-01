@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Book, Users, TrendingUp, ExternalLink, Plus, Sparkles, Palette, Eye, Edit, BarChart3, Bell } from "lucide-react";
+import { Book, Users, TrendingUp, ExternalLink, Plus, Sparkles, Palette, Eye, Edit, BarChart3, Bell, Check, X } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 
 interface DashboardStats {
@@ -28,7 +28,56 @@ export default function Dashboard() {
   const [youtubeUrl, setYoutubeUrl] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
   const [columnWidths, setColumnWidths] = useState([35, 20, 15, 15, 15]);
+  const [showNotifications, setShowNotifications] = useState(false);
   const tableRef = useRef<HTMLTableElement>(null);
+  const notificationsRef = useRef<HTMLDivElement>(null);
+
+  // Mock notifications data
+  const notifications = [
+    {
+      id: 1,
+      title: "New lead captured",
+      message: "Someone downloaded your 'Basketball Shooting Form' guide",
+      time: "2 minutes ago",
+      read: false,
+      type: "lead"
+    },
+    {
+      id: 2,
+      title: "Guide performance update",
+      message: "Your 'Soccer Training Drills' guide reached 100 views",
+      time: "1 hour ago",
+      read: false,
+      type: "milestone"
+    },
+    {
+      id: 3,
+      title: "Monthly summary ready",
+      message: "Your performance report for this month is ready to view",
+      time: "3 hours ago",
+      read: true,
+      type: "report"
+    }
+  ];
+
+  const unreadCount = notifications.filter(n => !n.read).length;
+
+  // Close notifications dropdown when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (notificationsRef.current && !notificationsRef.current.contains(event.target as Node)) {
+        setShowNotifications(false);
+      }
+    }
+
+    if (showNotifications) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => {
+        document.removeEventListener('mousedown', handleClickOutside);
+      };
+    }
+  }, [showNotifications]);
+
   const [processingSteps, setProcessingSteps] = useState([
     { id: "metadata", title: "Video metadata extracted", status: "pending" as const },
     { id: "transcript", title: "Content transcribed", status: "pending" as const },
@@ -196,12 +245,101 @@ export default function Dashboard() {
               </p>
             </div>
             <div className="flex items-center space-x-3">
-              <Button variant="ghost" size="sm" className="relative">
-                <Bell className="w-5 h-5" />
-                <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full text-xs flex items-center justify-center text-white">
-                  3
-                </span>
-              </Button>
+              <div className="relative" ref={notificationsRef}>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="relative"
+                  onClick={() => setShowNotifications(!showNotifications)}
+                >
+                  <Bell className="w-5 h-5" />
+                  {unreadCount > 0 && (
+                    <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full text-xs flex items-center justify-center text-white">
+                      {unreadCount}
+                    </span>
+                  )}
+                </Button>
+
+                {/* Notifications Dropdown */}
+                {showNotifications && (
+                  <div className="absolute right-0 top-full mt-2 w-80 bg-white rounded-lg shadow-lg border border-gray-200 z-50 max-h-96 overflow-y-auto">
+                    <div className="px-4 py-3 border-b border-gray-200">
+                      <div className="flex items-center justify-between">
+                        <h3 className="text-sm font-semibold text-gray-900">Notifications</h3>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setShowNotifications(false)}
+                          className="p-1 h-auto"
+                        >
+                          <X className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </div>
+                    
+                    <div className="py-2">
+                      {notifications.length > 0 ? (
+                        notifications.map((notification) => (
+                          <div
+                            key={notification.id}
+                            className={`px-4 py-3 hover:bg-gray-50 border-l-4 ${
+                              !notification.read 
+                                ? 'border-blue-500 bg-blue-50/30' 
+                                : 'border-transparent'
+                            }`}
+                          >
+                            <div className="flex items-start justify-between">
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center space-x-2">
+                                  <p className="text-sm font-medium text-gray-900">
+                                    {notification.title}
+                                  </p>
+                                  {!notification.read && (
+                                    <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                                  )}
+                                </div>
+                                <p className="text-xs text-gray-600 mt-1">
+                                  {notification.message}
+                                </p>
+                                <p className="text-xs text-gray-400 mt-1">
+                                  {notification.time}
+                                </p>
+                              </div>
+                              {!notification.read && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="p-1 h-auto ml-2"
+                                  title="Mark as read"
+                                >
+                                  <Check className="w-3 h-3" />
+                                </Button>
+                              )}
+                            </div>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="px-4 py-8 text-center">
+                          <Bell className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+                          <p className="text-sm text-gray-500">No notifications yet</p>
+                        </div>
+                      )}
+                    </div>
+
+                    {notifications.length > 0 && (
+                      <div className="px-4 py-3 border-t border-gray-200">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="w-full text-center text-blue-600 hover:text-blue-700"
+                        >
+                          View All Notifications
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
               <Button className="gradient-primary text-white">
                 <Plus className="w-4 h-4 mr-2" />
                 Create New Guide
