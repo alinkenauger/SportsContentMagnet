@@ -14,10 +14,10 @@
   --border: hsl(214, 32%, 91%);
   --input: hsl(214, 32%, 91%);
   --primary: hsl(221, 83%, 53%);
-  --primary-foreground: hsl(0, 0%, 100%);
-  --secondary: hsl(0, 84%, 60%);
-  --secondary-foreground: hsl(0, 0%, 100%);
-  --accent: hsl(0, 0%, 100%);
+  --primary-foreground: hsl(210, 40%, 98%);
+  --secondary: hsl(150, 60%, 45%);
+  --secondary-foreground: hsl(210, 40%, 98%);
+  --accent: hsl(210, 40%, 98%);
   --accent-foreground: hsl(222, 84%, 5%);
   --destructive: hsl(0, 84%, 60%);
   --destructive-foreground: hsl(210, 40%, 98%);
@@ -76,7 +76,7 @@
 
 @layer components {
   .gradient-primary {
-    @apply bg-gradient-to-r from-red-600 via-blue-600 to-primary;
+    @apply bg-gradient-to-r from-primary to-blue-600;
   }
 
   .gradient-secondary {
