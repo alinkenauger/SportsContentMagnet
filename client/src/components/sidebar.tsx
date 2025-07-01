@@ -7,7 +7,7 @@ import {
   Plus, 
   Book, 
   BarChart3, 
-  Palette, 
+  Users, 
   Settings, 
   LogOut,
   Video,
@@ -21,7 +21,7 @@ const navigation = [
   { name: "Create Guide", href: "/create", icon: Plus },
   { name: "Content Library", href: "/library", icon: Book },
   { name: "Analytics", href: "/analytics", icon: BarChart3 },
-  { name: "Branding", href: "/branding", icon: Palette },
+  { name: "Leads", href: "/leads", icon: Users },
   { name: "Settings", href: "/settings", icon: Settings },
 ];
 

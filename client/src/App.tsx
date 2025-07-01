@@ -11,6 +11,7 @@ import CreateGuide from "@/pages/create-guide";
 import ContentLibrary from "@/pages/content-library";
 import Analytics from "@/pages/analytics";
 import Branding from "@/pages/branding";
+import Leads from "@/pages/leads";
 import Settings from "@/pages/settings";
 import GuideLanding from "@/pages/guide-landing";
 import GuideDelivery from "@/pages/guide-delivery";
@@ -31,6 +32,7 @@ function Router() {
           <Route path="/library" component={ContentLibrary} />
           <Route path="/guide-editor/:guideId" component={GuideEditorEnhanced} />
           <Route path="/analytics" component={Analytics} />
+          <Route path="/leads" component={Leads} />
           <Route path="/branding" component={Branding} />
           <Route path="/settings" component={Settings} />
         </>

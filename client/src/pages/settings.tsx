@@ -12,6 +12,7 @@ import {
   Shield,
   Bell,
   Zap,
+  Palette,
   Key,
   Mail,
   Phone,
@@ -143,9 +144,9 @@ export default function Settings() {
                 <Zap className="w-4 h-4" />
                 Integrations
               </TabsTrigger>
-              <TabsTrigger value="advanced" className="flex items-center gap-2 text-sm">
-                <SettingsIcon className="w-4 h-4" />
-                Advanced
+              <TabsTrigger value="branding" className="flex items-center gap-2 text-sm">
+                <Palette className="w-4 h-4" />
+                Branding
               </TabsTrigger>
             </TabsList>
 
