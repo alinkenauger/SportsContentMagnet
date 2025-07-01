@@ -304,7 +304,7 @@ export default function Dashboard() {
                                   {guide.createdAt ? new Date(guide.createdAt).toLocaleDateString() : 'No date'}
                                 </p>
                               </div>
-                              <div className="min-w-0 flex-1">
+                              <div className="min-w-0" style={{ maxWidth: '200px' }}>
                                 <p className="font-medium text-foreground leading-tight">{guide.title}</p>
                               </div>
                             </div>
