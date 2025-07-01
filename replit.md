@@ -108,6 +108,13 @@ VidMagnet is a SAAS application that transforms YouTube videos into high-convert
 ```
 Changelog:
 - July 01, 2025. Initial setup
+- July 01, 2025. Updated app name to "VidMagnet"
+- July 01, 2025. Added SMS collection feature with legal compliance:
+  * Added phone and smsConsent fields to leads table
+  * Added collectSms and smsConsentText fields to landing pages
+  * Updated guide creation form with SMS collection toggle
+  * Added legal consent checkbox requirement for phone collection
+  * Updated landing page forms to conditionally show SMS fields
 ```
 
 ## User Preferences

@@ -90,6 +90,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           { name: 'skillLevel', label: 'Skill Level', type: 'select', options: ['Beginner', 'Intermediate', 'Advanced'], required: false }
         ],
         customUrl: `${guide.slug}-landing`,
+        collectSms: collectSms || false,
+        smsConsentText: smsConsentText || "I consent to receive text messages from this business. Message and data rates may apply. Reply STOP to opt out.",
         isActive: true
       });
 
