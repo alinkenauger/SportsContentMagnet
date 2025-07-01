@@ -3,15 +3,61 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { CheckCircle, Youtube, AlertCircle } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 
-export default function GoogleAuthButton() {
-  const { data: googleStatus, isLoading } = useQuery({
+interface GoogleAuthButtonProps {
+  variant?: 'card' | 'button' | 'hero' | 'header';
+  size?: 'sm' | 'lg' | 'default';
+}
+
+interface GoogleStatus {
+  connected: boolean;
+}
+
+export default function GoogleAuthButton({ variant = 'card', size = 'default' }: GoogleAuthButtonProps) {
+  const { data: googleStatus, isLoading } = useQuery<GoogleStatus>({
     queryKey: ['/api/auth/google-status'],
+    retry: false, // Don't retry on auth failures
   });
 
   const handleGoogleAuth = () => {
     window.location.href = '/auth/google';
   };
 
+  // Button variants for landing page
+  if (variant === 'button' || variant === 'hero' || variant === 'header') {
+    if (isLoading) {
+      return (
+        <Button disabled size={size} className="gradient-primary text-white">
+          Loading...
+        </Button>
+      );
+    }
+
+    if (googleStatus?.connected) {
+      return (
+        <Button 
+          onClick={() => window.location.href = '/dashboard'}
+          size={size} 
+          className="gradient-primary text-white"
+        >
+          <CheckCircle className="h-4 w-4 mr-2" />
+          {variant === 'hero' ? 'Go to Dashboard' : 'Dashboard'}
+        </Button>
+      );
+    }
+
+    return (
+      <Button 
+        onClick={handleGoogleAuth}
+        size={size}
+        className="gradient-primary text-white"
+      >
+        <Youtube className="h-4 w-4 mr-2" />
+        {variant === 'hero' ? 'Start Creating Guides' : variant === 'header' ? 'Sign In' : 'Connect Google'}
+      </Button>
+    );
+  }
+
+  // Card variant (original functionality)
   if (isLoading) {
     return (
       <Card className="w-full max-w-md">

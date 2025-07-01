@@ -1,10 +1,11 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Video, Users, TrendingUp, Zap } from "lucide-react";
+import GoogleAuthButton from "@/components/google-auth-button";
 
 export default function Landing() {
   const handleLogin = () => {
-    window.location.href = "/api/login";
+    window.location.href = "/auth/google";
   };
 
   return (
@@ -18,9 +19,7 @@ export default function Landing() {
             </div>
             <h1 className="text-2xl font-bold text-foreground">VidMagnet</h1>
           </div>
-          <Button onClick={handleLogin} className="gradient-primary text-white">
-            Get Started
-          </Button>
+          <GoogleAuthButton variant="header" />
         </div>
       </header>
 
@@ -35,9 +34,7 @@ export default function Landing() {
             Automatically extract valuable coaching insights from your videos and create branded practice guides that convert viewers into leads.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button size="lg" onClick={handleLogin} className="gradient-primary text-white">
-              Start Creating Guides
-            </Button>
+            <GoogleAuthButton variant="hero" size="lg" />
             <Button size="lg" variant="outline">
               Watch Demo
             </Button>
