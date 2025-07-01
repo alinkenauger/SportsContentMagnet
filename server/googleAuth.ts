@@ -30,6 +30,7 @@ export function setupGoogleAuth(app: Express) {
 
         // Update user's Google connection in database
         await storage.updateUserGoogleConnection(profile.id, {
+          userId: profile.id,
           googleId: profile.id,
           googleAccessToken: accessToken,
           googleRefreshToken: refreshToken,
@@ -41,7 +42,7 @@ export function setupGoogleAuth(app: Express) {
         return done(null, user);
       } catch (error) {
         console.error("Google auth error:", error);
-        return done(error, null);
+        return done(error, undefined);
       }
     }
   );

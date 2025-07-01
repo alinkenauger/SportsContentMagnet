@@ -2,6 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
+import { setupGoogleAuth } from "./googleAuth";
 import { analyzeVideoContent, generatePracticeGuide, personalizeGuideContent } from "./services/openai";
 import { getYouTubeVideoData, transcribeVideo } from "./services/youtube";
 import { insertGuideSchema, insertLandingPageSchema, insertLeadSchema, insertBrandingSettingsSchema, insertTrainingSettingsSchema, insertKnowledgebaseEntrySchema } from "@shared/schema";
@@ -10,6 +11,7 @@ import QRCode from 'qrcode';
 export async function registerRoutes(app: Express): Promise<Server> {
   // Auth middleware
   await setupAuth(app);
+  setupGoogleAuth(app);
 
   // Auth routes
   app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
@@ -20,6 +22,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching user:", error);
       res.status(500).json({ message: "Failed to fetch user" });
+    }
+  });
+
+  // Google auth status
+  app.get('/api/auth/google-status', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const googleConnection = await storage.getUserGoogleConnection(userId);
+      res.json({ connected: !!googleConnection });
+    } catch (error) {
+      console.error("Error checking Google auth status:", error);
+      res.status(500).json({ message: "Failed to check Google auth status" });
     }
   });
 
