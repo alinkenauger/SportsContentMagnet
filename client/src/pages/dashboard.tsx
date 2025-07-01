@@ -275,7 +275,7 @@ export default function Dashboard() {
                         <th className="text-left p-4 font-medium text-muted-foreground">Views</th>
                         <th className="text-left p-4 font-medium text-muted-foreground">Leads</th>
                         <th className="text-left p-4 font-medium text-muted-foreground">Landing Page</th>
-                        <th className="text-left p-4 font-medium text-muted-foreground">Thank You Page</th>
+                        <th className="text-left p-4 font-medium text-muted-foreground">Guide Page</th>
                         <th className="text-left p-4 font-medium text-muted-foreground">Actions</th>
                       </tr>
                     </thead>
@@ -329,7 +329,7 @@ export default function Dashboard() {
                             </Button>
                           </td>
                           
-                          {/* Thank You Page Link */}
+                          {/* Guide Page Link */}
                           <td className="p-4">
                             <Button
                               variant="ghost"
