@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { isUnauthorizedError } from "@/lib/authUtils";
+import { useLocation } from "wouter";
 import Sidebar from "@/components/sidebar";
 import StatsCard from "@/components/stats-card";
 import GuideCard from "@/components/guide-card";
@@ -25,6 +26,7 @@ interface DashboardStats {
 export default function Dashboard() {
   const { toast } = useToast();
   const { isAuthenticated, isLoading } = useAuth();
+  const [, setLocation] = useLocation();
   const [youtubeUrl, setYoutubeUrl] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
   const [columnWidths, setColumnWidths] = useState([35, 20, 15, 15, 15]);
@@ -340,7 +342,10 @@ export default function Dashboard() {
                   </div>
                 )}
               </div>
-              <Button className="gradient-primary text-white">
+              <Button 
+                className="gradient-primary text-white"
+                onClick={() => setLocation('/create')}
+              >
                 <Plus className="w-4 h-4 mr-2" />
                 Create New Guide
               </Button>
