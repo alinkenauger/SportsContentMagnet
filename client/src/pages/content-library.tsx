@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Search, Filter, Plus, Book, Grid, List } from "lucide-react";
+import { Search, Filter, Plus, Book, Grid, List, Eye, Users, ExternalLink, Edit, BarChart3 } from "lucide-react";
 import { Guide } from "@shared/schema";
 
 const categories = [
@@ -296,9 +296,9 @@ export default function ContentLibrary() {
                 </div>
               </div>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-0">
               {isLoading ? (
-                <div className="space-y-4">
+                <div className="p-6 space-y-4">
                   {[...Array(3)].map((_, i) => (
                     <div key={i} className="animate-pulse">
                       <div className="flex items-center space-x-4">
@@ -312,19 +312,116 @@ export default function ContentLibrary() {
                   ))}
                 </div>
               ) : filteredGuides.length > 0 ? (
-                <div className={viewMode === "grid" ? "grid grid-cols-1 lg:grid-cols-2 gap-6" : "space-y-4"}>
-                  {filteredGuides.map((guide) => (
-                    <GuideCard
-                      key={guide.id}
-                      guide={guide}
-                      onEdit={handleEditGuide}
-                      onViewLanding={handleViewLanding}
-                      onViewAnalytics={handleViewAnalytics}
-                    />
-                  ))}
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead className="bg-muted/50 border-b">
+                      <tr>
+                        <th className="text-left p-4 font-medium text-sm text-muted-foreground">Guide</th>
+                        <th className="text-left p-4 font-medium text-sm text-muted-foreground">Views</th>
+                        <th className="text-left p-4 font-medium text-sm text-muted-foreground">Leads</th>
+                        <th className="text-left p-4 font-medium text-sm text-muted-foreground">Landing Page</th>
+                        <th className="text-left p-4 font-medium text-sm text-muted-foreground">Guide Preview</th>
+                        <th className="text-left p-4 font-medium text-sm text-muted-foreground">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredGuides.map((guide) => (
+                        <tr key={guide.id} className="border-b hover:bg-muted/30 transition-colors">
+                          {/* Thumbnail and Name */}
+                          <td className="p-4">
+                            <div className="flex items-center space-x-3">
+                              <div className="w-16 h-12 bg-muted rounded-lg flex-shrink-0 overflow-hidden">
+                                {guide.thumbnailUrl ? (
+                                  <img 
+                                    src={guide.thumbnailUrl} 
+                                    alt={guide.title}
+                                    className="w-full h-full object-cover"
+                                  />
+                                ) : (
+                                  <div className="w-full h-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
+                                    <Book className="w-6 h-6 text-white" />
+                                  </div>
+                                )}
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <p className="font-medium text-foreground truncate">{guide.title}</p>
+                                <p className="text-sm text-muted-foreground truncate">
+                                  {guide.category || 'Uncategorized'} • {guide.createdAt ? new Date(guide.createdAt).toLocaleDateString() : 'No date'}
+                                </p>
+                              </div>
+                            </div>
+                          </td>
+                          
+                          {/* Views */}
+                          <td className="p-4">
+                            <div className="flex items-center text-sm">
+                              <Eye className="w-4 h-4 mr-2 text-muted-foreground" />
+                              <span className="font-medium">{guide.views || 0}</span>
+                            </div>
+                          </td>
+                          
+                          {/* Leads */}
+                          <td className="p-4">
+                            <div className="flex items-center text-sm">
+                              <Users className="w-4 h-4 mr-2 text-muted-foreground" />
+                              <span className="font-medium">0</span>
+                            </div>
+                          </td>
+                          
+                          {/* Landing Page Link */}
+                          <td className="p-4">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleViewLanding(guide)}
+                              className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                            >
+                              <ExternalLink className="w-4 h-4 mr-1" />
+                              View
+                            </Button>
+                          </td>
+                          
+                          {/* Guide Preview Link */}
+                          <td className="p-4">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => window.open(`/guide/${guide.id}`, '_blank')}
+                              className="text-green-600 hover:text-green-700 hover:bg-green-50"
+                            >
+                              <Book className="w-4 h-4 mr-1" />
+                              Preview
+                            </Button>
+                          </td>
+                          
+                          {/* Actions */}
+                          <td className="p-4">
+                            <div className="flex items-center space-x-2">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleEditGuide(guide)}
+                                className="text-gray-600 hover:text-gray-700 hover:bg-gray-50"
+                              >
+                                <Edit className="w-4 h-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleViewAnalytics(guide)}
+                                className="text-purple-600 hover:text-purple-700 hover:bg-purple-50"
+                              >
+                                <BarChart3 className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               ) : (
-                <div className="text-center py-12">
+                <div className="text-center py-12 p-6">
                   <Book className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
                   <h3 className="text-lg font-semibold text-foreground mb-2">No guides found</h3>
                   <p className="text-muted-foreground mb-4">
