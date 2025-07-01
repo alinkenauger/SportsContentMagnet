@@ -67,6 +67,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         description: analysis.summary,
         youtubeUrl,
         youtubeVideoId: videoData.videoId,
+        channelTitle: videoData.channelTitle,
         thumbnailUrl: videoData.thumbnailUrl,
         transcript,
         aiAnalysis: analysis,

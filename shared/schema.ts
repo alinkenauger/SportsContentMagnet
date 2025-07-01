@@ -60,6 +60,7 @@ export const guides = pgTable("guides", {
   description: text("description"),
   youtubeUrl: varchar("youtube_url").notNull(),
   youtubeVideoId: varchar("youtube_video_id").notNull(),
+  channelTitle: varchar("channel_title"), // YouTube channel name
   thumbnailUrl: varchar("thumbnail_url"),
   transcript: text("transcript"),
   aiAnalysis: jsonb("ai_analysis"),
