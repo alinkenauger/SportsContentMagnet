@@ -30,10 +30,13 @@ export default function Dashboard() {
   const [, setLocation] = useLocation();
   const [youtubeUrl, setYoutubeUrl] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
-  const [inputMethod, setInputMethod] = useState<"youtube" | "manual">("youtube");
+  const [inputMethod, setInputMethod] = useState<"youtube" | "manual" | "pdf" | "audio" | "streaming">("youtube");
   const [manualTitle, setManualTitle] = useState("");
   const [manualTranscript, setManualTranscript] = useState("");
   const [isDragOver, setIsDragOver] = useState(false);
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const [streamingUrl, setStreamingUrl] = useState("");
+  const [isProcessingFile, setIsProcessingFile] = useState(false);
   const [columnWidths, setColumnWidths] = useState([35, 20, 15, 15, 15]);
   const [showNotifications, setShowNotifications] = useState(false);
   const tableRef = useRef<HTMLTableElement>(null);
@@ -154,7 +157,8 @@ export default function Dashboard() {
   };
 
   const handleCreateGuide = async () => {
-    if (!youtubeUrl.trim()) {
+    // Validate input based on method
+    if (inputMethod === "youtube" && !youtubeUrl.trim()) {
       toast({
         title: "Error",
         description: "Please enter a YouTube URL",
@@ -162,8 +166,47 @@ export default function Dashboard() {
       });
       return;
     }
+    
+    if ((inputMethod === "manual" || inputMethod === "pdf" || inputMethod === "audio" || inputMethod === "streaming") && !manualTitle.trim()) {
+      toast({
+        title: "Error",
+        description: "Please enter a title",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    if (inputMethod === "manual" && !manualTranscript.trim()) {
+      toast({
+        title: "Error",
+        description: "Please enter transcript content",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    if ((inputMethod === "pdf" || inputMethod === "audio") && !uploadedFile) {
+      toast({
+        title: "Error",
+        description: `Please upload a ${inputMethod.toUpperCase()} file`,
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    if (inputMethod === "streaming" && !streamingUrl.trim()) {
+      toast({
+        title: "Error",
+        description: "Please enter a streaming URL",
+        variant: "destructive",
+      });
+      return;
+    }
 
     setIsProcessing(true);
+    if (inputMethod === "pdf" || inputMethod === "audio") {
+      setIsProcessingFile(true);
+    }
     setProgress(0);
     setCurrentStep("metadata");
 
@@ -194,16 +237,41 @@ export default function Dashboard() {
         );
       }
 
-      // Actually create the guide
-      const requestData = inputMethod === "youtube" ? {
-        youtubeUrl
-      } : {
-        manualTranscript,
-        manualTitle,
-        inputMethod: "manual"
-      };
-      
-      await apiRequest("POST", "/api/guides", requestData);
+      // Prepare request based on input method
+      if (inputMethod === "pdf" || inputMethod === "audio") {
+        // Use FormData for file uploads
+        const formData = new FormData();
+        formData.append('inputMethod', inputMethod);
+        formData.append('title', manualTitle);
+        if (uploadedFile) {
+          formData.append('file', uploadedFile);
+        }
+        
+        const response = await fetch('/api/guides', {
+          method: 'POST',
+          body: formData,
+        });
+        
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+      } else {
+        // Use JSON for other input methods
+        const requestData: any = {
+          inputMethod,
+          title: inputMethod === "youtube" ? youtubeUrl : manualTitle,
+        };
+        
+        if (inputMethod === "youtube") {
+          requestData.youtubeUrl = youtubeUrl;
+        } else if (inputMethod === "manual") {
+          requestData.transcript = manualTranscript;
+        } else if (inputMethod === "streaming") {
+          requestData.streamingUrl = streamingUrl;
+        }
+        
+        await apiRequest("POST", "/api/guides", requestData);
+      }
       
       toast({
         title: "Success",
@@ -214,6 +282,8 @@ export default function Dashboard() {
       setYoutubeUrl("");
       setManualTitle("");
       setManualTranscript("");
+      setUploadedFile(null);
+      setStreamingUrl("");
       refetchGuides();
     } catch (error) {
       if (isUnauthorizedError(error as Error)) {
@@ -266,22 +336,40 @@ export default function Dashboard() {
     setIsDragOver(false);
     
     const files = Array.from(e.dataTransfer.files);
-    const textFile = files.find(file => file.type === 'text/plain');
+    const file = files[0];
     
-    if (textFile) {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        const content = event.target?.result as string;
-        if (content) {
-          setManualTranscript(content);
-          setInputMethod("manual");
-          // Auto-fill title with filename if empty
-          if (!manualTitle) {
-            setManualTitle(textFile.name.replace(/\.[^/.]+$/, ""));
+    if (file) {
+      // Auto-fill title with filename if empty
+      if (!manualTitle) {
+        setManualTitle(file.name.replace(/\.[^/.]+$/, ""));
+      }
+      
+      if (file.type === 'text/plain') {
+        // Handle text files
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          const content = event.target?.result as string;
+          if (content) {
+            setManualTranscript(content);
+            setInputMethod("manual");
           }
-        }
-      };
-      reader.readAsText(textFile);
+        };
+        reader.readAsText(file);
+      } else if (file.type === 'application/pdf') {
+        // Handle PDF files
+        setUploadedFile(file);
+        setInputMethod("pdf");
+      } else if (file.type.startsWith('audio/')) {
+        // Handle audio files
+        setUploadedFile(file);
+        setInputMethod("audio");
+      } else {
+        toast({
+          title: "Unsupported file type",
+          description: "Please upload a .txt, .pdf, or audio file (.mp3, .wav, .m4a)",
+          variant: "destructive",
+        });
+      }
     } else {
       // Handle dragged text
       const text = e.dataTransfer.getData('text/plain');
@@ -485,23 +573,24 @@ export default function Dashboard() {
           <Card className="gradient-primary text-white mb-8">
             <CardContent className="p-8">
               <div className="max-w-4xl">
-                <h3 className="text-2xl font-bold mb-3">Transform Your Next Video</h3>
+                <h3 className="text-2xl font-bold mb-3">Transform Any Content into Lead Magnets</h3>
                 <p className="text-blue-100 mb-6">
-                  {inputMethod === "youtube" 
-                    ? "Paste a YouTube URL and let our AI extract valuable coaching insights to create your next lead magnet in minutes."
-                    : "Manually upload your video transcript or drag and drop a text file to bypass YouTube restrictions."
-                  }
+                  {inputMethod === "youtube" && "Paste a YouTube URL and let our AI extract valuable coaching insights to create your next lead magnet in minutes."}
+                  {inputMethod === "manual" && "Manually upload your video transcript or drag and drop a text file to bypass YouTube restrictions."}
+                  {inputMethod === "pdf" && "Upload PDF documents, articles, or guides to extract key insights and convert them into practice guides."}
+                  {inputMethod === "audio" && "Upload audio files (podcasts, lectures, recordings) and we'll transcribe and analyze them for you."}
+                  {inputMethod === "streaming" && "Process content from streaming platforms, live streams, or other video sources beyond YouTube."}
                 </p>
                 
                 {/* Input Method Toggle */}
-                <div className="flex space-x-2 mb-4">
+                <div className="flex flex-wrap gap-2 mb-4">
                   <Button
                     variant={inputMethod === "youtube" ? "secondary" : "ghost"}
                     size="sm"
                     onClick={() => setInputMethod("youtube")}
                     className={inputMethod === "youtube" ? "bg-white text-primary" : "bg-transparent text-white border-white hover:bg-white/10"}
                   >
-                    YouTube URL
+                    📺 YouTube
                   </Button>
                   <Button
                     variant={inputMethod === "manual" ? "secondary" : "ghost"}
@@ -509,11 +598,35 @@ export default function Dashboard() {
                     onClick={() => setInputMethod("manual")}
                     className={inputMethod === "manual" ? "bg-white text-primary" : "bg-transparent text-white border-white hover:bg-white/10"}
                   >
-                    Manual Transcript
+                    📝 Text/Transcript
+                  </Button>
+                  <Button
+                    variant={inputMethod === "pdf" ? "secondary" : "ghost"}
+                    size="sm"
+                    onClick={() => setInputMethod("pdf")}
+                    className={inputMethod === "pdf" ? "bg-white text-primary" : "bg-transparent text-white border-white hover:bg-white/10"}
+                  >
+                    📄 PDF Document
+                  </Button>
+                  <Button
+                    variant={inputMethod === "audio" ? "secondary" : "ghost"}
+                    size="sm"
+                    onClick={() => setInputMethod("audio")}
+                    className={inputMethod === "audio" ? "bg-white text-primary" : "bg-transparent text-white border-white hover:bg-white/10"}
+                  >
+                    🎧 Audio File
+                  </Button>
+                  <Button
+                    variant={inputMethod === "streaming" ? "secondary" : "ghost"}
+                    size="sm"
+                    onClick={() => setInputMethod("streaming")}
+                    className={inputMethod === "streaming" ? "bg-white text-primary" : "bg-transparent text-white border-white hover:bg-white/10"}
+                  >
+                    🌐 Streaming Link
                   </Button>
                 </div>
 
-                {inputMethod === "youtube" ? (
+                {inputMethod === "youtube" && (
                   <div className="flex space-x-4">
                     <Input
                       value={youtubeUrl}
@@ -531,13 +644,15 @@ export default function Dashboard() {
                       Generate Guide
                     </Button>
                   </div>
-                ) : (
+                )}
+
+                {inputMethod === "manual" && (
                   <div className="space-y-4">
                     {/* Title Input */}
                     <Input
                       value={manualTitle}
                       onChange={(e) => setManualTitle(e.target.value)}
-                      placeholder="Enter video title..."
+                      placeholder="Enter content title..."
                       className="bg-white text-slate-800 placeholder-slate-500"
                       disabled={isProcessing}
                     />
@@ -580,6 +695,191 @@ export default function Dashboard() {
                     </div>
                   </div>
                 )}
+
+                {inputMethod === "pdf" && (
+                  <div className="space-y-4">
+                    {/* Title Input */}
+                    <Input
+                      value={manualTitle}
+                      onChange={(e) => setManualTitle(e.target.value)}
+                      placeholder="Enter document title..."
+                      className="bg-white text-slate-800 placeholder-slate-500"
+                      disabled={isProcessing || isProcessingFile}
+                    />
+                    
+                    {/* PDF Upload Area */}
+                    <div
+                      onDragOver={handleDragOver}
+                      onDragLeave={handleDragLeave}
+                      onDrop={handleDrop}
+                      className={`min-h-[120px] p-6 rounded-lg border-2 border-dashed transition-all cursor-pointer ${
+                        isDragOver 
+                          ? 'border-yellow-300 bg-yellow-50/10' 
+                          : 'border-white/30 bg-white/5'
+                      } ${uploadedFile ? 'border-green-300 bg-green-50/10' : ''}`}
+                    >
+                      <input
+                        type="file"
+                        accept=".pdf"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            setUploadedFile(file);
+                            if (!manualTitle) {
+                              setManualTitle(file.name.replace(/\.[^/.]+$/, ""));
+                            }
+                          }
+                        }}
+                        className="hidden"
+                        id="pdf-upload"
+                        disabled={isProcessing || isProcessingFile}
+                      />
+                      <label htmlFor="pdf-upload" className="cursor-pointer">
+                        {uploadedFile ? (
+                          <div className="text-center">
+                            <div className="text-green-300 mb-2">✅ PDF Uploaded</div>
+                            <div className="text-white font-medium">{uploadedFile.name}</div>
+                            <div className="text-blue-100 text-sm mt-1">
+                              {(uploadedFile.size / 1024 / 1024).toFixed(2)} MB
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="text-center">
+                            <div className="text-blue-100 text-xl mb-2">📄</div>
+                            <div className="text-white font-medium mb-1">Drop PDF here or click to upload</div>
+                            <div className="text-blue-100 text-sm">
+                              Supports articles, guides, research papers, ebooks
+                            </div>
+                          </div>
+                        )}
+                      </label>
+                    </div>
+                    
+                    <div className="flex justify-end">
+                      <Button 
+                        onClick={handleCreateGuide}
+                        disabled={isProcessing || isProcessingFile || !manualTitle || !uploadedFile}
+                        className="bg-white text-primary hover:bg-gray-50"
+                      >
+                        <Sparkles className="w-4 h-4 mr-2" />
+                        Extract & Generate Guide
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                {inputMethod === "audio" && (
+                  <div className="space-y-4">
+                    {/* Title Input */}
+                    <Input
+                      value={manualTitle}
+                      onChange={(e) => setManualTitle(e.target.value)}
+                      placeholder="Enter audio title..."
+                      className="bg-white text-slate-800 placeholder-slate-500"
+                      disabled={isProcessing || isProcessingFile}
+                    />
+                    
+                    {/* Audio Upload Area */}
+                    <div
+                      onDragOver={handleDragOver}
+                      onDragLeave={handleDragLeave}
+                      onDrop={handleDrop}
+                      className={`min-h-[120px] p-6 rounded-lg border-2 border-dashed transition-all cursor-pointer ${
+                        isDragOver 
+                          ? 'border-yellow-300 bg-yellow-50/10' 
+                          : 'border-white/30 bg-white/5'
+                      } ${uploadedFile ? 'border-green-300 bg-green-50/10' : ''}`}
+                    >
+                      <input
+                        type="file"
+                        accept="audio/*,.mp3,.wav,.m4a,.aac,.ogg"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            setUploadedFile(file);
+                            if (!manualTitle) {
+                              setManualTitle(file.name.replace(/\.[^/.]+$/, ""));
+                            }
+                          }
+                        }}
+                        className="hidden"
+                        id="audio-upload"
+                        disabled={isProcessing || isProcessingFile}
+                      />
+                      <label htmlFor="audio-upload" className="cursor-pointer">
+                        {uploadedFile ? (
+                          <div className="text-center">
+                            <div className="text-green-300 mb-2">✅ Audio Uploaded</div>
+                            <div className="text-white font-medium">{uploadedFile.name}</div>
+                            <div className="text-blue-100 text-sm mt-1">
+                              {(uploadedFile.size / 1024 / 1024).toFixed(2)} MB
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="text-center">
+                            <div className="text-blue-100 text-xl mb-2">🎧</div>
+                            <div className="text-white font-medium mb-1">Drop audio file here or click to upload</div>
+                            <div className="text-blue-100 text-sm">
+                              Supports MP3, WAV, M4A - podcasts, lectures, interviews
+                            </div>
+                          </div>
+                        )}
+                      </label>
+                    </div>
+                    
+                    <div className="flex justify-end">
+                      <Button 
+                        onClick={handleCreateGuide}
+                        disabled={isProcessing || isProcessingFile || !manualTitle || !uploadedFile}
+                        className="bg-white text-primary hover:bg-gray-50"
+                      >
+                        <Sparkles className="w-4 h-4 mr-2" />
+                        Transcribe & Generate Guide
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                {inputMethod === "streaming" && (
+                  <div className="space-y-4">
+                    {/* Title Input */}
+                    <Input
+                      value={manualTitle}
+                      onChange={(e) => setManualTitle(e.target.value)}
+                      placeholder="Enter stream/video title..."
+                      className="bg-white text-slate-800 placeholder-slate-500"
+                      disabled={isProcessing}
+                    />
+                    
+                    {/* Streaming URL Input */}
+                    <Input
+                      value={streamingUrl}
+                      onChange={(e) => setStreamingUrl(e.target.value)}
+                      placeholder="https://platform.com/video-url or https://stream-url.m3u8"
+                      className="bg-white text-slate-800 placeholder-slate-500"
+                      disabled={isProcessing}
+                    />
+                    
+                    <div className="bg-white/10 p-3 rounded-lg">
+                      <div className="text-blue-100 text-sm">
+                        <strong className="text-white">Supported platforms:</strong> Twitch, Vimeo, Dailymotion, Facebook, Instagram, TikTok, and direct streaming URLs
+                      </div>
+                    </div>
+                    
+                    <div className="flex justify-end">
+                      <Button 
+                        onClick={handleCreateGuide}
+                        disabled={isProcessing || !manualTitle || !streamingUrl}
+                        className="bg-white text-primary hover:bg-gray-50"
+                      >
+                        <Sparkles className="w-4 h-4 mr-2" />
+                        Process & Generate Guide
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+
               </div>
             </CardContent>
           </Card>
