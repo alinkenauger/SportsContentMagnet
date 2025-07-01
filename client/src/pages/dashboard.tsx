@@ -275,6 +275,7 @@ export default function Dashboard() {
                         <th className="text-left p-4 font-medium text-muted-foreground">Views</th>
                         <th className="text-left p-4 font-medium text-muted-foreground">Leads</th>
                         <th className="text-left p-4 font-medium text-muted-foreground">Landing Page</th>
+                        <th className="text-left p-4 font-medium text-muted-foreground">Thank You Page</th>
                         <th className="text-left p-4 font-medium text-muted-foreground">Actions</th>
                       </tr>
                     </thead>
@@ -322,6 +323,18 @@ export default function Dashboard() {
                               variant="ghost"
                               size="sm"
                               className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                            >
+                              <ExternalLink className="w-4 h-4 mr-1" />
+                              View
+                            </Button>
+                          </td>
+                          
+                          {/* Thank You Page Link */}
+                          <td className="p-4">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-green-600 hover:text-green-700 hover:bg-green-50"
                             >
                               <ExternalLink className="w-4 h-4 mr-1" />
                               View
