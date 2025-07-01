@@ -129,9 +129,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let transcript: string;
       let inputMethod = req.body.inputMethod;
       
+      // Extract common parameters
+      const { youtubeUrl, leadTags, collectSms, smsConsentText } = req.body;
+      
       // Handle different input methods
       if (inputMethod === "youtube") {
-        const { youtubeUrl } = req.body;
         if (!youtubeUrl) {
           return res.status(400).json({ message: "YouTube URL is required" });
         }
@@ -220,7 +222,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         userId,
         title: guideContent.title,
         description: analysis.summary,
-        youtubeUrl,
+        youtubeUrl: youtubeUrl || null,
         youtubeVideoId: videoData.videoId,
         channelTitle: videoData.channelTitle,
         thumbnailUrl: videoData.thumbnailUrl,
@@ -247,7 +249,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           { name: 'skillLevel', label: 'Skill Level', type: 'select', options: ['Beginner', 'Intermediate', 'Advanced'], required: false }
         ],
         customUrl: `${guide.slug}-landing`,
-        collectSms: collectSms || false,
+        collectSms: collectSms === true || collectSms === "true",
         smsConsentText: smsConsentText || "I consent to receive text messages from this business. Message and data rates may apply. Reply STOP to opt out.",
         isActive: true
       });
