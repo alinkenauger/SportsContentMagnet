@@ -97,6 +97,11 @@ export function setupGoogleAuth(app: Express) {
   // Google OAuth routes
   app.get(
     "/api/auth/google",
+    (req, res, next) => {
+      console.log("Google OAuth initiated - Host:", req.get('host'));
+      console.log("Expected callback URL:", `https://${req.get('host')}/api/auth/google/callback`);
+      next();
+    },
     passport.authenticate("google", {
       scope: [
         "profile",
