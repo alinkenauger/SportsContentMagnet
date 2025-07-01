@@ -8,6 +8,7 @@ import Sidebar from "@/components/sidebar";
 import StatsCard from "@/components/stats-card";
 import GuideCard from "@/components/guide-card";
 import ProcessingModal from "@/components/processing-modal";
+import GoogleAuthButton from "@/components/google-auth-button";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -407,6 +408,11 @@ export default function Dashboard() {
               icon={ExternalLink}
               iconColor="text-purple-600"
             />
+          </div>
+
+          {/* Google Auth Status */}
+          <div className="mb-6">
+            <GoogleAuthButton />
           </div>
 
           {/* Quick Action - Create New Guide */}
