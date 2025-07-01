@@ -78,6 +78,8 @@ export default function ContentLibrary() {
   }) || [];
 
   const handleEditGuide = (guide: Guide) => {
+    console.log('Edit button clicked');
+    console.log('Navigating to:', `/guide-editor/${guide.id}`);
     navigate(`/guide-editor/${guide.id}`);
   };
 
