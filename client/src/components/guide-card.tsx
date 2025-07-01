@@ -197,12 +197,7 @@ export default function GuideCard({ guide, onEdit, onViewLanding, onViewAnalytic
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                console.log('Edit button clicked in GuideCard');
-                console.log('Guide ID:', guide.id);
-                console.log('onEdit function exists:', !!onEdit);
-                console.log('About to call onEdit with guide:', guide);
                 onEdit?.(guide);
-                console.log('onEdit called successfully');
               }} 
               variant="outline"
             >

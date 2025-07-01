@@ -478,7 +478,7 @@ export default function GuideEditorEnhanced() {
   };
 
   const deleteElement = (id: string) => {
-    setElements(elements.filter(el => el.id !== id && el.parentId !== id));
+    setElements(prevElements => prevElements.filter(el => el.id !== id && el.parentId !== id));
     setIsEditing(null);
   };
 
@@ -555,7 +555,11 @@ export default function GuideEditorEnhanced() {
           <Button
             size="sm"
             variant="ghost"
-            onClick={() => deleteElement(element.id)}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              deleteElement(element.id);
+            }}
             className="h-6 w-6 p-0 bg-background border text-destructive hover:text-destructive"
           >
             <Trash2 className="h-3 w-3" />
