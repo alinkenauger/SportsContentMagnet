@@ -1,4 +1,8 @@
 import { YoutubeTranscript } from 'youtube-transcript';
+import { TranscriptionResult } from './audioTranscription.js';
+import { ytdlpTranscriptionService } from './ytdlpTranscription.js';
+import { whisperTranscriptionService } from './whisperTranscription.js';
+import { whisperYoutubeService } from './whisperYoutubeService.js';
 
 export interface YouTubeVideoData {
   videoId: string;
