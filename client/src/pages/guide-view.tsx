@@ -269,11 +269,26 @@ export default function GuideView() {
                   </div>
                   <div className="flex-1">
                     <div className="flex items-center space-x-3 mb-2">
-                      {section.timestamp && (
+                      <h3 className="text-xl font-semibold text-slate-800">
+                        {section.title}
+                      </h3>
+                      <Badge variant="secondary" className="text-xs">
+                        {section.type.charAt(0).toUpperCase() + section.type.slice(1)}
+                      </Badge>
+                    </div>
+                    
+                    <div className="prose prose-slate max-w-none mb-4">
+                      <div className="whitespace-pre-wrap text-slate-700 leading-relaxed">
+                        {section.content}
+                      </div>
+                    </div>
+
+                    {section.timestamp && (
+                      <div className="flex justify-center pt-3 border-t border-slate-100">
                         <Button
                           variant="default"
                           size="sm"
-                          className="px-3 py-2 bg-orange-600 hover:bg-orange-700 text-white shadow-md"
+                          className="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white shadow-md"
                           onClick={() => {
                             const iframe = document.querySelector('iframe');
                             if (iframe && section.timestampSeconds) {
@@ -283,22 +298,10 @@ export default function GuideView() {
                           }}
                         >
                           <Play className="w-4 h-4 mr-2" />
-                          {section.timestamp}
+                          Watch at {section.timestamp}
                         </Button>
-                      )}
-                      <h3 className="text-xl font-semibold text-slate-800">
-                        {section.title}
-                      </h3>
-                      <Badge variant="secondary" className="text-xs">
-                        {section.type.charAt(0).toUpperCase() + section.type.slice(1)}
-                      </Badge>
-                    </div>
-                    
-                    <div className="prose prose-slate max-w-none">
-                      <div className="whitespace-pre-wrap text-slate-700 leading-relaxed">
-                        {section.content}
                       </div>
-                    </div>
+                    )}
                   </div>
                 </div>
               </CardContent>
