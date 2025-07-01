@@ -276,13 +276,32 @@ export default function Dashboard() {
                 </div>
               ) : guides && guides.length > 0 ? (
                 <div className="overflow-x-auto">
-                  <table className="w-full">
+                  <table className="w-full table-fixed">
+                    <colgroup>
+                      <col style={{ width: '35%' }} />
+                      <col style={{ width: '20%' }} />
+                      <col style={{ width: '15%' }} />
+                      <col style={{ width: '15%' }} />
+                      <col style={{ width: '15%' }} />
+                    </colgroup>
                     <thead className="border-b">
                       <tr>
-                        <th className="text-left p-4 font-medium text-muted-foreground">Guide</th>
-                        <th className="text-left p-4 font-medium text-muted-foreground">Conversion Funnel</th>
-                        <th className="text-left p-4 font-medium text-muted-foreground">Landing Page</th>
-                        <th className="text-left p-4 font-medium text-muted-foreground">Guide Page</th>
+                        <th className="text-left p-4 font-medium text-muted-foreground resize-handle group">
+                          Guide
+                          <div className="absolute right-0 top-0 h-full w-1 cursor-col-resize opacity-0 group-hover:opacity-100 bg-blue-500 transition-opacity"></div>
+                        </th>
+                        <th className="text-left p-4 font-medium text-muted-foreground resize-handle group relative">
+                          Conversion Funnel
+                          <div className="absolute right-0 top-0 h-full w-1 cursor-col-resize opacity-0 group-hover:opacity-100 bg-blue-500 transition-opacity"></div>
+                        </th>
+                        <th className="text-left p-4 font-medium text-muted-foreground resize-handle group relative">
+                          Landing Page
+                          <div className="absolute right-0 top-0 h-full w-1 cursor-col-resize opacity-0 group-hover:opacity-100 bg-blue-500 transition-opacity"></div>
+                        </th>
+                        <th className="text-left p-4 font-medium text-muted-foreground resize-handle group relative">
+                          Guide Page
+                          <div className="absolute right-0 top-0 h-full w-1 cursor-col-resize opacity-0 group-hover:opacity-100 bg-blue-500 transition-opacity"></div>
+                        </th>
                         <th className="text-left p-4 font-medium text-muted-foreground">Actions</th>
                       </tr>
                     </thead>
@@ -290,7 +309,7 @@ export default function Dashboard() {
                       {guides.slice(0, 5).map((guide: any) => (
                         <tr key={guide.id} className="border-b hover:bg-muted/50 transition-colors">
                           {/* Guide Info */}
-                          <td className="p-4">
+                          <td className="px-3 py-3">
                             <div className="flex items-start space-x-3">
                               <div className="flex-shrink-0">
                                 <div className="w-16 h-12 rounded-md overflow-hidden bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
@@ -304,14 +323,14 @@ export default function Dashboard() {
                                   {guide.createdAt ? new Date(guide.createdAt).toLocaleDateString() : 'No date'}
                                 </p>
                               </div>
-                              <div className="min-w-0 max-w-[300px] pr-2">
+                              <div className="min-w-0 flex-1">
                                 <p className="font-medium text-foreground leading-tight">{guide.title}</p>
                               </div>
                             </div>
                           </td>
                           
                           {/* Conversion Funnel */}
-                          <td className="p-4">
+                          <td className="px-3 py-3">
                             <div className="space-y-2">
                               {/* Views */}
                               <div className="flex items-center justify-between text-sm">
@@ -350,7 +369,7 @@ export default function Dashboard() {
                           </td>
                           
                           {/* Landing Page Link */}
-                          <td className="p-4">
+                          <td className="px-3 py-3">
                             <Button
                               variant="ghost"
                               size="sm"
@@ -362,7 +381,7 @@ export default function Dashboard() {
                           </td>
                           
                           {/* Guide Page Link */}
-                          <td className="p-4">
+                          <td className="px-3 py-3">
                             <Button
                               variant="ghost"
                               size="sm"
@@ -374,8 +393,8 @@ export default function Dashboard() {
                           </td>
                           
                           {/* Actions */}
-                          <td className="p-4">
-                            <div className="flex items-center space-x-2">
+                          <td className="px-3 py-3">
+                            <div className="flex items-center space-x-1">
                               <Button
                                 variant="ghost"
                                 size="sm"
