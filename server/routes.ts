@@ -2,9 +2,8 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
-import { analyzeVideoContent, generatePracticeGuide } from "./services/openai";
-import { getYouTubeVideoData, transcribeVideo } from "./services/youtube";
 import { analyzeVideoContent, generatePracticeGuide, personalizeGuideContent } from "./services/openai";
+import { getYouTubeVideoData, transcribeVideo } from "./services/youtube";
 import { insertGuideSchema, insertLandingPageSchema, insertLeadSchema, insertBrandingSettingsSchema, insertTrainingSettingsSchema, insertKnowledgebaseEntrySchema } from "@shared/schema";
 import QRCode from 'qrcode';
 
@@ -21,6 +20,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching user:", error);
       res.status(500).json({ message: "Failed to fetch user" });
+    }
+  });
+
+  // Test transcription endpoint (for debugging)
+  app.post('/api/test-transcription', async (req, res) => {
+    try {
+      const { videoId } = req.body;
+      if (!videoId) {
+        return res.status(400).json({ error: 'videoId is required' });
+      }
+      
+      console.log(`Testing transcription for video: ${videoId}`);
+      const transcript = await transcribeVideo(videoId);
+      
+      res.json({ 
+        success: true, 
+        transcript: transcript.substring(0, 500) + '...', // Truncate for response
+        length: transcript.length 
+      });
+    } catch (error) {
+      console.error('Test transcription error:', error);
+      res.status(500).json({ error: error.message });
     }
   });
 
