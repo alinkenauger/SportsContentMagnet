@@ -280,8 +280,7 @@ export default function Dashboard() {
                     <thead className="border-b">
                       <tr>
                         <th className="text-left p-4 font-medium text-muted-foreground">Guide</th>
-                        <th className="text-left p-4 font-medium text-muted-foreground">Views</th>
-                        <th className="text-left p-4 font-medium text-muted-foreground">Leads</th>
+                        <th className="text-left p-4 font-medium text-muted-foreground">Conversion Funnel</th>
                         <th className="text-left p-4 font-medium text-muted-foreground">Landing Page</th>
                         <th className="text-left p-4 font-medium text-muted-foreground">Guide Page</th>
                         <th className="text-left p-4 font-medium text-muted-foreground">Actions</th>
@@ -309,19 +308,42 @@ export default function Dashboard() {
                             </div>
                           </td>
                           
-                          {/* Views */}
+                          {/* Conversion Funnel */}
                           <td className="p-4">
-                            <div className="flex items-center text-sm">
-                              <Eye className="w-4 h-4 mr-2 text-muted-foreground" />
-                              <span className="font-medium">{guide.views || 0}</span>
-                            </div>
-                          </td>
-                          
-                          {/* Leads */}
-                          <td className="p-4">
-                            <div className="flex items-center text-sm">
-                              <Users className="w-4 h-4 mr-2 text-muted-foreground" />
-                              <span className="font-medium">0</span>
+                            <div className="space-y-2">
+                              {/* Views */}
+                              <div className="flex items-center justify-between text-sm">
+                                <div className="flex items-center">
+                                  <Eye className="w-3 h-3 mr-1 text-blue-500" />
+                                  <span className="text-muted-foreground">Views</span>
+                                </div>
+                                <span className="font-medium">{guide.views || 0}</span>
+                              </div>
+                              
+                              {/* Visual Funnel */}
+                              <div className="relative">
+                                <div className="w-full h-2 bg-blue-100 rounded-full overflow-hidden">
+                                  <div 
+                                    className="h-full bg-blue-500 rounded-full transition-all"
+                                    style={{ width: '100%' }}
+                                  ></div>
+                                </div>
+                                <div className="w-4/5 h-1.5 bg-green-100 rounded-full overflow-hidden mt-1 ml-2">
+                                  <div 
+                                    className="h-full bg-green-500 rounded-full transition-all"
+                                    style={{ width: guide.views > 0 ? `${Math.min(100, ((0) / guide.views) * 100)}%` : '0%' }}
+                                  ></div>
+                                </div>
+                              </div>
+                              
+                              {/* Leads */}
+                              <div className="flex items-center justify-between text-sm">
+                                <div className="flex items-center">
+                                  <Users className="w-3 h-3 mr-1 text-green-500" />
+                                  <span className="text-muted-foreground">Leads</span>
+                                </div>
+                                <span className="font-medium">0</span>
+                              </div>
                             </div>
                           </td>
                           
