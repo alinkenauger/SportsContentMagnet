@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useParams } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { CheckCircle, Download, Star, Users, Clock, Lock, Play } from "lucide-react";
+import { CheckCircle, Download, Star, Users, Clock, Lock } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 
 interface LandingPageData {
@@ -78,56 +78,33 @@ export default function GuideLanding() {
     },
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!landingData) return;
-
-    // Validate required fields
-    const missingFields = landingData.landingPage.customFields
-      .filter(field => field.required && !formData[field.name])
-      .map(field => field.label);
-
-    if (missingFields.length > 0) {
+    if (!formData.email) {
       toast({
-        title: "Missing Information",
-        description: `Please fill in: ${missingFields.join(", ")}`,
+        title: "Email Required",
+        description: "Please enter your email address.",
         variant: "destructive",
       });
       return;
     }
 
-    // Validate email format
-    const emailField = landingData.landingPage.customFields.find(f => f.type === "email");
-    if (emailField && formData[emailField.name]) {
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(formData[emailField.name])) {
-        toast({
-          title: "Invalid Email",
-          description: "Please enter a valid email address",
-          variant: "destructive",
-        });
-        return;
-      }
-    }
-
-    // Validate SMS consent if phone is provided
-    if ((landingData.landingPage as any).collectSms && formData.phone && formData.phone.trim()) {
-      if (!formData.smsConsent || formData.smsConsent !== "true") {
-        toast({
-          title: "SMS Consent Required",
-          description: "Please consent to SMS messages if you want to provide your phone number",
-          variant: "destructive",
-        });
-        return;
-      }
+    // Check SMS consent requirement
+    if ((landingData?.landingPage as any)?.collectSms && formData.phone && !formData.smsConsent) {
+      toast({
+        title: "SMS Consent Required",
+        description: "Please provide consent for SMS messages if you want to share your phone number.",
+        variant: "destructive",
+      });
+      return;
     }
 
     // Prepare submission data with SMS fields
     const submissionData = {
       ...formData,
-      phone: (landingData.landingPage as any).collectSms ? (formData.phone || "") : "",
-      smsConsent: ((landingData.landingPage as any).collectSms && formData.phone) ? 
+      phone: (landingData?.landingPage as any)?.collectSms ? (formData.phone || "") : "",
+      smsConsent: ((landingData?.landingPage as any)?.collectSms && formData.phone) ? 
         (formData.smsConsent === "true" ? "true" : "false") : "false"
     };
 
@@ -203,47 +180,65 @@ export default function GuideLanding() {
         {/* Main Headline */}
         <div className="text-center mb-16">
           <h1 className="text-4xl md:text-5xl font-bold text-gray-800 mb-6 leading-tight max-w-4xl mx-auto">
-            {(landingPage as any).headline || `MASTER ${guide.category?.toUpperCase()} WITH "${guide.title}"`}
+            {(landingPage as any).headline || `Master sports performance and agility training with This Free Practice Guide`}
           </h1>
           <p className="text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
-            {(landingPage as any).description || guide.description}
+            {(landingPage as any).description || `Download our comprehensive practice guide based on "${guide.title}" and start improving your skills today.`}
           </p>
         </div>
 
-        {/* Thumbnail (left) and Form (right) Section */}
+        {/* Thumbnail and Form Section */}
         <div className="grid lg:grid-cols-2 gap-12 items-start mb-16">
-          {/* Left Column - Video Thumbnail with Lock */}
-          <div className="relative">
-            <div className="aspect-video rounded-lg overflow-hidden bg-black relative shadow-2xl">
-              <img 
-                src={guide.thumbnailUrl || "/api/placeholder/600/400"} 
-                alt={guide.title}
-                className="w-full h-full object-cover"
-              />
-              {/* Lock Overlay */}
-              <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
-                <div className="text-center text-white">
-                  <Lock className="w-16 h-16 mx-auto mb-4 opacity-90" />
-                  <h3 className="text-2xl font-bold mb-2">Unlock Your Free Guide</h3>
-                  <p className="text-lg opacity-90">Enter your email to access instantly</p>
+          {/* Left Column - Video with Benefits Below */}
+          <div>
+            {/* Video Thumbnail with Lock */}
+            <div className="relative mb-8">
+              <div className="aspect-video rounded-lg overflow-hidden bg-black relative shadow-2xl">
+                <img 
+                  src={guide.thumbnailUrl || "/api/placeholder/600/400"} 
+                  alt={guide.title}
+                  className="w-full h-full object-cover"
+                />
+                {/* Lock Overlay */}
+                <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+                  <div className="text-center text-white">
+                    <Lock className="w-16 h-16 mx-auto mb-4 opacity-90" />
+                    <h3 className="text-2xl font-bold mb-2">Unlock Your Free Guide</h3>
+                    <p className="text-lg opacity-90">Enter your email to access instantly</p>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Social Proof */}
+              <div className="mt-6 flex items-center justify-center space-x-6 text-sm text-gray-600">
+                <div className="flex items-center">
+                  <Users className="w-4 h-4 mr-2 text-green-600" />
+                  <span>1,847+ Downloads</span>
+                </div>
+                <div className="flex items-center">
+                  <Star className="w-4 h-4 mr-2 text-yellow-500" />
+                  <span>4.9/5 Rating</span>
+                </div>
+                <div className="flex items-center">
+                  <Clock className="w-4 h-4 mr-2 text-blue-600" />
+                  <span>5-Min Setup</span>
                 </div>
               </div>
             </div>
-            
-            {/* Social Proof */}
-            <div className="mt-6 flex items-center justify-center space-x-6 text-sm text-gray-600">
-              <div className="flex items-center">
-                <Users className="w-4 h-4 mr-2 text-green-600" />
-                <span>1,847+ Downloads</span>
-              </div>
-              <div className="flex items-center">
-                <Star className="w-4 h-4 mr-2 text-yellow-500" />
-                <span>4.9/5 Rating</span>
-              </div>
-              <div className="flex items-center">
-                <Clock className="w-4 h-4 mr-2 text-blue-600" />
-                <span>5-Min Setup</span>
-              </div>
+
+            {/* 4 Benefits Below Video */}
+            <div className="space-y-3">
+              {[
+                "Master proven techniques that work for all skill levels",
+                "Follow step-by-step practice drills designed by professionals", 
+                "Get exclusive coaching insights from industry experts",
+                "Avoid the most common mistakes that hold players back"
+              ].map((benefit, index) => (
+                <div key={index} className="flex items-start text-left">
+                  <CheckCircle className="w-5 h-5 text-green-600 mr-3 flex-shrink-0 mt-0.5" />
+                  <span className="text-gray-700 font-medium">{benefit}</span>
+                </div>
+              ))}
             </div>
           </div>
 
@@ -259,7 +254,7 @@ export default function GuideLanding() {
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-4" id="lead-form">
-              {/* Standard Fields */}
+              {/* Email Field */}
               <div>
                 <Label htmlFor="email" className="text-sm font-medium text-gray-700">
                   Email Address *
@@ -375,32 +370,6 @@ export default function GuideLanding() {
             </p>
           </div>
         </div>
-
-        {/* Benefits Section - Single Column with Multiple Bullet Points */}
-        <div className="text-center mb-12">
-          <h2 className="text-3xl font-bold text-gray-800 mb-8">
-            What You'll Learn Inside
-          </h2>
-          <div className="max-w-2xl mx-auto">
-            <div className="grid grid-cols-1 gap-4">
-              {[
-                "Master proven techniques that work for all skill levels",
-                "Follow step-by-step practice drills designed by professionals", 
-                "Get exclusive coaching insights from industry experts",
-                "Avoid the most common mistakes that hold players back",
-                "Discover equipment recommendations that won't break the bank",
-                "Learn performance tracking tips to measure your progress",
-                "Access bonus warm-up routines for injury prevention",
-                "Get troubleshooting guides for quick problem solving"
-              ].map((benefit, index) => (
-                <div key={index} className="flex items-start text-left bg-white rounded-lg p-4 shadow-sm border border-gray-100">
-                  <CheckCircle className="w-6 h-6 text-green-600 mr-4 flex-shrink-0 mt-0.5" />
-                  <span className="text-gray-700 font-medium text-lg leading-relaxed">{benefit}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
       </main>
 
       {/* Footer */}
@@ -410,46 +379,6 @@ export default function GuideLanding() {
             © 2024 {brandingSettings?.companyName || "VidMagnet"}. All rights reserved. 
             {" "}By submitting this form, you agree to our privacy policy and terms of service.
           </p>
-        </div>
-      </footer>
-    </div>
-  );
-}
-                      <span className="text-red-500 ml-1">*</span>
-                    </Label>
-                  </div>
-                )}
-              </>
-            )}
-
-            <Button 
-              type="submit" 
-              size="lg"
-              disabled={submitLeadMutation.isPending}
-              className="w-full bg-green-600 hover:bg-green-700 text-white py-3 text-lg font-semibold"
-            >
-              {submitLeadMutation.isPending ? "SENDING..." : "GET MY FREE TRAINING NOW »"}
-            </Button>
-          </form>
-        </section>
-      </main>
-
-      {/* Footer */}
-      <footer className="bg-gray-800 text-white py-8 px-4">
-        <div className="container mx-auto max-w-6xl text-center">
-          <p className="text-sm text-gray-400 mb-4">
-            Consult your doctor prior to any training within our products, videos, or website. Nothing on this page, any of our websites, or any of our content or curriculum is a promise or guarantee of results, and we do not offer any legal, medical, tax or other professional advice. By using our training, you understand that the information in our products are based on our training experience only and is not professional medical advice.
-          </p>
-          <div className="text-sm text-gray-500">
-            <p className="mb-2">Copyright 2025+ {brandingSettings?.companyName || "VidMagnet"}. All Rights Reserved</p>
-            <div className="flex justify-center space-x-4">
-              <a href="#" className="hover:text-white">Privacy Policy</a>
-              <span>|</span>
-              <a href="#" className="hover:text-white">Terms & Conditions</a>
-              <span>|</span>
-              <a href="#" className="hover:text-white">Contact Us</a>
-            </div>
-          </div>
         </div>
       </footer>
     </div>
