@@ -18,6 +18,9 @@ export function setupGoogleAuth(app: Express) {
     return;
   }
 
+  console.log("Setting up Google OAuth with Client ID:", process.env.GOOGLE_CLIENT_ID?.substring(0, 20) + "...");
+  console.log("Callback URL configured as: /api/auth/google/callback");
+
   const googleStrategy = new GoogleStrategy(
     {
       clientID: process.env.GOOGLE_CLIENT_ID,
