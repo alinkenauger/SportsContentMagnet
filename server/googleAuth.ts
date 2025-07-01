@@ -120,23 +120,34 @@ export function setupGoogleAuth(app: Express) {
     })
   );
 
-  app.get(
-    "/api/auth/google/callback",
-    (req, res, next) => {
-      console.log("Google callback received - Query params:", req.query);
-      console.log("Google callback - Session before auth:", !!req.session);
-      next();
-    },
-    passport.authenticate("google", { 
-      failureRedirect: "/?error=google_auth_failed",
-      failureFlash: false
-    }),
-    (req, res) => {
-      console.log("Google authentication successful - User:", !!req.user);
-      console.log("Redirecting to dashboard");
-      res.redirect("/dashboard");
+  app.get("/api/auth/google/callback", (req, res) => {
+    console.log("=== GOOGLE CALLBACK DEBUG ===");
+    console.log("Query params:", req.query);
+    console.log("Headers:", req.headers);
+    console.log("Session exists:", !!req.session);
+    console.log("Session ID:", req.sessionID);
+    
+    // Check for OAuth errors first
+    if (req.query.error) {
+      console.log("OAuth Error:", req.query.error);
+      console.log("Error Description:", req.query.error_description);
+      return res.redirect(`/?error=${req.query.error}&desc=${encodeURIComponent(req.query.error_description || '')}`);
     }
-  );
+    
+    // If no error, proceed with Passport authentication
+    passport.authenticate("google", { 
+      failureRedirect: "/?error=auth_failed",
+      failureFlash: false
+    })(req, res, (err) => {
+      if (err) {
+        console.log("Passport authentication error:", err);
+        return res.redirect("/?error=passport_failed");
+      }
+      
+      console.log("Authentication successful - User:", !!req.user);
+      res.redirect("/dashboard");
+    });
+  });
 
   // Add error handling for failed OAuth
   app.get("/", (req, res, next) => {
