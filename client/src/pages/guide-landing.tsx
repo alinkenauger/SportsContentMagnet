@@ -200,143 +200,221 @@ export default function GuideLanding() {
 
       {/* Main Content */}
       <main className="container mx-auto px-4 py-16 max-w-6xl">
-        {/* Green accent bar */}
-        <div className="w-16 h-1 bg-green-500 mx-auto mb-8"></div>
-        
         {/* Main Headline */}
         <div className="text-center mb-16">
           <h1 className="text-4xl md:text-5xl font-bold text-gray-800 mb-6 leading-tight max-w-4xl mx-auto">
-            {landingPage.headline || `MASTER ${guide.category?.toUpperCase()} WITH "${guide.title}"`}
+            {(landingPage as any).headline || `MASTER ${guide.category?.toUpperCase()} WITH "${guide.title}"`}
           </h1>
+          <p className="text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
+            {(landingPage as any).description || guide.description}
+          </p>
         </div>
 
-        {/* Content Grid */}
-        <div className="grid md:grid-cols-2 gap-12 items-center mb-16">
-          {/* Left Column - Benefits */}
-          <div className="space-y-6">
-            {guide.tags?.slice(0, 3).map((benefit, index) => (
-              <div key={index} className="flex items-start space-x-4">
-                <CheckCircle className="w-6 h-6 text-green-500 mt-1 flex-shrink-0" />
-                <p className="text-lg text-gray-700 leading-relaxed">
-                  {benefit}
-                </p>
-              </div>
-            ))}
-          </div>
-
-          {/* Right Column - Locked Video */}
+        {/* Thumbnail (left) and Form (right) Section */}
+        <div className="grid lg:grid-cols-2 gap-12 items-start mb-16">
+          {/* Left Column - Video Thumbnail with Lock */}
           <div className="relative">
-            <div className="aspect-video rounded-lg overflow-hidden bg-black relative group">
+            <div className="aspect-video rounded-lg overflow-hidden bg-black relative shadow-2xl">
               <img 
                 src={guide.thumbnailUrl || "/api/placeholder/600/400"} 
                 alt={guide.title}
                 className="w-full h-full object-cover"
               />
               {/* Lock Overlay */}
-              <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
-                <div className="bg-white/20 backdrop-blur-sm rounded-full p-4">
-                  <Lock className="w-8 h-8 text-white" />
+              <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+                <div className="text-center text-white">
+                  <Lock className="w-16 h-16 mx-auto mb-4 opacity-90" />
+                  <h3 className="text-2xl font-bold mb-2">Unlock Your Free Guide</h3>
+                  <p className="text-lg opacity-90">Enter your email to access instantly</p>
                 </div>
               </div>
-              {/* Video title overlay */}
-              <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-6">
-                <h3 className="text-white text-xl font-bold">
-                  {guide.title}
-                </h3>
+            </div>
+            
+            {/* Social Proof */}
+            <div className="mt-6 flex items-center justify-center space-x-6 text-sm text-gray-600">
+              <div className="flex items-center">
+                <Users className="w-4 h-4 mr-2 text-green-600" />
+                <span>1,847+ Downloads</span>
+              </div>
+              <div className="flex items-center">
+                <Star className="w-4 h-4 mr-2 text-yellow-500" />
+                <span>4.9/5 Rating</span>
+              </div>
+              <div className="flex items-center">
+                <Clock className="w-4 h-4 mr-2 text-blue-600" />
+                <span>5-Min Setup</span>
               </div>
             </div>
           </div>
-        </div>
 
-        {/* CTA Button */}
-        <div className="text-center mb-16">
-          <Button 
-            size="lg"
-            className="bg-green-600 hover:bg-green-700 text-white px-8 py-4 text-lg font-semibold rounded-md"
-            onClick={() => document.getElementById('lead-form')?.scrollIntoView({ behavior: 'smooth' })}
-          >
-            GET MY FREE TRAINING NOW »
-          </Button>
-        </div>
+          {/* Right Column - Lead Capture Form */}
+          <div className="bg-white rounded-lg shadow-xl border border-gray-200 p-8">
+            <div className="text-center mb-6">
+              <h2 className="text-2xl font-bold text-gray-800 mb-2">
+                Get Your FREE Practice Guide
+              </h2>
+              <p className="text-gray-600">
+                Join thousands who've improved their game with our proven techniques
+              </p>
+            </div>
 
-        {/* Lead Form Section */}
-        <section id="lead-form" className="bg-white rounded-lg shadow-lg p-8 max-w-2xl mx-auto">
-          <h2 className="text-2xl font-bold text-gray-800 mb-6 text-center">
-            Get Your Free Practice Guide
-          </h2>
-          
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {landingPage.customFields.map((field) => (
-              <div key={field.name}>
-                <Label 
-                  htmlFor={field.name}
-                  className="text-sm font-medium text-gray-700"
-                >
-                  {field.label} {field.required && <span className="text-red-500">*</span>}
+            <form onSubmit={handleSubmit} className="space-y-4" id="lead-form">
+              {/* Standard Fields */}
+              <div>
+                <Label htmlFor="email" className="text-sm font-medium text-gray-700">
+                  Email Address *
                 </Label>
-                
-                {field.type === "select" ? (
-                  <Select
-                    value={formData[field.name] || ""}
-                    onValueChange={(value) => setFormData(prev => ({ ...prev, [field.name]: value }))}
-                  >
-                    <SelectTrigger className="w-full mt-1">
-                      <SelectValue placeholder={`Select ${field.label.toLowerCase()}`} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {field.options?.map((option) => (
-                        <SelectItem key={option} value={option}>
-                          {option}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                ) : (
-                  <Input
-                    id={field.name}
-                    type={field.type}
-                    value={formData[field.name] || ""}
-                    onChange={(e) => setFormData(prev => ({ ...prev, [field.name]: e.target.value }))}
-                    placeholder={`Enter your ${field.label.toLowerCase()}`}
-                    className="mt-1"
-                    required={field.required}
-                  />
-                )}
+                <Input
+                  id="email"
+                  type="email"
+                  required
+                  className="mt-1 block w-full border-gray-300 rounded-md focus:ring-green-500 focus:border-green-500"
+                  value={formData.email || ""}
+                  onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
+                  placeholder="your@email.com"
+                />
               </div>
-            ))}
 
-            {/* SMS Collection Fields */}
-            {(landingData.landingPage as any).collectSms && (
-              <>
-                <div>
-                  <Label htmlFor="phone" className="text-sm font-medium text-gray-700">
-                    Phone Number (optional)
+              {/* Custom Fields */}
+              {(landingPage as any).customFields?.map((field: any) => (
+                <div key={field.name}>
+                  <Label htmlFor={field.name} className="text-sm font-medium text-gray-700">
+                    {field.label} {field.required && '*'}
                   </Label>
-                  <Input
-                    id="phone"
-                    type="tel"
-                    value={formData.phone || ""}
-                    onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
-                    placeholder="Enter your phone number"
-                    className="mt-1"
-                  />
-                </div>
-                
-                {formData.phone && formData.phone.trim() && (
-                  <div className="flex items-start space-x-3 p-4 bg-blue-50 rounded-lg">
-                    <input
-                      type="checkbox"
-                      id="smsConsent"
-                      checked={formData.smsConsent === "true"}
-                      onChange={(e) => setFormData(prev => ({ 
-                        ...prev, 
-                        smsConsent: e.target.checked ? "true" : "false" 
-                      }))}
-                      className="mt-1 h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                  
+                  {field.type === 'select' ? (
+                    <Select
+                      value={formData[field.name] || ""}
+                      onValueChange={(value) => setFormData(prev => ({ ...prev, [field.name]: value }))}
+                    >
+                      <SelectTrigger className="mt-1">
+                        <SelectValue placeholder={`Select ${field.label.toLowerCase()}`} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {field.options?.map((option: any) => (
+                          <SelectItem key={option} value={option}>
+                            {option}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <Input
+                      id={field.name}
+                      type={field.type}
+                      required={field.required}
+                      className="mt-1 block w-full border-gray-300 rounded-md focus:ring-green-500 focus:border-green-500"
+                      value={formData[field.name] || ""}
+                      onChange={(e) => setFormData(prev => ({ ...prev, [field.name]: e.target.value }))}
+                      placeholder={`Enter your ${field.label.toLowerCase()}`}
                     />
-                    <Label htmlFor="smsConsent" className="text-sm text-gray-700 leading-relaxed">
-                      {(landingData.landingPage as any).smsConsentText || 
-                        "I consent to receive text messages from this business. Message and data rates may apply. Reply STOP to opt out."}
+                  )}
+                </div>
+              ))}
+
+              {/* SMS Collection (if enabled) */}
+              {(landingPage as any).collectSms && (
+                <>
+                  <div>
+                    <Label htmlFor="phone" className="text-sm font-medium text-gray-700">
+                      Phone Number (optional)
+                    </Label>
+                    <Input
+                      id="phone"
+                      type="tel"
+                      className="mt-1 block w-full border-gray-300 rounded-md focus:ring-green-500 focus:border-green-500"
+                      value={formData.phone || ""}
+                      onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
+                      placeholder="+1 (555) 123-4567"
+                    />
+                  </div>
+                  
+                  {formData.phone && (
+                    <div className="flex items-start space-x-2">
+                      <input
+                        type="checkbox"
+                        id="smsConsent"
+                        className="mt-1 rounded border-gray-300 text-green-600 focus:ring-green-500"
+                        checked={formData.smsConsent === "true"}
+                        onChange={(e) => setFormData(prev => ({ 
+                          ...prev, 
+                          smsConsent: e.target.checked ? "true" : "false" 
+                        }))}
+                      />
+                      <Label htmlFor="smsConsent" className="text-sm text-gray-600 leading-relaxed">
+                        {(landingPage as any).smsConsentText || 
+                          "I consent to receive SMS notifications and updates. Message frequency varies. Reply STOP to opt-out."}
+                      </Label>
+                    </div>
+                  )}
+                </>
+              )}
+
+              <Button
+                type="submit"
+                disabled={submitLeadMutation.isPending}
+                className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-md text-lg transition-colors"
+              >
+                {submitLeadMutation.isPending ? (
+                  <div className="flex items-center justify-center">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    Processing...
+                  </div>
+                ) : (
+                  <>
+                    <Download className="w-5 h-5 mr-2" />
+                    GET MY FREE GUIDE NOW
+                  </>
+                )}
+              </Button>
+            </form>
+
+            <p className="text-xs text-gray-500 text-center mt-4 leading-relaxed">
+              By submitting this form, you agree to receive emails from us. You can unsubscribe at any time.
+              {(landingPage as any).collectSms && " SMS terms apply if phone number provided."}
+            </p>
+          </div>
+        </div>
+
+        {/* Benefits Section - Single Column with Multiple Bullet Points */}
+        <div className="text-center mb-12">
+          <h2 className="text-3xl font-bold text-gray-800 mb-8">
+            What You'll Learn Inside
+          </h2>
+          <div className="max-w-2xl mx-auto">
+            <div className="grid grid-cols-1 gap-4">
+              {[
+                "Master proven techniques that work for all skill levels",
+                "Follow step-by-step practice drills designed by professionals", 
+                "Get exclusive coaching insights from industry experts",
+                "Avoid the most common mistakes that hold players back",
+                "Discover equipment recommendations that won't break the bank",
+                "Learn performance tracking tips to measure your progress",
+                "Access bonus warm-up routines for injury prevention",
+                "Get troubleshooting guides for quick problem solving"
+              ].map((benefit, index) => (
+                <div key={index} className="flex items-start text-left bg-white rounded-lg p-4 shadow-sm border border-gray-100">
+                  <CheckCircle className="w-6 h-6 text-green-600 mr-4 flex-shrink-0 mt-0.5" />
+                  <span className="text-gray-700 font-medium text-lg leading-relaxed">{benefit}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </main>
+
+      {/* Footer */}
+      <footer className="bg-gray-800 text-white py-8 mt-16">
+        <div className="container mx-auto px-4 text-center max-w-6xl">
+          <p className="text-sm text-gray-400">
+            © 2024 {brandingSettings?.companyName || "VidMagnet"}. All rights reserved. 
+            {" "}By submitting this form, you agree to our privacy policy and terms of service.
+          </p>
+        </div>
+      </footer>
+    </div>
+  );
+}
                       <span className="text-red-500 ml-1">*</span>
                     </Label>
                   </div>
