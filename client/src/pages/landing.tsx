@@ -31,6 +31,9 @@ export default function Landing() {
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <GoogleAuthButton variant="hero" size="lg" />
+            <Button size="lg" variant="outline" onClick={() => window.location.href = '/api/login'}>
+              Sign In with Replit
+            </Button>
             <Button size="lg" variant="outline">
               Watch Demo
             </Button>
