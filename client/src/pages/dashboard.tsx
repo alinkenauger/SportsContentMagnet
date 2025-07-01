@@ -483,11 +483,13 @@ export default function Dashboard() {
                         <div key={guide.id} className="flex items-center space-x-4 p-3 bg-gray-50 rounded-lg">
                           {/* Thumbnail */}
                           <div className="flex-shrink-0">
-                            <div className="w-16 h-12 rounded-md overflow-hidden bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
+                            <div className="w-16 h-12 rounded-md overflow-hidden bg-gray-100 flex items-center justify-center">
                               {guide.thumbnailUrl ? (
                                 <img src={guide.thumbnailUrl} alt="" className="w-full h-full object-contain" />
                               ) : (
-                                <Book className="w-5 h-5 text-white" />
+                                <div className="bg-gradient-to-br from-blue-500 to-purple-600 w-full h-full flex items-center justify-center">
+                                  <Book className="w-5 h-5 text-white" />
+                                </div>
                               )}
                             </div>
                           </div>
