@@ -166,6 +166,13 @@ Changelog:
   * Added pen icon editing functionality - click element to edit instead of auto-edit
   * Enhanced user experience with smooth, professional element interactions
   * Confirmed drag-and-drop precision and element positioning working correctly
+- July 01, 2025. Enhanced content personalization and video integration:
+  * Added channel title field to guides schema for channel-specific attribution
+  * Modified AI content generation to include YouTube channel references in introductions
+  * Implemented responsive YouTube video embeds in guide previews above Next Steps section
+  * Fixed delete functionality for dropped elements using proper functional state updates
+  * Cleaned up debug console logs for improved user experience
+  * Guides now properly attribute original content creators in introduction paragraphs
 ```
 
 ## User Preferences

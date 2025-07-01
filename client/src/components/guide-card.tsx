@@ -172,7 +172,24 @@ export default function GuideCard({ guide, onEdit, onViewLanding, onViewAnalytic
                 <p className="text-sm">{guide.content.conclusion}</p>
               </div>
               
-              <div className="mt-4 p-4 bg-primary/10 rounded-lg">
+              {/* YouTube Video Embed */}
+              {guide.youtubeVideoId && (
+                <div className="mt-6">
+                  <p className="font-semibold mb-3">Watch the Original Video</p>
+                  <div className="relative w-full h-0 pb-[56.25%] rounded-lg overflow-hidden">
+                    <iframe
+                      className="absolute top-0 left-0 w-full h-full"
+                      src={`https://www.youtube.com/embed/${guide.youtubeVideoId}`}
+                      title={guide.title}
+                      frameBorder="0"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                      allowFullScreen
+                    />
+                  </div>
+                </div>
+              )}
+              
+              <div className="mt-6 p-4 bg-primary/10 rounded-lg">
                 <p className="font-semibold mb-2 text-primary">Next Steps</p>
                 <p className="text-sm">{guide.content.callToAction}</p>
               </div>
@@ -185,7 +202,6 @@ export default function GuideCard({ guide, onEdit, onViewLanding, onViewAnalytic
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                console.log('View Landing button clicked');
                 onViewLanding?.(guide);
               }} 
               variant="outline"
@@ -208,7 +224,6 @@ export default function GuideCard({ guide, onEdit, onViewLanding, onViewAnalytic
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                console.log('Analytics button clicked');
                 onViewAnalytics?.(guide);
               }} 
               variant="outline"

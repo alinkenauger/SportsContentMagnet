@@ -114,12 +114,13 @@ export async function analyzeVideoContent(transcript: string, videoTitle: string
   }
 }
 
-export async function generatePracticeGuide(analysis: VideoAnalysis, videoTitle: string, brandingSettings?: any): Promise<GuideContent> {
+export async function generatePracticeGuide(analysis: VideoAnalysis, videoTitle: string, channelTitle?: string, brandingSettings?: any): Promise<GuideContent> {
   try {
     const prompt = `
     Create a comprehensive practice guide based on this video analysis.
     
     Video Title: ${videoTitle}
+    Channel Name: ${channelTitle || 'the channel'}
     Brand Name: ${brandingSettings?.companyName || 'Your Coach'}
     Brand Tagline: ${brandingSettings?.tagline || 'Elevate Your Game'}
     
@@ -129,7 +130,7 @@ export async function generatePracticeGuide(analysis: VideoAnalysis, videoTitle:
     Create a well-structured practice guide in the following JSON format:
     {
       "title": "practice guide title",
-      "introduction": "engaging introduction paragraph",
+      "introduction": "engaging introduction paragraph that specifically mentions this is based on content from ${channelTitle || 'the original channel'} and references the video creators expertise",
       "sections": [
         {
           "title": "section title",
@@ -148,6 +149,7 @@ export async function generatePracticeGuide(analysis: VideoAnalysis, videoTitle:
     - Structure it as a comprehensive practice guide
     - Make it valuable enough to be worth exchanging an email for
     - Include ${brandingSettings?.companyName || 'your coach'} branding naturally
+    - IMPORTANT: In the introduction, specifically mention that this guide is based on insights from ${channelTitle || 'the original content creator'} to give proper attribution
     `;
 
     const response = await openai.chat.completions.create({

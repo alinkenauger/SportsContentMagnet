@@ -58,7 +58,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const brandingSettings = await storage.getBrandingSettings(userId);
       
       // Step 5: Generate practice guide
-      const guideContent = await generatePracticeGuide(analysis, videoData.title, brandingSettings);
+      const guideContent = await generatePracticeGuide(analysis, videoData.title, videoData.channelTitle, brandingSettings);
       
       // Step 6: Create guide in database
       const guide = await storage.createGuide({
