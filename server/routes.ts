@@ -60,6 +60,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Step 5: Generate practice guide
       const guideContent = await generatePracticeGuide(analysis, videoData.title, videoData.channelTitle, brandingSettings);
       
+      // Process lead tags (convert comma-separated string to array)
+      const processedLeadTags = leadTags ? 
+        leadTags.split(',').map((tag: string) => tag.trim()).filter((tag: string) => tag.length > 0) : 
+        [];
+      
       // Step 6: Create guide in database
       const guide = await storage.createGuide({
         userId,
@@ -74,6 +79,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         content: guideContent,
         category: analysis.category,
         tags: analysis.keyTips,
+        leadTags: processedLeadTags,
         slug: `guide-${Date.now()}`,
         status: 'published'
       });

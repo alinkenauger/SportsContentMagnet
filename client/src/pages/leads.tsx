@@ -223,6 +223,7 @@ export default function Leads() {
                   <thead className="border-b">
                     <tr className="text-left">
                       <th className="pb-3 font-medium text-muted-foreground">Contact</th>
+                      <th className="pb-3 font-medium text-muted-foreground">Tags</th>
                       <th className="pb-3 font-medium text-muted-foreground">Source</th>
                       <th className="pb-3 font-medium text-muted-foreground">Date</th>
                       <th className="pb-3 font-medium text-muted-foreground">Actions</th>
@@ -269,6 +270,19 @@ export default function Leads() {
                                   )}
                                 </div>
                               </div>
+                            </div>
+                          </td>
+                          <td className="py-4">
+                            <div className="flex flex-wrap gap-1">
+                              {lead.tags && lead.tags.length > 0 ? (
+                                lead.tags.map((tag: string, index: number) => (
+                                  <Badge key={index} variant="outline" className="text-xs">
+                                    {tag}
+                                  </Badge>
+                                ))
+                              ) : (
+                                <span className="text-sm text-muted-foreground">No tags</span>
+                              )}
                             </div>
                           </td>
                           <td className="py-4">
