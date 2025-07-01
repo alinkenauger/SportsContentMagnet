@@ -81,7 +81,7 @@ export async function transcribeVideo(videoId: string): Promise<string> {
       return whisperTranscript;
     }
     
-    throw new Error("Unable to transcribe video. Please ensure the video has captions enabled or is publicly accessible.");
+    throw new Error("Unable to transcribe video. YouTube blocks programmatic access to most videos. Please try a video with closed captions from an educational channel, or contact support for manual transcription options.");
     
   } catch (error) {
     console.error("Transcription error:", error);

@@ -199,6 +199,12 @@ Changelog:
   * Implemented intelligent content parsing using pattern matching to identify drill elements
   * Added color-coded icons for each drill component (red alert, blue lightning, green repeat, purple clock, orange check)
   * Enhanced drill sections with structured visual format making practice instructions more actionable and clear
+- July 01, 2025. Fixed video transcription system and identified YouTube API limitations:
+  * Implemented real transcription using youtube-transcript library with OpenAI Whisper fallback
+  * Identified that YouTube's anti-bot measures block programmatic access to most videos
+  * Added proper error handling and user guidance for videos without accessible captions
+  * Transcription works for videos with public captions, but many modern videos are blocked
+  * System provides clear error messages directing users to try videos with captions enabled
 ```
 
 ## User Preferences
