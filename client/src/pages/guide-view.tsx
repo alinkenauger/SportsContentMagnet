@@ -13,9 +13,21 @@ import {
   Share2, 
   ExternalLink,
   ArrowLeft,
-  Play
+  Play,
+  Clock,
+  AlertCircle,
+  Zap,
+  Repeat
 } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
+
+interface DrillBreakdown {
+  painPoint: string;
+  technique: string;
+  reps: string;
+  duration: string;
+  focus: string;
+}
 
 interface GuideViewData {
   guide: {
@@ -50,6 +62,85 @@ interface GuideViewData {
     companyName?: string;
     tagline?: string;
   };
+}
+
+function parseDrillContent(content: string): DrillBreakdown | null {
+  try {
+    // Extract key information using pattern matching
+    const painPointMatch = content.match(/(?:pain point|problem|issue|struggle|difficulty)[:\s]+(.*?)(?:\.|,|\n|$)/i);
+    const techniqueMatch = content.match(/(?:technique|method|approach|way|how)[:\s]+(.*?)(?:\.|,|\n|$)/i);
+    const repsMatch = content.match(/(?:reps|repetitions|times|sets)[:\s]+(.*?)(?:\.|,|\n|$)/i);
+    const durationMatch = content.match(/(?:duration|time|seconds|minutes)[:\s]+(.*?)(?:\.|,|\n|$)/i);
+    const focusMatch = content.match(/(?:focus|concentrate|attention|key)[:\s]+(.*?)(?:\.|,|\n|$)/i);
+
+    // Fallback to extracting meaningful phrases
+    const sentences = content.split(/[.!?]/).filter(s => s.trim());
+    
+    return {
+      painPoint: painPointMatch?.[1]?.trim() || sentences.find(s => s.includes('problem') || s.includes('issue'))?.trim() || "Improve fundamentals",
+      technique: techniqueMatch?.[1]?.trim() || sentences.find(s => s.includes('technique') || s.includes('method'))?.trim() || "Practice proper form",
+      reps: repsMatch?.[1]?.trim() || sentences.find(s => /\d+\s*(?:reps|times|sets)/i.test(s))?.match(/\d+\s*(?:reps|times|sets)/i)?.[0] || "10-15 reps",
+      duration: durationMatch?.[1]?.trim() || sentences.find(s => /\d+\s*(?:seconds|minutes)/i.test(s))?.match(/\d+\s*(?:seconds|minutes)/i)?.[0] || "5-10 minutes",
+      focus: focusMatch?.[1]?.trim() || sentences[sentences.length - 1]?.trim() || "Maintain consistency"
+    };
+  } catch {
+    return null;
+  }
+}
+
+function DrillVisual({ breakdown }: { breakdown: DrillBreakdown }) {
+  return (
+    <div className="mt-4 bg-gradient-to-br from-orange-50 to-amber-50 border border-orange-200 rounded-lg p-4">
+      <h4 className="text-lg font-semibold text-orange-800 mb-3 flex items-center">
+        <Target className="w-5 h-5 mr-2" />
+        Drill Breakdown
+      </h4>
+      
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div className="flex items-start space-x-3 bg-white p-3 rounded-md border border-orange-100">
+          <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+          <div>
+            <h5 className="font-medium text-gray-800 text-sm">Pain Point</h5>
+            <p className="text-gray-600 text-sm">{breakdown.painPoint}</p>
+          </div>
+        </div>
+        
+        <div className="flex items-start space-x-3 bg-white p-3 rounded-md border border-orange-100">
+          <Zap className="w-5 h-5 text-blue-500 flex-shrink-0 mt-0.5" />
+          <div>
+            <h5 className="font-medium text-gray-800 text-sm">Technique</h5>
+            <p className="text-gray-600 text-sm">{breakdown.technique}</p>
+          </div>
+        </div>
+        
+        <div className="flex items-start space-x-3 bg-white p-3 rounded-md border border-orange-100">
+          <Repeat className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" />
+          <div>
+            <h5 className="font-medium text-gray-800 text-sm">Repetitions</h5>
+            <p className="text-gray-600 text-sm">{breakdown.reps}</p>
+          </div>
+        </div>
+        
+        <div className="flex items-start space-x-3 bg-white p-3 rounded-md border border-orange-100">
+          <Clock className="w-5 h-5 text-purple-500 flex-shrink-0 mt-0.5" />
+          <div>
+            <h5 className="font-medium text-gray-800 text-sm">Duration</h5>
+            <p className="text-gray-600 text-sm">{breakdown.duration}</p>
+          </div>
+        </div>
+      </div>
+      
+      <div className="mt-3 bg-white p-3 rounded-md border border-orange-100">
+        <div className="flex items-start space-x-3">
+          <CheckCircle className="w-5 h-5 text-orange-500 flex-shrink-0 mt-0.5" />
+          <div>
+            <h5 className="font-medium text-gray-800 text-sm">Key Focus</h5>
+            <p className="text-gray-600 text-sm">{breakdown.focus}</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 export default function GuideView() {
@@ -282,6 +373,11 @@ export default function GuideView() {
                         {section.content}
                       </div>
                     </div>
+
+                    {section.type === 'drill' && (() => {
+                      const drillBreakdown = parseDrillContent(section.content);
+                      return drillBreakdown ? <DrillVisual breakdown={drillBreakdown} /> : null;
+                    })()}
 
                     {section.timestamp && (
                       <div className="flex justify-start pt-3 border-t border-slate-100">
