@@ -212,11 +212,21 @@ export default function Dashboard() {
         return;
       }
       
-      toast({
-        title: "Error",
-        description: "Failed to create guide. Please try again.",
-        variant: "destructive",
-      });
+      const errorMessage = (error as Error).message;
+      
+      if (errorMessage.includes("TRANSCRIPTION_BLOCKED")) {
+        toast({
+          title: "Video Transcription Blocked",
+          description: "YouTube blocks automatic transcription for most modern videos. Try older educational videos or contact support for manual options.",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: "Failed to create guide. Please try again.",
+          variant: "destructive",
+        });
+      }
     } finally {
       setIsProcessing(false);
       setProcessingSteps(prev => prev.map(s => ({ ...s, status: "pending" })));

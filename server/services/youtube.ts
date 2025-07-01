@@ -81,10 +81,16 @@ export async function transcribeVideo(videoId: string): Promise<string> {
       return whisperTranscript;
     }
     
-    throw new Error("Unable to transcribe video. YouTube blocks programmatic access to most videos. Please try a video with closed captions from an educational channel, or contact support for manual transcription options.");
+    throw new Error("TRANSCRIPTION_BLOCKED: YouTube's anti-bot measures prevent automatic transcription of this video. This affects most modern videos, even those with captions. Consider:\n\n• Using older educational videos (pre-2020) which may still be accessible\n• Educational channels that allow captions API access\n• Manual transcript upload feature (coming soon)\n• Contacting support for enterprise transcription options");
     
   } catch (error) {
     console.error("Transcription error:", error);
+    
+    // Check if it's our specific error type
+    if ((error as Error).message.startsWith("TRANSCRIPTION_BLOCKED:")) {
+      throw error;
+    }
+    
     throw new Error("Failed to transcribe video: " + (error as Error).message);
   }
 }
