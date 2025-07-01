@@ -55,6 +55,8 @@ export default function GuideEditor() {
   
   const [isEditing, setIsEditing] = useState<string | null>(null);
   const [draggedElement, setDraggedElement] = useState<string | null>(null);
+  const [draggedFromToolbar, setDraggedFromToolbar] = useState<string | null>(null);
+  const [dropZoneVisible, setDropZoneVisible] = useState(false);
   const [elements, setElements] = useState<EditableElement[]>([]);
   const [guideTitle, setGuideTitle] = useState("");
   const [guideDescription, setGuideDescription] = useState("");
@@ -261,17 +263,68 @@ export default function GuideEditor() {
     setElements(newElements);
   };
 
-  const handleDragStart = (e: DragEvent, elementId: string) => {
+  // Toolbar drag handlers
+  const handleToolbarDragStart = (e: DragEvent<HTMLButtonElement>, elementType: EditableElement['type']) => {
+    setDraggedFromToolbar(elementType);
+    setDropZoneVisible(true);
+    e.dataTransfer.effectAllowed = 'copy';
+    e.dataTransfer.setData('text/plain', elementType);
+  };
+
+  const handleToolbarDragEnd = () => {
+    setDraggedFromToolbar(null);
+    setDropZoneVisible(false);
+  };
+
+  // Element drag handlers
+  const handleElementDragStart = (e: DragEvent, elementId: string) => {
     setDraggedElement(elementId);
     e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', elementId);
   };
 
   const handleDragOver = (e: DragEvent) => {
     e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
+    if (draggedFromToolbar) {
+      e.dataTransfer.dropEffect = 'copy';
+    } else {
+      e.dataTransfer.dropEffect = 'move';
+    }
   };
 
-  const handleDrop = (e: DragEvent, targetId: string) => {
+  // Canvas drop handler for new elements from toolbar
+  const handleCanvasDrop = (e: DragEvent<HTMLDivElement>, insertIndex?: number) => {
+    e.preventDefault();
+    
+    if (draggedFromToolbar) {
+      const newElement: EditableElement = {
+        id: `${draggedFromToolbar}-${Date.now()}`,
+        type: draggedFromToolbar as EditableElement['type'],
+        content: getDefaultContent(draggedFromToolbar as EditableElement['type']),
+        order: insertIndex !== undefined ? insertIndex : elements.length
+      };
+      
+      const newElements = [...elements];
+      if (insertIndex !== undefined) {
+        newElements.splice(insertIndex, 0, newElement);
+        newElements.forEach((el, index) => {
+          el.order = index;
+        });
+      } else {
+        newElements.push(newElement);
+      }
+      
+      setElements(newElements);
+      setDraggedFromToolbar(null);
+      setDropZoneVisible(false);
+      
+      // Auto-edit the new element
+      setTimeout(() => setIsEditing(newElement.id), 100);
+    }
+  };
+
+  // Element drop handler for reordering
+  const handleElementDrop = (e: DragEvent, targetId: string) => {
     e.preventDefault();
     if (draggedElement && draggedElement !== targetId) {
       moveElement(draggedElement, targetId);
@@ -597,7 +650,10 @@ export default function GuideEditor() {
                 variant="outline"
                 size="sm"
                 onClick={() => addElement('heading')}
-                className="flex flex-col h-16"
+                className="flex flex-col h-16 cursor-grab active:cursor-grabbing"
+                draggable
+                onDragStart={(e) => handleToolbarDragStart(e, 'heading')}
+                onDragEnd={handleToolbarDragEnd}
               >
                 <Type className="h-4 w-4 mb-1" />
                 <span className="text-xs">Heading</span>
