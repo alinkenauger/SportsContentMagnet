@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Book, Users, TrendingUp, ExternalLink, Plus, Sparkles, Palette } from "lucide-react";
+import { Book, Users, TrendingUp, ExternalLink, Plus, Sparkles, Palette, Eye, Edit, BarChart3 } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 
 interface DashboardStats {
@@ -241,52 +241,129 @@ export default function Dashboard() {
             </CardContent>
           </Card>
 
-          {/* Recent Guides and Performance */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* Recent Guides */}
-            <div className="lg:col-span-2">
-              <Card>
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <CardTitle>Recent Guides</CardTitle>
-                    <Button variant="ghost" size="sm">
-                      View All
-                    </Button>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  {guidesLoading ? (
-                    <div className="space-y-4">
-                      {[...Array(3)].map((_, i) => (
-                        <div key={i} className="animate-pulse">
-                          <div className="flex items-center space-x-4">
-                            <div className="w-20 h-14 bg-muted rounded-lg"></div>
-                            <div className="flex-1 space-y-2">
-                              <div className="h-4 bg-muted rounded w-3/4"></div>
-                              <div className="h-3 bg-muted rounded w-1/2"></div>
-                            </div>
-                          </div>
+          {/* Recent Guides - Table Format */}
+          <Card className="mb-8">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle>Recent Guides</CardTitle>
+                <Button variant="ghost" size="sm">
+                  View All
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {guidesLoading ? (
+                <div className="space-y-4">
+                  {[...Array(3)].map((_, i) => (
+                    <div key={i} className="animate-pulse">
+                      <div className="flex items-center space-x-4">
+                        <div className="w-20 h-14 bg-muted rounded-lg"></div>
+                        <div className="flex-1 space-y-2">
+                          <div className="h-4 bg-muted rounded w-3/4"></div>
+                          <div className="h-3 bg-muted rounded w-1/2"></div>
                         </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : guides && guides.length > 0 ? (
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead className="border-b">
+                      <tr>
+                        <th className="text-left p-4 font-medium text-muted-foreground">Guide</th>
+                        <th className="text-left p-4 font-medium text-muted-foreground">Views</th>
+                        <th className="text-left p-4 font-medium text-muted-foreground">Leads</th>
+                        <th className="text-left p-4 font-medium text-muted-foreground">Landing Page</th>
+                        <th className="text-left p-4 font-medium text-muted-foreground">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {guides.slice(0, 5).map((guide: any) => (
+                        <tr key={guide.id} className="border-b hover:bg-muted/50 transition-colors">
+                          {/* Guide Info */}
+                          <td className="p-4">
+                            <div className="flex items-center space-x-3">
+                              <div className="w-12 h-8 rounded-md overflow-hidden bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
+                                {guide.thumbnailUrl ? (
+                                  <img src={guide.thumbnailUrl} alt="" className="w-full h-full object-cover" />
+                                ) : (
+                                  <Book className="w-4 h-4 text-white" />
+                                )}
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <p className="font-medium text-foreground truncate">{guide.title}</p>
+                                <p className="text-sm text-muted-foreground truncate">
+                                  {guide.createdAt ? new Date(guide.createdAt).toLocaleDateString() : 'No date'}
+                                </p>
+                              </div>
+                            </div>
+                          </td>
+                          
+                          {/* Views */}
+                          <td className="p-4">
+                            <div className="flex items-center text-sm">
+                              <Eye className="w-4 h-4 mr-2 text-muted-foreground" />
+                              <span className="font-medium">{guide.views || 0}</span>
+                            </div>
+                          </td>
+                          
+                          {/* Leads */}
+                          <td className="p-4">
+                            <div className="flex items-center text-sm">
+                              <Users className="w-4 h-4 mr-2 text-muted-foreground" />
+                              <span className="font-medium">0</span>
+                            </div>
+                          </td>
+                          
+                          {/* Landing Page Link */}
+                          <td className="p-4">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                            >
+                              <ExternalLink className="w-4 h-4 mr-1" />
+                              View
+                            </Button>
+                          </td>
+                          
+                          {/* Actions */}
+                          <td className="p-4">
+                            <div className="flex items-center space-x-2">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-gray-600 hover:text-gray-700 hover:bg-gray-50"
+                              >
+                                <Edit className="w-4 h-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-purple-600 hover:text-purple-700 hover:bg-purple-50"
+                              >
+                                <BarChart3 className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
                       ))}
-                    </div>
-                  ) : guides && guides.length > 0 ? (
-                    <div className="space-y-4">
-                      {guides.slice(0, 3).map((guide: any) => (
-                        <GuideCard key={guide.id} guide={guide} />
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="text-center py-8">
-                      <Book className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                      <p className="text-muted-foreground">No guides yet. Create your first guide above!</p>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </div>
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <Book className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                  <p className="text-muted-foreground">No guides yet. Create your first guide above!</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
 
-            {/* Performance Overview */}
-            <div className="space-y-6">
+          {/* Performance Overview - Centered */}
+          <div className="max-w-4xl mx-auto">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Top Performing Guides */}
               <Card>
                 <CardHeader>

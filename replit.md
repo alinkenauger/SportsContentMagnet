@@ -179,6 +179,13 @@ Changelog:
   * Condensed filters and stats sections to reduce vertical space and improve screen utilization
   * Streamlined guide metadata display to show only creation date (removed category information)
   * Enhanced table styling with hover effects and responsive design for better user experience
+  * Changed stats cards layout from 2 columns on mobile to 4 columns across all screen sizes
+- July 01, 2025. Enhanced dashboard layout with consistent table format and centered performance section:
+  * Restructured dashboard to use table format for Recent Guides matching Content Library design
+  * Moved Performance Overview section below Recent Guides in centered layout with 2-column grid
+  * Added same table columns structure: guide info, views, leads, landing page links, and actions
+  * Improved visual consistency across dashboard and content library pages
+  * Enhanced space utilization with streamlined layout design
 ```
 
 ## User Preferences
