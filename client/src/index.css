@@ -13,11 +13,11 @@
   --card-foreground: hsl(222, 84%, 5%);
   --border: hsl(214, 32%, 91%);
   --input: hsl(214, 32%, 91%);
-  --primary: hsl(221, 83%, 53%);
-  --primary-foreground: hsl(210, 40%, 98%);
-  --secondary: hsl(150, 60%, 45%);
+  --primary: hsl(215, 25%, 70%);
+  --primary-foreground: hsl(0, 0%, 100%);
+  --secondary: hsl(150, 25%, 65%);
   --secondary-foreground: hsl(222, 84%, 5%);
-  --accent: hsl(43, 96%, 56%);
+  --accent: hsl(35, 40%, 75%);
   --accent-foreground: hsl(222, 84%, 5%);
   --destructive: hsl(0, 84%, 60%);
   --destructive-foreground: hsl(210, 40%, 98%);
@@ -76,7 +76,13 @@
 
 @layer components {
   .gradient-primary {
-    @apply bg-gradient-to-r from-primary to-blue-600;
+    background: linear-gradient(135deg, 
+      hsla(215, 35%, 75%, 0.9) 0%, 
+      hsla(220, 25%, 65%, 0.8) 35%, 
+      hsla(210, 30%, 70%, 0.9) 100%);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid hsla(215, 25%, 85%, 0.3);
   }
 
   .gradient-secondary {
