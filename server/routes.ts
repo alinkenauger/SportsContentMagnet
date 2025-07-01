@@ -2,6 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
+import { analyzeVideoContent, generatePracticeGuide } from "./services/openai";
 import { getYouTubeVideoData, transcribeVideo } from "./services/youtube";
 import { analyzeVideoContent, generatePracticeGuide, personalizeGuideContent } from "./services/openai";
 import { insertGuideSchema, insertLandingPageSchema, insertLeadSchema, insertBrandingSettingsSchema, insertTrainingSettingsSchema, insertKnowledgebaseEntrySchema } from "@shared/schema";
@@ -404,6 +405,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching public guide:", error);
       res.status(500).json({ message: "Failed to fetch guide" });
+    }
+  });
+
+  // Regenerate guide content from transcript
+  app.post('/api/guides/:id/regenerate', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const guideId = parseInt(req.params.id);
+      
+      const guide = await storage.getGuide(guideId);
+      if (!guide || guide.userId !== userId) {
+        return res.status(404).json({ message: "Guide not found" });
+      }
+
+      if (!guide.transcript) {
+        return res.status(400).json({ message: "No transcript available for regeneration" });
+      }
+
+      // Get branding settings
+      const brandingSettings = await storage.getBrandingSettings(userId);
+
+      // Re-analyze the actual transcript
+      const analysis = await analyzeVideoContent(guide.transcript, guide.title, guide.description);
+      
+      // Regenerate guide content based on real transcript
+      const newContent = await generatePracticeGuide(analysis, guide.title, guide.channelTitle, brandingSettings);
+
+      // Update the guide with real content
+      const updatedGuide = await storage.updateGuide(guideId, {
+        aiAnalysis: analysis,
+        content: newContent
+      });
+
+      res.json({ 
+        message: "Guide regenerated successfully",
+        guide: updatedGuide
+      });
+    } catch (error) {
+      console.error("Error regenerating guide:", error);
+      res.status(500).json({ message: "Failed to regenerate guide" });
     }
   });
 
