@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -27,6 +27,8 @@ export default function Dashboard() {
   const { isAuthenticated, isLoading } = useAuth();
   const [youtubeUrl, setYoutubeUrl] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
+  const [columnWidths, setColumnWidths] = useState([35, 20, 15, 15, 15]);
+  const tableRef = useRef<HTMLTableElement>(null);
   const [processingSteps, setProcessingSteps] = useState([
     { id: "metadata", title: "Video metadata extracted", status: "pending" as const },
     { id: "transcript", title: "Content transcribed", status: "pending" as const },
@@ -60,6 +62,33 @@ export default function Dashboard() {
     queryKey: ["/api/guides"],
     enabled: isAuthenticated,
   });
+
+  // Column resize functionality
+  const handleMouseDown = (columnIndex: number) => (e: React.MouseEvent) => {
+    e.preventDefault();
+    const startX = e.clientX;
+    const startWidths = [...columnWidths];
+
+    const handleMouseMove = (e: MouseEvent) => {
+      const deltaX = e.clientX - startX;
+      const tableWidth = tableRef.current?.offsetWidth || 800;
+      const deltaPercent = (deltaX / tableWidth) * 100;
+      
+      const newWidths = [...startWidths];
+      newWidths[columnIndex] = Math.max(10, startWidths[columnIndex] + deltaPercent);
+      newWidths[columnIndex + 1] = Math.max(10, startWidths[columnIndex + 1] - deltaPercent);
+      
+      setColumnWidths(newWidths);
+    };
+
+    const handleMouseUp = () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+  };
 
   const handleCreateGuide = async () => {
     if (!youtubeUrl.trim()) {
@@ -276,40 +305,52 @@ export default function Dashboard() {
                 </div>
               ) : guides && guides.length > 0 ? (
                 <div className="overflow-x-auto">
-                  <table className="w-full table-fixed">
+                  <table ref={tableRef} className="w-full table-fixed border-separate border-spacing-0">
                     <colgroup>
-                      <col style={{ width: '35%' }} />
-                      <col style={{ width: '20%' }} />
-                      <col style={{ width: '15%' }} />
-                      <col style={{ width: '15%' }} />
-                      <col style={{ width: '15%' }} />
+                      <col style={{ width: `${columnWidths[0]}%` }} />
+                      <col style={{ width: `${columnWidths[1]}%` }} />
+                      <col style={{ width: `${columnWidths[2]}%` }} />
+                      <col style={{ width: `${columnWidths[3]}%` }} />
+                      <col style={{ width: `${columnWidths[4]}%` }} />
                     </colgroup>
                     <thead className="border-b">
                       <tr>
-                        <th className="text-left p-4 font-medium text-muted-foreground resize-handle group">
+                        <th className="text-left px-3 py-4 font-medium text-muted-foreground relative border-r border-gray-200">
                           Guide
-                          <div className="absolute right-0 top-0 h-full w-1 cursor-col-resize opacity-0 group-hover:opacity-100 bg-blue-500 transition-opacity"></div>
+                          <div 
+                            className="absolute right-0 top-0 h-full w-1 cursor-col-resize hover:bg-blue-500 transition-colors bg-transparent"
+                            onMouseDown={handleMouseDown(0)}
+                          ></div>
                         </th>
-                        <th className="text-left p-4 font-medium text-muted-foreground resize-handle group relative">
+                        <th className="text-left px-3 py-4 font-medium text-muted-foreground relative border-r border-gray-200">
                           Conversion Funnel
-                          <div className="absolute right-0 top-0 h-full w-1 cursor-col-resize opacity-0 group-hover:opacity-100 bg-blue-500 transition-opacity"></div>
+                          <div 
+                            className="absolute right-0 top-0 h-full w-1 cursor-col-resize hover:bg-blue-500 transition-colors bg-transparent"
+                            onMouseDown={handleMouseDown(1)}
+                          ></div>
                         </th>
-                        <th className="text-left p-4 font-medium text-muted-foreground resize-handle group relative">
+                        <th className="text-left px-3 py-4 font-medium text-muted-foreground relative border-r border-gray-200">
                           Landing Page
-                          <div className="absolute right-0 top-0 h-full w-1 cursor-col-resize opacity-0 group-hover:opacity-100 bg-blue-500 transition-opacity"></div>
+                          <div 
+                            className="absolute right-0 top-0 h-full w-1 cursor-col-resize hover:bg-blue-500 transition-colors bg-transparent"
+                            onMouseDown={handleMouseDown(2)}
+                          ></div>
                         </th>
-                        <th className="text-left p-4 font-medium text-muted-foreground resize-handle group relative">
+                        <th className="text-left px-3 py-4 font-medium text-muted-foreground relative border-r border-gray-200">
                           Guide Page
-                          <div className="absolute right-0 top-0 h-full w-1 cursor-col-resize opacity-0 group-hover:opacity-100 bg-blue-500 transition-opacity"></div>
+                          <div 
+                            className="absolute right-0 top-0 h-full w-1 cursor-col-resize hover:bg-blue-500 transition-colors bg-transparent"
+                            onMouseDown={handleMouseDown(3)}
+                          ></div>
                         </th>
-                        <th className="text-left p-4 font-medium text-muted-foreground">Actions</th>
+                        <th className="text-left px-3 py-4 font-medium text-muted-foreground">Actions</th>
                       </tr>
                     </thead>
                     <tbody>
                       {guides.slice(0, 5).map((guide: any) => (
                         <tr key={guide.id} className="border-b hover:bg-muted/50 transition-colors">
                           {/* Guide Info */}
-                          <td className="px-3 py-3">
+                          <td className="px-3 py-3 border-r border-gray-200">
                             <div className="flex items-start space-x-3">
                               <div className="flex-shrink-0">
                                 <div className="w-16 h-12 rounded-md overflow-hidden bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
