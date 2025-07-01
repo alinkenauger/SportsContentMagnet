@@ -77,7 +77,19 @@ export default function GuideLanding() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.email) {
+    // Ensure at least one contact method (email or phone)
+    if (!formData.email && !formData.phone) {
+      toast({
+        title: "Contact Method Required",
+        description: "Please provide either an email address or phone number.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // If email field exists in custom fields and is required, validate it
+    const emailField = (landingData?.landingPage as any)?.customFields?.find((field: any) => field.name === 'email');
+    if (emailField?.required && !formData.email) {
       toast({
         title: "Email Required",
         description: "Please enter your email address.",

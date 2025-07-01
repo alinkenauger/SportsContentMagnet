@@ -122,6 +122,13 @@ Changelog:
   * Centered form with professional styling
   * Legal disclaimer footer matching industry standards
   * Responsive design for mobile and desktop
+- July 01, 2025. Fixed landing page form and added public library:
+  * Removed duplicate email field from landing page forms
+  * Created public library page for browsing all public guides
+  * Added form validation requiring at least email OR phone number
+  * Ensured default landing page forms include First Name (required) and Email (required)
+  * Added backend routes for public guide discovery
+  * Updated guide delivery page with library navigation
 ```
 
 ## User Preferences
