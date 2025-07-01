@@ -62,8 +62,8 @@ export default function GuideLanding() {
       });
     },
     onSuccess: (response: any) => {
-      // Redirect immediately to guide delivery page
-      window.location.href = `/delivery/${landingData?.guide.id}?leadId=${response.lead.id}`;
+      // Redirect to the delivery URL provided by the server
+      window.location.href = response.deliveryUrl;
     },
     onError: (error: Error) => {
       toast({
