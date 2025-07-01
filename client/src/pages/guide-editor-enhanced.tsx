@@ -567,44 +567,62 @@ export default function GuideEditorEnhanced() {
   };
 
   const renderElementContent = (element: EditableElement, isActive: boolean): JSX.Element => {
+    // Early return for missing element or content
+    if (!element || !element.content) {
+      return (
+        <div className="text-center text-muted-foreground py-4">
+          <Settings className="h-8 w-8 mx-auto mb-2 opacity-50" />
+          <p className="text-sm">Invalid element</p>
+          <p className="text-xs">Missing content</p>
+        </div>
+      );
+    }
+    
     switch (element.type) {
       case 'heading':
-        const HeadingTag = `h${element.content.level || 2}` as keyof JSX.IntrinsicElements;
-        return isActive ? (
-          <div className="space-y-2">
-            <Input
-              value={element.content.text}
-              onChange={(e) => updateElement(element.id, { ...element.content, text: e.target.value })}
-              className="font-semibold text-lg"
-            />
-            <Select
-              value={element.content.level?.toString() || '2'}
-              onValueChange={(value) => updateElement(element.id, { ...element.content, level: parseInt(value) })}
+        console.log('Matched heading case');
+        try {
+          const HeadingTag = `h${element.content.level || 2}` as keyof JSX.IntrinsicElements;
+          return isActive ? (
+            <div className="space-y-2">
+              <Input
+                value={element.content.text || ''}
+                onChange={(e) => updateElement(element.id, { ...element.content, text: e.target.value })}
+                className="font-semibold text-lg"
+              />
+              <Select
+                value={element.content.level?.toString() || '2'}
+                onValueChange={(value) => updateElement(element.id, { ...element.content, level: parseInt(value) })}
+              >
+                <SelectTrigger className="w-32">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="1">H1</SelectItem>
+                  <SelectItem value="2">H2</SelectItem>
+                  <SelectItem value="3">H3</SelectItem>
+                  <SelectItem value="4">H4</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          ) : (
+            <HeadingTag 
+              className="font-semibold cursor-pointer"
+              onClick={() => setIsEditing(element.id)}
             >
-              <SelectTrigger className="w-32">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="1">H1</SelectItem>
-                <SelectItem value="2">H2</SelectItem>
-                <SelectItem value="3">H3</SelectItem>
-                <SelectItem value="4">H4</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        ) : (
-          <HeadingTag 
-            className="font-semibold cursor-pointer"
-            onClick={() => setIsEditing(element.id)}
-          >
-            {element.content.text}
-          </HeadingTag>
-        );
+              {element.content.text || 'Click to edit heading'}
+            </HeadingTag>
+          );
+        } catch (error) {
+          console.error('Error rendering heading:', error);
+          return <div>Error rendering heading</div>;
+        }
 
       case 'paragraph':
+        console.log('Matched paragraph case');
         return isActive ? (
           <Textarea
-            value={element.content.text}
+            value={element.content.text || ''}
             onChange={(e) => updateElement(element.id, { ...element.content, text: e.target.value })}
             className="min-h-20"
             autoFocus
@@ -614,7 +632,7 @@ export default function GuideEditorEnhanced() {
             className="cursor-pointer"
             onClick={() => setIsEditing(element.id)}
           >
-            {element.content.text}
+            {element.content.text || 'Click to edit...'}
           </p>
         );
 
