@@ -291,19 +291,21 @@ export default function Dashboard() {
                         <tr key={guide.id} className="border-b hover:bg-muted/50 transition-colors">
                           {/* Guide Info */}
                           <td className="p-4">
-                            <div className="flex items-center space-x-3">
-                              <div className="w-12 h-8 rounded-md overflow-hidden bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
-                                {guide.thumbnailUrl ? (
-                                  <img src={guide.thumbnailUrl} alt="" className="w-full h-full object-cover" />
-                                ) : (
-                                  <Book className="w-4 h-4 text-white" />
-                                )}
-                              </div>
-                              <div className="min-w-0 flex-1">
-                                <p className="font-medium text-foreground truncate">{guide.title}</p>
-                                <p className="text-sm text-muted-foreground truncate">
+                            <div className="flex items-start space-x-3">
+                              <div className="flex-shrink-0">
+                                <div className="w-16 h-12 rounded-md overflow-hidden bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
+                                  {guide.thumbnailUrl ? (
+                                    <img src={guide.thumbnailUrl} alt="" className="w-full h-full object-cover" />
+                                  ) : (
+                                    <Book className="w-5 h-5 text-white" />
+                                  )}
+                                </div>
+                                <p className="text-xs text-muted-foreground mt-1 text-center">
                                   {guide.createdAt ? new Date(guide.createdAt).toLocaleDateString() : 'No date'}
                                 </p>
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <p className="font-medium text-foreground leading-tight">{guide.title}</p>
                               </div>
                             </div>
                           </td>
