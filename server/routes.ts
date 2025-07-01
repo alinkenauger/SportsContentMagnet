@@ -7,8 +7,26 @@ import { analyzeVideoContent, generatePracticeGuide, personalizeGuideContent } f
 import { getYouTubeVideoData, transcribeVideo } from "./services/youtube";
 import { insertGuideSchema, insertLandingPageSchema, insertLeadSchema, insertBrandingSettingsSchema, insertTrainingSettingsSchema, insertKnowledgebaseEntrySchema } from "@shared/schema";
 import QRCode from 'qrcode';
+import multer from 'multer';
+// import pdf from 'pdf-parse'; // Temporarily disabled due to module issues
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Configure multer for file uploads
+  const upload = multer({
+    storage: multer.memoryStorage(),
+    limits: {
+      fileSize: 100 * 1024 * 1024, // 100MB limit
+    },
+    fileFilter: (req, file, cb) => {
+      // Accept PDF files and audio files
+      if (file.mimetype === 'application/pdf' || file.mimetype.startsWith('audio/')) {
+        cb(null, true);
+      } else {
+        cb(new Error('Only PDF and audio files are allowed'), false);
+      }
+    }
+  });
+
   // Use Google OAuth as primary authentication
   setupGoogleAuth(app);
   // Keep Replit Auth as backup/alternative
@@ -102,25 +120,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Guide routes
-  app.post('/api/guides', isAuthenticated, async (req: any, res) => {
+  // Guide routes - handle multiple content types
+  app.post('/api/guides', upload.single('file'), isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const { youtubeUrl, manualTranscript, manualTitle, inputMethod, category, customInstructions, targetAudience, difficulty, collectSms, smsConsentText, leadTags } = req.body;
-
+      
       let videoData: any;
       let transcript: string;
+      let inputMethod = req.body.inputMethod;
+      
+      // Handle different input methods
+      if (inputMethod === "youtube") {
+        const { youtubeUrl } = req.body;
+        if (!youtubeUrl) {
+          return res.status(400).json({ message: "YouTube URL is required" });
+        }
 
-      if (inputMethod === "manual") {
-        // Handle manual transcript input
-        if (!manualTranscript || !manualTitle) {
+        // Extract video metadata and transcribe
+        videoData = await getYouTubeVideoData(youtubeUrl);
+        transcript = await transcribeVideo(videoData.videoId);
+        
+      } else if (inputMethod === "manual") {
+        const { transcript: manualTranscript, title } = req.body;
+        if (!manualTranscript || !title) {
           return res.status(400).json({ message: "Manual transcript and title are required" });
         }
         
-        // Create mock video data for manual input
         videoData = {
           videoId: `manual-${Date.now()}`,
-          title: manualTitle,
+          title: title,
           description: "",
           thumbnailUrl: "",
           duration: "0:00",
@@ -131,17 +159,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
         };
         
         transcript = manualTranscript;
-      } else {
-        // Handle YouTube URL input
-        if (!youtubeUrl) {
-          return res.status(400).json({ message: "YouTube URL is required" });
+        
+      } else if (inputMethod === "pdf") {
+        const { title } = req.body;
+        if (!req.file || !title) {
+          return res.status(400).json({ message: "PDF file and title are required" });
         }
 
-        // Step 1: Extract video metadata
-        videoData = await getYouTubeVideoData(youtubeUrl);
+        // Temporarily return error for PDF processing until library is fixed
+        return res.status(501).json({ 
+          message: "PDF processing temporarily unavailable. Please extract text manually and use the 'Text/Transcript' option instead." 
+        });
         
-        // Step 2: Transcribe video
-        transcript = await transcribeVideo(videoData.videoId);
+      } else if (inputMethod === "audio") {
+        const { title } = req.body;
+        if (!req.file || !title) {
+          return res.status(400).json({ message: "Audio file and title are required" });
+        }
+
+        // For audio files, we'll use OpenAI Whisper to transcribe
+        // This would require additional setup with OpenAI's audio API
+        // For now, we'll return an error and suggest manual transcription
+        return res.status(501).json({ 
+          message: "Audio transcription not yet implemented. Please manually transcribe your audio and use the 'Text/Transcript' option instead." 
+        });
+        
+      } else if (inputMethod === "streaming") {
+        const { streamingUrl, title } = req.body;
+        if (!streamingUrl || !title) {
+          return res.status(400).json({ message: "Streaming URL and title are required" });
+        }
+
+        // For streaming content, we'll need to extract and process
+        // This would require additional setup for streaming video processing
+        // For now, we'll return an error and suggest manual transcription
+        return res.status(501).json({ 
+          message: "Streaming video processing not yet implemented. Please manually transcribe your content and use the 'Text/Transcript' option instead." 
+        });
+        
+      } else {
+        return res.status(400).json({ message: "Invalid input method" });
       }
       
       // Step 3: Analyze content with AI

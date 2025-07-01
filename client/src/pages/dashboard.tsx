@@ -315,6 +315,7 @@ export default function Dashboard() {
       }
     } finally {
       setIsProcessing(false);
+      setIsProcessingFile(false);
       setProcessingSteps(prev => prev.map(s => ({ ...s, status: "pending" })));
       setProgress(0);
     }
