@@ -108,9 +108,7 @@ export function setupGoogleAuth(app: Express) {
     passport.authenticate("google", {
       scope: [
         "profile",
-        "email",
-        "https://www.googleapis.com/auth/youtube.readonly",
-        "https://www.googleapis.com/auth/youtube.force-ssl"
+        "email"
       ],
       accessType: "offline",
       prompt: "consent"
