@@ -64,7 +64,7 @@ export async function getYouTubeVideoData(url: string): Promise<YouTubeVideoData
   }
 }
 
-export async function transcribeVideo(videoId: string): Promise<string> {
+export async function transcribeVideo(videoId: string): Promise<string | { text: string; segments: Array<{ start: number; end: number; text: string; }>; method: string; }> {
   try {
     console.log(`Attempting to transcribe video: ${videoId}`);
     
@@ -123,7 +123,12 @@ export async function transcribeVideo(videoId: string): Promise<string> {
         
         if (transcriptionResult.success && transcriptionResult.text && transcriptionResult.text.length > 100) {
           console.log(`Successfully transcribed via audio extraction: ${transcriptionResult.text.length} characters`);
-          return transcriptionResult.text;
+          // Return both text and segments for timestamp support
+          return {
+            text: transcriptionResult.text,
+            segments: transcriptionResult.segments || [],
+            method: 'audio_extraction'
+          };
         } else {
           audioResult.error = transcriptionResult.error || 'Audio transcription failed';
         }

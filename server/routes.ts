@@ -140,7 +140,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         // Extract video metadata and transcribe
         videoData = await getYouTubeVideoData(youtubeUrl);
-        transcript = await transcribeVideo(videoData.videoId);
+        const transcriptionResult = await transcribeVideo(videoData.videoId);
+        
+        // Handle both string and object responses from transcription
+        if (typeof transcriptionResult === 'string') {
+          transcript = transcriptionResult;
+        } else if (transcriptionResult && typeof transcriptionResult === 'object') {
+          transcript = transcriptionResult.text;
+          // Store segments for timestamp generation
+          videoData.segments = transcriptionResult.segments || [];
+        } else {
+          throw new Error('Invalid transcription result');
+        }
         
       } else if (inputMethod === "manual") {
         const { transcript: manualTranscript, title } = req.body;
@@ -229,14 +240,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Invalid input method" });
       }
       
-      // Step 3: Analyze content with AI
-      const analysis = await analyzeVideoContent(transcript, videoData.title, videoData.description);
-      
-      // Step 4: Get user's branding settings
+      // Step 3: Get user's training settings for AI customization
+      const trainingSettings = await storage.getTrainingSettings(userId);
       const brandingSettings = await storage.getBrandingSettings(userId);
       
-      // Step 5: Generate practice guide
-      const guideContent = await generatePracticeGuide(analysis, videoData.title, videoData.channelTitle, brandingSettings);
+      // Step 4: Generate practice guide with accurate timestamps
+      let guideContent;
+      if (videoData.segments && videoData.segments.length > 0) {
+        // Use timestamped content generation for YouTube videos with timing data
+        const { generateTimestampedContent } = await import('./services/aiContentWithTimestamps');
+        guideContent = await generateTimestampedContent(transcript, videoData.segments, videoData, trainingSettings);
+      } else {
+        // Fallback to regular content generation for manual/audio uploads
+        const analysis = await analyzeVideoContent(transcript, videoData.title, videoData.description);
+        guideContent = await generatePracticeGuide(analysis, videoData.title, videoData.channelTitle, brandingSettings);
+      }
       
       // Process lead tags (convert comma-separated string to array)
       const processedLeadTags = leadTags ? 

@@ -23,7 +23,7 @@ export class AudioTranscriptionService {
   }
 
   /**
-   * Transcribe audio file using Python transcription service
+   * Transcribe audio file using Python transcription service with timestamps
    */
   async transcribeFile(filePath: string, method: 'whisper' | 'google' | 'auto' = 'auto'): Promise<TranscriptionResult> {
     return new Promise((resolve) => {
@@ -36,8 +36,8 @@ export class AudioTranscriptionService {
         return;
       }
 
-      // Spawn Python process
-      const pythonProcess = spawn('python3', [this.pythonScriptPath, filePath, method], {
+      // Spawn Python process with timestamps enabled
+      const pythonProcess = spawn('python3', [this.pythonScriptPath, filePath, method, '--timestamps'], {
         stdio: ['pipe', 'pipe', 'pipe']
       });
 
