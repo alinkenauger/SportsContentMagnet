@@ -485,7 +485,7 @@ export default function Dashboard() {
                           <div className="flex-shrink-0">
                             <div className="w-16 h-12 rounded-md overflow-hidden bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
                               {guide.thumbnailUrl ? (
-                                <img src={guide.thumbnailUrl} alt="" className="w-full h-full object-cover" />
+                                <img src={guide.thumbnailUrl} alt="" className="w-full h-full object-contain" />
                               ) : (
                                 <Book className="w-5 h-5 text-white" />
                               )}
