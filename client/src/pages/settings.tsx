@@ -41,7 +41,6 @@ export default function Settings() {
   const [isAddingEntry, setIsAddingEntry] = useState(false);
   const [editingEntry, setEditingEntry] = useState<KnowledgebaseEntry | null>(null);
   const [uploadProgress, setUploadProgress] = useState<{ [key: string]: number }>({});
-  const [showTemplates, setShowTemplates] = useState(false);
 
   // Form states
   const [newEntry, setNewEntry] = useState({
@@ -118,8 +117,6 @@ export default function Settings() {
       title: "Template Applied",
       description: `${templateType.charAt(0).toUpperCase() + templateType.slice(1)} coaching template has been applied to your settings.`,
     });
-    
-    setShowTemplates(false);
   };
 
   // Fetch training settings
@@ -397,117 +394,66 @@ export default function Settings() {
             </CardHeader>
             <CardContent className="space-y-6">
               {/* Template Selection */}
-              <div className="space-y-4">
-                <div className="flex justify-between items-center">
-                  <Label>Quick Start Templates</Label>
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    onClick={() => setShowTemplates(!showTemplates)}
-                  >
-                    {showTemplates ? "Hide Templates" : "Show Templates"}
-                  </Button>
+              <div className="space-y-3">
+                <Label>Quick Start Templates</Label>
+                <div className="flex gap-3 items-center">
+                  <Select onValueChange={(value) => value && applyTemplate(value as keyof typeof templates)}>
+                    <SelectTrigger className="w-64">
+                      <SelectValue placeholder="Choose a coaching template..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="beginner">
+                        <div className="flex flex-col">
+                          <span className="font-medium">Beginner-Friendly Coach</span>
+                          <span className="text-xs text-gray-500">Fundamentals & safety focus</span>
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="advanced">
+                        <div className="flex flex-col">
+                          <span className="font-medium">Advanced Performance Coach</span>
+                          <span className="text-xs text-gray-500">Technical & competitive training</span>
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="wellness">
+                        <div className="flex flex-col">
+                          <span className="font-medium">Fitness & Wellness Coach</span>
+                          <span className="text-xs text-gray-500">Holistic & lifestyle integration</span>
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="youth">
+                        <div className="flex flex-col">
+                          <span className="font-medium">Youth Sports Coach</span>
+                          <span className="text-xs text-gray-500">Fun & age-appropriate</span>
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="sport">
+                        <div className="flex flex-col">
+                          <span className="font-medium">Sport-Specific Coach</span>
+                          <span className="text-xs text-gray-500">Rules & position training</span>
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="howto">
+                        <div className="flex flex-col">
+                          <span className="font-medium">How-To Skill Teacher</span>
+                          <span className="text-xs text-gray-500">Step-by-step instructions</span>
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="cooking">
+                        <div className="flex flex-col">
+                          <span className="font-medium">Cooking Instructor</span>
+                          <span className="text-xs text-gray-500">Culinary techniques & recipes</span>
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="coding">
+                        <div className="flex flex-col">
+                          <span className="font-medium">Coding Mentor</span>
+                          <span className="text-xs text-gray-500">Programming & best practices</span>
+                        </div>
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-sm text-gray-500">Select a template to auto-fill all training fields</p>
                 </div>
-                
-                {showTemplates && (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-4 border rounded-lg bg-gray-50 max-h-96 overflow-y-auto">
-                    <div className="space-y-2">
-                      <h4 className="font-medium">Beginner-Friendly Coach</h4>
-                      <p className="text-sm text-gray-600">Focus on fundamentals, safety, and step-by-step progression</p>
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={() => applyTemplate('beginner')}
-                      >
-                        Apply Template
-                      </Button>
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <h4 className="font-medium">Advanced Performance Coach</h4>
-                      <p className="text-sm text-gray-600">Technical analysis, performance optimization, competitive training</p>
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={() => applyTemplate('advanced')}
-                      >
-                        Apply Template
-                      </Button>
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <h4 className="font-medium">Fitness & Wellness Coach</h4>
-                      <p className="text-sm text-gray-600">Holistic approach, lifestyle integration, motivation-focused</p>
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={() => applyTemplate('wellness')}
-                      >
-                        Apply Template
-                      </Button>
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <h4 className="font-medium">Youth Sports Coach</h4>
-                      <p className="text-sm text-gray-600">Fun-focused, skill development, age-appropriate guidance</p>
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={() => applyTemplate('youth')}
-                      >
-                        Apply Template
-                      </Button>
-                    </div>
-
-                    <div className="space-y-2">
-                      <h4 className="font-medium">Sport-Specific Coach</h4>
-                      <p className="text-sm text-gray-600">Specialized techniques, sport rules, position-specific training</p>
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={() => applyTemplate('sport')}
-                      >
-                        Apply Template
-                      </Button>
-                    </div>
-
-                    <div className="space-y-2">
-                      <h4 className="font-medium">How-To Skill Teacher</h4>
-                      <p className="text-sm text-gray-600">Clear instructions, practical skills, hands-on learning</p>
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={() => applyTemplate('howto')}
-                      >
-                        Apply Template
-                      </Button>
-                    </div>
-
-                    <div className="space-y-2">
-                      <h4 className="font-medium">Cooking Instructor</h4>
-                      <p className="text-sm text-gray-600">Culinary techniques, recipe guidance, kitchen tips</p>
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={() => applyTemplate('cooking')}
-                      >
-                        Apply Template
-                      </Button>
-                    </div>
-
-                    <div className="space-y-2">
-                      <h4 className="font-medium">Coding Mentor</h4>
-                      <p className="text-sm text-gray-600">Programming concepts, best practices, problem-solving</p>
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={() => applyTemplate('coding')}
-                      >
-                        Apply Template
-                      </Button>
-                    </div>
-                  </div>
-                )}
               </div>
 
               <div className="space-y-2">
