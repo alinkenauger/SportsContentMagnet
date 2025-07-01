@@ -92,9 +92,14 @@ export async function transcribeVideo(videoId: string): Promise<string> {
       return whisperTranscript;
     }
     
-    // Provide helpful error with what we tried
-    const errorDetails = ytdlpResult.error ? `yt-dlp: ${ytdlpResult.error.substring(0, 100)}...` : 'yt-dlp failed';
-    throw new Error(`TRANSCRIPTION_FAILED: Unable to extract transcript using multiple methods. ${errorDetails}\n\nThis video may not have captions available or may be restricted. Try videos with confirmed subtitles or use alternative input methods.`);
+    // Check if yt-dlp successfully connected but found no subtitles
+    if (ytdlpResult.error && ytdlpResult.error.includes('No subtitles found')) {
+      throw new Error(`NO_CAPTIONS_AVAILABLE: This YouTube video doesn't have captions or subtitles available.\n\nSuggestions:\n• Try a different video that has captions enabled\n• Use the Audio Upload feature to transcribe downloaded audio\n• Copy/paste a manual transcript if you have one\n• Educational channels often have better caption support`);
+    }
+    
+    // General failure case
+    const errorDetails = ytdlpResult.error ? ytdlpResult.error.substring(0, 150) : 'Multiple extraction methods failed';
+    throw new Error(`TRANSCRIPTION_FAILED: Unable to extract transcript. ${errorDetails}\n\nAlternatives:\n• Upload audio file for AI transcription\n• Paste manual transcript\n• Try a different video with confirmed captions`);
     
   } catch (error) {
     console.error("Transcription error:", error);

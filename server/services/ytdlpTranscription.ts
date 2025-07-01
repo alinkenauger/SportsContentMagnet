@@ -1,5 +1,6 @@
 import { spawn } from 'child_process';
 import path from 'path';
+import { fileURLToPath } from 'url';
 
 export interface YtDlpResult {
   success: boolean;
@@ -12,6 +13,8 @@ export class YtDlpTranscriptionService {
   private pythonScriptPath: string;
 
   constructor() {
+    const __filename = fileURLToPath(import.meta.url);
+    const __dirname = path.dirname(__filename);
     this.pythonScriptPath = path.join(__dirname, 'youtube_extractor.py');
   }
 
@@ -20,9 +23,10 @@ export class YtDlpTranscriptionService {
    */
   async extractTranscript(videoIdOrUrl: string): Promise<YtDlpResult> {
     return new Promise((resolve) => {
-      // Spawn Python process with yt-dlp
+      // Spawn Python process with yt-dlp with timeout
       const pythonProcess = spawn('python3', [this.pythonScriptPath, videoIdOrUrl], {
-        stdio: ['pipe', 'pipe', 'pipe']
+        stdio: ['pipe', 'pipe', 'pipe'],
+        timeout: 20000 // 20 second timeout
       });
 
       let output = '';

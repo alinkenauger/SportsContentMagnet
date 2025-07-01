@@ -31,6 +31,8 @@ def extract_youtube_transcript(video_id_or_url):
             '--skip-download',
             '--no-warnings',
             '--quiet',
+            '--socket-timeout', '10',
+            '--retries', '1',
             video_url
         ]
         
@@ -64,6 +66,8 @@ def extract_youtube_transcript(video_id_or_url):
                 '--skip-download',
                 '--no-warnings',
                 '--quiet',
+                '--socket-timeout', '10',
+                '--retries', '1',
                 video_url
             ]
             
