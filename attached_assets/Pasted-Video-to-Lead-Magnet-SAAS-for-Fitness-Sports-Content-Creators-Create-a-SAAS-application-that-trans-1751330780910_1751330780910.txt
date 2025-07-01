@@ -1,0 +1,129 @@
+Video-to-Lead-Magnet SAAS for Fitness & Sports Content Creators
+Create a SAAS application that transforms YouTube videos into high-converting lead magnets specifically for fitness, sports, and how-to content creators. The application should automatically extract valuable coaching tips, drills, and techniques from videos, then generate branded practice guides that serve as lead magnets.
+Core Functionality
+The platform should allow users to:
+
+Input a YouTube URL and automatically extract/transcribe the video content
+Use AI to analyze the transcript and identify key training tips, drills, and actionable advice
+Generate a branded practice guide with the video's core content
+Create a lead-capture landing page that collects name, email, and custom fields
+Deliver a beautiful, branded guide page after email submission
+Organize all guides in a searchable content library
+Track conversion metrics and user engagement
+
+Technical Requirements
+
+Frontend: React with responsive design, user dashboard, content management interface
+Backend: Node.js, data storage, YouTube API integration, OpenAI/similar AI integration
+User Authentication: Secure login system for SAAS customers
+Video Processing Pipeline: YouTube metadata extraction, transcription, content analysis
+Guide Generation: Branded PDF/web page creation with key video insights
+Visual Asset Handling: Extract screenshots/GIFs from key video moments
+Landing Page System: Customizable templates, form collection, branding options
+Content Library: Searchable repository of all guides, categorization options
+Analytics: Conversion tracking, click data, performance metrics
+Integrations: Zapier, webhooks, API connections, email service providers
+
+Essential Features
+
+Dashboard for SAAS users with:
+
+YouTube URL submission
+Table view of all created guides
+Analytics overview
+Branding settings
+
+
+Video processing that:
+
+Extracts video metadata
+Transcribes content with timestamps
+Uses AI to identify key training elements
+Captures visual assets at important moments
+
+
+Lead magnet generation that creates:
+
+Professionally formatted practice guides
+Step-by-step drill instructions
+Visual references from the video
+Embedded timestamp links to video sections
+Personalized content using the player's first name
+
+
+Landing page system with:
+
+Name/email collection
+Custom field configuration options
+Basic customization (logo, colors, headline)
+Custom URL slugs
+Tracking pixel support
+
+
+Delivery page featuring:
+
+Branded practice guide content
+Personalized recommendations based on custom field responses
+Call-to-action areas that are customizable
+Access to the full content library
+Related guide recommendations
+
+
+Integrations including:
+
+Zapier connectivity
+Webhook support
+Direct API
+Tag/tracking code implementation
+Data passing for all custom fields
+
+
+Analytics covering:
+
+Conversion rates
+Guide engagement
+CTA click-through rates
+Traffic sources
+Custom field response analysis
+
+
+
+Must-Have Additional Features
+
+QR code generation for each practice guide
+Custom URL slug options for landing pages
+Basic content editing capabilities for generated guides
+Categorization system for organizing guides by topic, pain point, or goal
+Targeted CTA options based on content categories
+AI feedback mechanism to improve guide quality
+Visual asset extraction from key video moments
+Direct links to each guide for sharing
+Personalization engine that:
+
+Dynamically inserts the player's name throughout the guide
+Creates custom sections based on form responses
+Tailors advice to user-provided skill levels, goals, or limitations
+Adjusts drill difficulty based on experience level provided
+
+
+Custom field management that allows:
+
+Adding/removing form fields on landing pages
+Setting conditional logic for field display
+Creating personalization rules based on responses
+Passing custom tags to email systems based on responses
+
+
+
+Implementation Notes
+
+Focus on creating a seamless user experience for SAAS customers
+Ensure the AI content extraction produces truly valuable, actionable practice guides
+Prioritize visual appeal and branding consistency across landing and delivery pages
+Design the system to scale with increasing content volume
+Keep the interface intuitive with minimal learning curve
+Ensure mobile responsiveness throughout all user-facing pages
+Implement robust personalization that makes each guide feel custom-created for the individual
+Design the custom field system to be flexible while remaining user-friendly
+
+The final product should enable content creators to quickly transform their YouTube videos into high-value lead magnets without additional work, dramatically increasing their conversion rates while providing genuine value to their audience. The personalization features will make users feel like they're receiving custom coaching, significantly enhancing perceived value and engagement.RetryClaude can make mistakes. Please double-check responses.Research Sonnet 3.7
