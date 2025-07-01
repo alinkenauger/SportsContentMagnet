@@ -36,7 +36,6 @@ export function setupGoogleAuth(app: Express) {
           googleEmail: profile.emails?.[0]?.value,
           googleName: profile.displayName,
           googlePicture: profile.photos?.[0]?.value,
-          connectedAt: new Date(),
         });
 
         return done(null, user);

@@ -26,6 +26,9 @@ import {
   type InsertTrainingSettings,
   type KnowledgebaseEntry,
   type InsertKnowledgebaseEntry,
+  googleConnections,
+  type GoogleConnection,
+  type InsertGoogleConnection,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, sql, count, avg } from "drizzle-orm";
@@ -105,6 +108,10 @@ export interface IStorage {
   updateKnowledgebaseEntry(id: number, entry: Partial<InsertKnowledgebaseEntry>): Promise<KnowledgebaseEntry>;
   deleteKnowledgebaseEntry(id: number): Promise<void>;
   searchKnowledgebaseEntries(userId: string, query?: string): Promise<KnowledgebaseEntry[]>;
+
+  // Google connection operations
+  getUserGoogleConnection(userId: string): Promise<GoogleConnection | undefined>;
+  updateUserGoogleConnection(userId: string, connection: InsertGoogleConnection | null): Promise<GoogleConnection | null>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -477,6 +484,37 @@ export class DatabaseStorage implements IStorage {
     }
 
     return await queryBuilder.orderBy(desc(knowledgebaseEntries.createdAt));
+  }
+
+  async getUserGoogleConnection(userId: string): Promise<GoogleConnection | undefined> {
+    const [connection] = await db.select().from(googleConnections).where(eq(googleConnections.userId, userId));
+    return connection;
+  }
+
+  async updateUserGoogleConnection(userId: string, connection: InsertGoogleConnection | null): Promise<GoogleConnection | null> {
+    if (connection === null) {
+      // Delete the connection
+      await db.delete(googleConnections).where(eq(googleConnections.userId, userId));
+      return null;
+    }
+
+    // Upsert the connection
+    const [result] = await db
+      .insert(googleConnections)
+      .values({
+        ...connection,
+        userId,
+      })
+      .onConflictDoUpdate({
+        target: googleConnections.userId,
+        set: {
+          ...connection,
+          updatedAt: new Date(),
+        },
+      })
+      .returning();
+
+    return result;
   }
 }
 

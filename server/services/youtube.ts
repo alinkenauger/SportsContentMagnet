@@ -173,7 +173,7 @@ async function getOfficialYouTubeTranscript(videoId: string): Promise<string | n
     console.log("Found captions but download requires OAuth2 authentication, not available with API key only");
     return null;
     
-    const captionText = await captionResponse.text();
+    const captionText = await captionsResponse.text();
     
     // Parse the caption format and extract text
     const transcript = parseCaptionFormat(captionText);
