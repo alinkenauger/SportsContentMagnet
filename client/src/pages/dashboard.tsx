@@ -475,23 +475,46 @@ export default function Dashboard() {
               </CardHeader>
               <CardContent>
                 {guides && guides.length > 0 ? (
-                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                  <div className="space-y-4">
                     {guides
                       .sort((a: any, b: any) => (b.conversionRate || 0) - (a.conversionRate || 0))
                       .slice(0, 3)
                       .map((guide: any) => (
-                        <div key={guide.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-foreground truncate">
-                              {guide.title}
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                              {guide.downloads || 0} conversions
-                            </p>
+                        <div key={guide.id} className="flex items-center space-x-4 p-3 bg-gray-50 rounded-lg">
+                          {/* Thumbnail */}
+                          <div className="flex-shrink-0">
+                            <div className="w-16 h-12 rounded-md overflow-hidden bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
+                              {guide.thumbnailUrl ? (
+                                <img src={guide.thumbnailUrl} alt="" className="w-full h-full object-cover" />
+                              ) : (
+                                <Book className="w-5 h-5 text-white" />
+                              )}
+                            </div>
                           </div>
-                          <Badge variant="secondary">
-                            {guide.conversionRate || 0}%
-                          </Badge>
+                          
+                          {/* Full Headline */}
+                          <div className="flex-1 min-w-0">
+                            <h3 className="text-sm font-medium text-foreground leading-tight">
+                              {guide.title}
+                            </h3>
+                          </div>
+                          
+                          {/* Metrics Bar */}
+                          <div className="flex items-center space-x-6 text-sm">
+                            <div className="flex items-center space-x-2">
+                              <Eye className="w-4 h-4 text-blue-500" />
+                              <span className="font-medium">{guide.views || 0}</span>
+                              <span className="text-muted-foreground">views</span>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <Users className="w-4 h-4 text-green-500" />
+                              <span className="font-medium">{guide.leads || 0}</span>
+                              <span className="text-muted-foreground">leads</span>
+                            </div>
+                            <Badge variant="secondary">
+                              {guide.conversionRate || 0}%
+                            </Badge>
+                          </div>
                         </div>
                       ))}
                   </div>
