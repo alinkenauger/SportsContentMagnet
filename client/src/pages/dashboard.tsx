@@ -371,7 +371,7 @@ export default function Dashboard() {
                           </td>
                           
                           {/* Conversion Funnel */}
-                          <td className="px-3 py-3">
+                          <td className="px-3 py-3 border-r border-gray-200">
                             <div className="space-y-2">
                               {/* Views */}
                               <div className="flex items-center justify-between text-sm">
@@ -410,7 +410,7 @@ export default function Dashboard() {
                           </td>
                           
                           {/* Landing Page Link */}
-                          <td className="px-3 py-3">
+                          <td className="px-3 py-3 border-r border-gray-200">
                             <Button
                               variant="ghost"
                               size="sm"
@@ -422,7 +422,7 @@ export default function Dashboard() {
                           </td>
                           
                           {/* Guide Page Link */}
-                          <td className="px-3 py-3">
+                          <td className="px-3 py-3 border-r border-gray-200">
                             <Button
                               variant="ghost"
                               size="sm"
@@ -526,28 +526,7 @@ export default function Dashboard() {
               </CardContent>
             </Card>
 
-            {/* Recent Activity */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Recent Activity</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  <div className="flex items-center text-sm">
-                    <div className="w-2 h-2 bg-green-500 rounded-full mr-3"></div>
-                    <span className="text-muted-foreground">New lead captured</span>
-                  </div>
-                  <div className="flex items-center text-sm">
-                    <div className="w-2 h-2 bg-blue-500 rounded-full mr-3"></div>
-                    <span className="text-muted-foreground">Guide viewed 12 times</span>
-                  </div>
-                  <div className="flex items-center text-sm">
-                    <div className="w-2 h-2 bg-purple-500 rounded-full mr-3"></div>
-                    <span className="text-muted-foreground">Landing page updated</span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+
           </div>
         </main>
       </div>
