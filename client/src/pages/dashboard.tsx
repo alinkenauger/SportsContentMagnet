@@ -64,14 +64,10 @@ export default function Dashboard() {
 
   const unreadCount = notifications.filter(n => !n.read).length;
 
-  // Function to mark notification as read
+  // Function to mark notification as read (removes it from the list)
   const markAsRead = (notificationId: number) => {
     setNotifications(prev => 
-      prev.map(notification => 
-        notification.id === notificationId 
-          ? { ...notification, read: true }
-          : notification
-      )
+      prev.filter(notification => notification.id !== notificationId)
     );
   };
 
