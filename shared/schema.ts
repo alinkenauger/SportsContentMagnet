@@ -169,6 +169,46 @@ export const knowledgebaseEntries = pgTable("knowledgebase_entries", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Personalization engine tables
+export const personalizationProfiles = pgTable("personalization_profiles", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").references(() => users.id).notNull(),
+  name: varchar("name").notNull(),
+  description: text("description"),
+  skillLevel: varchar("skill_level").notNull(), // 'beginner', 'intermediate', 'advanced', 'expert'
+  goals: text("goals").array().default([]), // e.g., ['weight_loss', 'muscle_gain', 'technique_improvement']
+  preferences: jsonb("preferences").default({}), // flexible JSON for various preferences
+  demographics: jsonb("demographics").default({}), // age_group, experience_level, etc.
+  isDefault: boolean("is_default").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const personalizationRules = pgTable("personalization_rules", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").references(() => users.id).notNull(),
+  name: varchar("name").notNull(),
+  description: text("description"),
+  conditions: jsonb("conditions").notNull(), // JSON rules for when to apply
+  modifications: jsonb("modifications").notNull(), // JSON for content modifications
+  priority: integer("priority").default(0), // higher number = higher priority
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const contentVariants = pgTable("content_variants", {
+  id: serial("id").primaryKey(),
+  guideId: integer("guide_id").references(() => guides.id).notNull(),
+  profileId: integer("profile_id").references(() => personalizationProfiles.id).notNull(),
+  variantName: varchar("variant_name").notNull(),
+  personalizedContent: jsonb("personalized_content").notNull(), // modified guide content
+  generationPrompt: text("generation_prompt"), // prompt used to generate this variant
+  performanceMetrics: jsonb("performance_metrics").default({}), // engagement, conversion rates
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Relations
 export const usersRelations = relations(users, ({ many, one }) => ({
   guides: many(guides),
@@ -179,6 +219,8 @@ export const usersRelations = relations(users, ({ many, one }) => ({
   brandingSettings: one(brandingSettings),
   trainingSettings: one(trainingSettings),
   knowledgebaseEntries: many(knowledgebaseEntries),
+  personalizationProfiles: many(personalizationProfiles),
+  personalizationRules: many(personalizationRules),
 }));
 
 export const guidesRelations = relations(guides, ({ one, many }) => ({
@@ -187,6 +229,7 @@ export const guidesRelations = relations(guides, ({ one, many }) => ({
   leads: many(leads),
   qrCodes: many(qrCodes),
   analyticsEvents: many(analyticsEvents),
+  contentVariants: many(contentVariants),
 }));
 
 export const landingPagesRelations = relations(landingPages, ({ one, many }) => ({
@@ -223,6 +266,20 @@ export const trainingSettingsRelations = relations(trainingSettings, ({ one }) =
 
 export const knowledgebaseEntriesRelations = relations(knowledgebaseEntries, ({ one }) => ({
   user: one(users, { fields: [knowledgebaseEntries.userId], references: [users.id] }),
+}));
+
+export const personalizationProfilesRelations = relations(personalizationProfiles, ({ one, many }) => ({
+  user: one(users, { fields: [personalizationProfiles.userId], references: [users.id] }),
+  contentVariants: many(contentVariants),
+}));
+
+export const personalizationRulesRelations = relations(personalizationRules, ({ one }) => ({
+  user: one(users, { fields: [personalizationRules.userId], references: [users.id] }),
+}));
+
+export const contentVariantsRelations = relations(contentVariants, ({ one }) => ({
+  guide: one(guides, { fields: [contentVariants.guideId], references: [guides.id] }),
+  profile: one(personalizationProfiles, { fields: [contentVariants.profileId], references: [personalizationProfiles.id] }),
 }));
 
 // Insert schemas
@@ -271,6 +328,24 @@ export const insertKnowledgebaseEntrySchema = createInsertSchema(knowledgebaseEn
   updatedAt: true,
 });
 
+export const insertPersonalizationProfileSchema = createInsertSchema(personalizationProfiles).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertPersonalizationRuleSchema = createInsertSchema(personalizationRules).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertContentVariantSchema = createInsertSchema(contentVariants).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 // Types
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
@@ -290,3 +365,9 @@ export type TrainingSettings = typeof trainingSettings.$inferSelect;
 export type InsertTrainingSettings = z.infer<typeof insertTrainingSettingsSchema>;
 export type KnowledgebaseEntry = typeof knowledgebaseEntries.$inferSelect;
 export type InsertKnowledgebaseEntry = z.infer<typeof insertKnowledgebaseEntrySchema>;
+export type PersonalizationProfile = typeof personalizationProfiles.$inferSelect;
+export type InsertPersonalizationProfile = z.infer<typeof insertPersonalizationProfileSchema>;
+export type PersonalizationRule = typeof personalizationRules.$inferSelect;
+export type InsertPersonalizationRule = z.infer<typeof insertPersonalizationRuleSchema>;
+export type ContentVariant = typeof contentVariants.$inferSelect;
+export type InsertContentVariant = z.infer<typeof insertContentVariantSchema>;
