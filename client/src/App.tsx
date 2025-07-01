@@ -15,6 +15,7 @@ import Leads from "@/pages/leads";
 import Settings from "@/pages/settings";
 import GuideLanding from "@/pages/guide-landing";
 import GuideDelivery from "@/pages/guide-delivery";
+import GuideView from "@/pages/guide-view";
 import Library from "@/pages/library";
 import GuideEditorEnhanced from "@/pages/guide-editor-enhanced";
 

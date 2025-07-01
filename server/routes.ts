@@ -145,6 +145,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Track guide view (public endpoint)
+  app.post('/api/guides/:id/view', async (req, res) => {
+    try {
+      const guideId = parseInt(req.params.id);
+      const guide = await storage.getGuide(guideId);
+      
+      if (!guide) {
+        return res.status(404).json({ message: "Guide not found" });
+      }
+
+      // Increment view count
+      await storage.updateGuide(guideId, {
+        views: (guide.views || 0) + 1
+      });
+
+      // Create analytics event
+      await storage.createAnalyticsEvent({
+        guideId,
+        userId: guide.userId,
+        eventType: 'view',
+        eventData: {
+          timestamp: new Date().toISOString(),
+          referrer: req.headers.referer || null,
+          userAgent: req.headers['user-agent'] || null
+        }
+      });
+
+      res.json({ success: true, views: (guide.views || 0) + 1 });
+    } catch (error) {
+      console.error("Error tracking guide view:", error);
+      res.status(500).json({ message: "Failed to track view" });
+    }
+  });
+
   app.get('/api/guides/:id/landing-page', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
@@ -347,6 +381,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching delivery page:", error);
       res.status(500).json({ message: "Failed to fetch delivery page" });
+    }
+  });
+
+  // Public guide view route (no authentication required)
+  app.get('/api/guide/:id/public', async (req, res) => {
+    try {
+      const guideId = parseInt(req.params.id);
+      const guide = await storage.getGuide(guideId);
+      
+      if (!guide) {
+        return res.status(404).json({ message: "Guide not found" });
+      }
+
+      // Get branding settings for the guide owner
+      const brandingSettings = await storage.getBrandingSettings(guide.userId);
+
+      res.json({
+        guide,
+        brandingSettings
+      });
+    } catch (error) {
+      console.error("Error fetching public guide:", error);
+      res.status(500).json({ message: "Failed to fetch guide" });
     }
   });
 

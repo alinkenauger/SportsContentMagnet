@@ -566,6 +566,7 @@ export default function Dashboard() {
                               variant="ghost"
                               size="sm"
                               className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                              onClick={() => window.open(`/landing/${guide.slug}-landing`, '_blank')}
                             >
                               <ExternalLink className="w-4 h-4 mr-1" />
                               View
@@ -578,6 +579,7 @@ export default function Dashboard() {
                               variant="ghost"
                               size="sm"
                               className="text-green-600 hover:text-green-700 hover:bg-green-50"
+                              onClick={() => window.open(`/guide/${guide.id}`, '_blank')}
                             >
                               <ExternalLink className="w-4 h-4 mr-1" />
                               View
