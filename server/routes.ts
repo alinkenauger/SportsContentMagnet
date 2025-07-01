@@ -1,0 +1,388 @@
+import type { Express } from "express";
+import { createServer, type Server } from "http";
+import { storage } from "./storage";
+import { setupAuth, isAuthenticated } from "./replitAuth";
+import { getYouTubeVideoData, transcribeVideo } from "./services/youtube";
+import { analyzeVideoContent, generatePracticeGuide, personalizeGuideContent } from "./services/openai";
+import { insertGuideSchema, insertLandingPageSchema, insertLeadSchema, insertBrandingSettingsSchema } from "@shared/schema";
+import QRCode from 'qrcode';
+
+export async function registerRoutes(app: Express): Promise<Server> {
+  // Auth middleware
+  await setupAuth(app);
+
+  // Auth routes
+  app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      res.json(user);
+    } catch (error) {
+      console.error("Error fetching user:", error);
+      res.status(500).json({ message: "Failed to fetch user" });
+    }
+  });
+
+  // Dashboard analytics
+  app.get('/api/dashboard/stats', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const stats = await storage.getAnalyticsByUser(userId);
+      res.json(stats);
+    } catch (error) {
+      console.error("Error fetching dashboard stats:", error);
+      res.status(500).json({ message: "Failed to fetch dashboard stats" });
+    }
+  });
+
+  // Guide routes
+  app.post('/api/guides', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { youtubeUrl } = req.body;
+
+      if (!youtubeUrl) {
+        return res.status(400).json({ message: "YouTube URL is required" });
+      }
+
+      // Step 1: Extract video metadata
+      const videoData = await getYouTubeVideoData(youtubeUrl);
+      
+      // Step 2: Transcribe video
+      const transcript = await transcribeVideo(videoData.videoId);
+      
+      // Step 3: Analyze content with AI
+      const analysis = await analyzeVideoContent(transcript, videoData.title, videoData.description);
+      
+      // Step 4: Get user's branding settings
+      const brandingSettings = await storage.getBrandingSettings(userId);
+      
+      // Step 5: Generate practice guide
+      const guideContent = await generatePracticeGuide(analysis, videoData.title, brandingSettings);
+      
+      // Step 6: Create guide in database
+      const guide = await storage.createGuide({
+        userId,
+        title: guideContent.title,
+        description: analysis.summary,
+        youtubeUrl,
+        youtubeVideoId: videoData.videoId,
+        thumbnailUrl: videoData.thumbnailUrl,
+        transcript,
+        aiAnalysis: analysis,
+        content: guideContent,
+        category: analysis.category,
+        tags: analysis.keyTips,
+        slug: `guide-${Date.now()}`,
+        status: 'published'
+      });
+
+      // Step 7: Create default landing page
+      const landingPage = await storage.createLandingPage({
+        guideId: guide.id,
+        userId,
+        title: `Get Your ${guideContent.title}`,
+        headline: `Master ${analysis.category} with This Free Practice Guide`,
+        description: `Download our comprehensive practice guide based on "${videoData.title}" and start improving your skills today.`,
+        customFields: [
+          { name: 'firstName', label: 'First Name', type: 'text', required: true },
+          { name: 'email', label: 'Email', type: 'email', required: true },
+          { name: 'skillLevel', label: 'Skill Level', type: 'select', options: ['Beginner', 'Intermediate', 'Advanced'], required: false }
+        ],
+        customUrl: `${guide.slug}-landing`,
+        isActive: true
+      });
+
+      res.json({
+        guide,
+        landingPage,
+        landingPageUrl: `/landing/${landingPage.customUrl}`,
+        message: "Guide created successfully"
+      });
+
+    } catch (error) {
+      console.error("Error creating guide:", error);
+      res.status(500).json({ message: "Failed to create guide: " + (error as Error).message });
+    }
+  });
+
+  app.get('/api/guides', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { search, category } = req.query;
+      const guides = await storage.searchGuides(userId, search as string, category as string);
+      res.json(guides);
+    } catch (error) {
+      console.error("Error fetching guides:", error);
+      res.status(500).json({ message: "Failed to fetch guides" });
+    }
+  });
+
+  app.get('/api/guides/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const guideId = parseInt(req.params.id);
+      const guide = await storage.getGuide(guideId);
+      
+      if (!guide || guide.userId !== userId) {
+        return res.status(404).json({ message: "Guide not found" });
+      }
+
+      const analytics = await storage.getGuideAnalytics(guideId);
+      res.json({ ...guide, analytics });
+    } catch (error) {
+      console.error("Error fetching guide:", error);
+      res.status(500).json({ message: "Failed to fetch guide" });
+    }
+  });
+
+  app.put('/api/guides/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const guideId = parseInt(req.params.id);
+      const guide = await storage.getGuide(guideId);
+      
+      if (!guide || guide.userId !== userId) {
+        return res.status(404).json({ message: "Guide not found" });
+      }
+
+      const updateData = insertGuideSchema.partial().parse(req.body);
+      const updatedGuide = await storage.updateGuide(guideId, updateData);
+      res.json(updatedGuide);
+    } catch (error) {
+      console.error("Error updating guide:", error);
+      res.status(500).json({ message: "Failed to update guide" });
+    }
+  });
+
+  // Landing page routes
+  app.get('/api/landing/:customUrl', async (req, res) => {
+    try {
+      const { customUrl } = req.params;
+      const landingPage = await storage.getLandingPageByUrl(customUrl);
+      
+      if (!landingPage || !landingPage.isActive) {
+        return res.status(404).json({ message: "Landing page not found" });
+      }
+
+      const guide = await storage.getGuide(landingPage.guideId);
+      const brandingSettings = await storage.getBrandingSettings(landingPage.userId);
+
+      // Track page view
+      await storage.createAnalyticsEvent({
+        userId: landingPage.userId,
+        guideId: landingPage.guideId,
+        landingPageId: landingPage.id,
+        eventType: 'view',
+        eventData: { page: 'landing' },
+        ipAddress: req.ip,
+        userAgent: req.get('User-Agent'),
+        referrer: req.get('Referer')
+      });
+
+      res.json({
+        landingPage,
+        guide,
+        brandingSettings
+      });
+    } catch (error) {
+      console.error("Error fetching landing page:", error);
+      res.status(500).json({ message: "Failed to fetch landing page" });
+    }
+  });
+
+  app.post('/api/landing/:customUrl/submit', async (req, res) => {
+    try {
+      const { customUrl } = req.params;
+      const landingPage = await storage.getLandingPageByUrl(customUrl);
+      
+      if (!landingPage || !landingPage.isActive) {
+        return res.status(404).json({ message: "Landing page not found" });
+      }
+
+      const { firstName, email, customFieldData } = req.body;
+
+      if (!email) {
+        return res.status(400).json({ message: "Email is required" });
+      }
+
+      // Create lead
+      const lead = await storage.createLead({
+        landingPageId: landingPage.id,
+        guideId: landingPage.guideId,
+        userId: landingPage.userId,
+        email,
+        firstName,
+        customFieldData,
+        ipAddress: req.ip,
+        userAgent: req.get('User-Agent'),
+        referrer: req.get('Referer')
+      });
+
+      // Track conversion
+      await storage.createAnalyticsEvent({
+        userId: landingPage.userId,
+        guideId: landingPage.guideId,
+        landingPageId: landingPage.id,
+        eventType: 'conversion',
+        eventData: { leadId: lead.id },
+        ipAddress: req.ip,
+        userAgent: req.get('User-Agent'),
+        referrer: req.get('Referer')
+      });
+
+      res.json({
+        success: true,
+        deliveryUrl: `/delivery/${customUrl}/${lead.id}`,
+        message: "Lead captured successfully"
+      });
+
+    } catch (error) {
+      console.error("Error submitting lead:", error);
+      res.status(500).json({ message: "Failed to submit lead" });
+    }
+  });
+
+  // Delivery page routes
+  app.get('/api/delivery/:customUrl/:leadId', async (req, res) => {
+    try {
+      const { customUrl, leadId } = req.params;
+      const landingPage = await storage.getLandingPageByUrl(customUrl);
+      
+      if (!landingPage) {
+        return res.status(404).json({ message: "Page not found" });
+      }
+
+      const guide = await storage.getGuide(landingPage.guideId);
+      const brandingSettings = await storage.getBrandingSettings(landingPage.userId);
+      
+      // Get lead data for personalization
+      const leads = await storage.getLeadsByGuide(landingPage.guideId);
+      const lead = leads.find(l => l.id === parseInt(leadId));
+
+      if (!lead) {
+        return res.status(404).json({ message: "Access denied" });
+      }
+
+      // Personalize the guide content
+      const personalizedContent = await personalizeGuideContent(
+        guide?.content as any,
+        {
+          firstName: lead.firstName,
+          customFieldData: lead.customFieldData as Record<string, any>
+        }
+      );
+
+      // Track delivery page view
+      await storage.createAnalyticsEvent({
+        userId: landingPage.userId,
+        guideId: landingPage.guideId,
+        landingPageId: landingPage.id,
+        eventType: 'view',
+        eventData: { page: 'delivery', leadId: lead.id },
+        ipAddress: req.ip,
+        userAgent: req.get('User-Agent'),
+        referrer: req.get('Referer')
+      });
+
+      res.json({
+        guide: {
+          ...guide,
+          content: personalizedContent
+        },
+        brandingSettings,
+        lead
+      });
+
+    } catch (error) {
+      console.error("Error fetching delivery page:", error);
+      res.status(500).json({ message: "Failed to fetch delivery page" });
+    }
+  });
+
+  // QR Code generation
+  app.post('/api/qr-codes', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { guideId, targetUrl } = req.body;
+
+      // Generate QR code
+      const qrCodeDataUrl = await QRCode.toDataURL(targetUrl, {
+        width: 300,
+        margin: 2,
+        color: {
+          dark: '#000000',
+          light: '#FFFFFF'
+        }
+      });
+
+      // Save QR code record
+      const qrCode = await storage.createQrCode({
+        guideId,
+        userId,
+        qrCodeUrl: qrCodeDataUrl,
+        targetUrl
+      });
+
+      res.json(qrCode);
+    } catch (error) {
+      console.error("Error generating QR code:", error);
+      res.status(500).json({ message: "Failed to generate QR code" });
+    }
+  });
+
+  // Branding settings routes
+  app.get('/api/branding', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const settings = await storage.getBrandingSettings(userId);
+      res.json(settings);
+    } catch (error) {
+      console.error("Error fetching branding settings:", error);
+      res.status(500).json({ message: "Failed to fetch branding settings" });
+    }
+  });
+
+  app.post('/api/branding', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const settingsData = insertBrandingSettingsSchema.parse({
+        ...req.body,
+        userId
+      });
+      
+      const settings = await storage.upsertBrandingSettings(settingsData);
+      res.json(settings);
+    } catch (error) {
+      console.error("Error updating branding settings:", error);
+      res.status(500).json({ message: "Failed to update branding settings" });
+    }
+  });
+
+  // Analytics routes
+  app.get('/api/analytics', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const analytics = await storage.getAnalyticsByUser(userId);
+      res.json(analytics);
+    } catch (error) {
+      console.error("Error fetching analytics:", error);
+      res.status(500).json({ message: "Failed to fetch analytics" });
+    }
+  });
+
+  // Leads routes
+  app.get('/api/leads', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const leads = await storage.getLeadsByUser(userId);
+      res.json(leads);
+    } catch (error) {
+      console.error("Error fetching leads:", error);
+      res.status(500).json({ message: "Failed to fetch leads" });
+    }
+  });
+
+  const httpServer = createServer(app);
+  return httpServer;
+}

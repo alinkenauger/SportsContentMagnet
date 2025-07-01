@@ -1,0 +1,117 @@
+# Video-to-Lead-Magnet SAAS for Fitness & Sports Content Creators
+
+## Overview
+
+CoachCraft is a SAAS application that transforms YouTube videos into high-converting lead magnets specifically for fitness, sports, and how-to content creators. The platform automatically extracts video content, transcribes it, uses AI to analyze coaching insights, and generates branded practice guides with customizable landing pages for lead capture.
+
+## System Architecture
+
+### Frontend Architecture
+- **Framework**: React with TypeScript using Vite as the build tool
+- **Styling**: TailwindCSS with shadcn/ui component library for consistent design
+- **State Management**: TanStack Query (React Query) for server state and caching
+- **Routing**: Wouter for lightweight client-side routing
+- **UI Components**: Radix UI primitives with custom styling through shadcn/ui
+
+### Backend Architecture
+- **Runtime**: Node.js with Express.js framework
+- **Database**: PostgreSQL with Drizzle ORM for type-safe database operations
+- **Database Provider**: Neon Database (serverless PostgreSQL)
+- **Authentication**: Replit Auth integration with OpenID Connect
+- **Session Management**: Express sessions with PostgreSQL storage
+
+### Project Structure
+```
+├── client/              # Frontend React application
+├── server/              # Backend Express server
+├── shared/              # Shared types and schemas
+├── migrations/          # Database migration files
+└── attached_assets/     # Project documentation
+```
+
+## Key Components
+
+### Video Processing Pipeline
+- **YouTube Integration**: Extracts video metadata, thumbnails, and basic information
+- **Transcription Service**: Converts video audio to text with timestamps
+- **AI Analysis**: Uses OpenAI GPT-4o to identify key coaching insights, drills, and techniques
+- **Content Generation**: Creates structured practice guides from analyzed content
+
+### Lead Capture System
+- **Landing Pages**: Customizable templates with branding options
+- **Form Builder**: Dynamic form creation with custom fields
+- **Lead Management**: Stores and tracks lead information and engagement
+- **Delivery System**: Automated guide delivery after email capture
+
+### User Management
+- **Authentication**: Secure login through Replit's OAuth system
+- **User Profiles**: Stores user preferences and branding settings
+- **Session Handling**: Persistent sessions with database storage
+
+### Analytics & Tracking
+- **Conversion Metrics**: Tracks views, downloads, and conversion rates
+- **Performance Analytics**: Monitors guide performance and user engagement
+- **QR Code Generation**: Creates scannable codes for easy guide sharing
+
+## Data Flow
+
+1. **Content Creation**: User submits YouTube URL through dashboard
+2. **Processing Pipeline**: 
+   - Extract video metadata using YouTube API
+   - Transcribe video content
+   - Analyze content with OpenAI for coaching insights
+   - Generate structured practice guide
+   - Create customized landing page
+3. **Lead Capture**: Visitors access landing page, submit contact information
+4. **Delivery**: System delivers branded guide and tracks engagement
+5. **Analytics**: Real-time tracking of conversions and user behavior
+
+## External Dependencies
+
+### APIs and Services
+- **YouTube Data API v3**: Video metadata extraction and validation
+- **OpenAI API**: GPT-4o for content analysis and guide generation
+- **QRCode Library**: Generate QR codes for guide sharing
+- **Neon Database**: Serverless PostgreSQL hosting
+
+### Authentication
+- **Replit Auth**: OAuth-based authentication system
+- **OpenID Connect**: Industry-standard authentication protocol
+
+### Frontend Libraries
+- **TanStack Query**: Server state management and caching
+- **Radix UI**: Accessible component primitives
+- **Tailwind CSS**: Utility-first styling framework
+- **Wouter**: Lightweight routing solution
+
+## Deployment Strategy
+
+### Development Environment
+- **Vite Dev Server**: Hot module replacement and fast builds
+- **TypeScript**: Full type safety across frontend and backend
+- **ESLint/Prettier**: Code quality and formatting standards
+
+### Production Build
+- **Frontend**: Vite build with optimized bundles
+- **Backend**: esbuild for server bundling
+- **Database**: Drizzle migrations for schema management
+
+### Environment Variables
+- `DATABASE_URL`: PostgreSQL connection string
+- `SESSION_SECRET`: Session encryption key
+- `YOUTUBE_API_KEY`: YouTube Data API credentials
+- `OPENAI_API_KEY`: OpenAI API credentials
+- `REPLIT_DOMAINS`: Allowed domains for OAuth
+
+## Changelog
+
+```
+Changelog:
+- July 01, 2025. Initial setup
+```
+
+## User Preferences
+
+```
+Preferred communication style: Simple, everyday language.
+```
