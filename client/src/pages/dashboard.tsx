@@ -35,7 +35,7 @@ export default function Dashboard() {
   const notificationsRef = useRef<HTMLDivElement>(null);
 
   // Mock notifications data
-  const notifications = [
+  const [notifications, setNotifications] = useState([
     {
       id: 1,
       title: "New lead captured",
@@ -60,9 +60,20 @@ export default function Dashboard() {
       read: true,
       type: "report"
     }
-  ];
+  ]);
 
   const unreadCount = notifications.filter(n => !n.read).length;
+
+  // Function to mark notification as read
+  const markAsRead = (notificationId: number) => {
+    setNotifications(prev => 
+      prev.map(notification => 
+        notification.id === notificationId 
+          ? { ...notification, read: true }
+          : notification
+      )
+    );
+  };
 
   // Close notifications dropdown when clicking outside
   useEffect(() => {
@@ -313,6 +324,7 @@ export default function Dashboard() {
                                   size="sm"
                                   className="p-1 h-auto ml-2"
                                   title="Mark as read"
+                                  onClick={() => markAsRead(notification.id)}
                                 >
                                   <Check className="w-3 h-3" />
                                 </Button>
