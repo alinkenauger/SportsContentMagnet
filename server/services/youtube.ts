@@ -1,7 +1,4 @@
 import { YoutubeTranscript } from 'youtube-transcript';
-import { TranscriptionResult } from './audioTranscription.js';
-import { ytdlpTranscriptionService } from './ytdlpTranscription.js';
-import { whisperTranscriptionService } from './whisperTranscription.js';
 import { whisperYoutubeService } from './whisperYoutubeService.js';
 
 export interface YouTubeVideoData {
@@ -71,45 +68,72 @@ export async function transcribeVideo(videoId: string): Promise<string> {
   try {
     console.log(`Attempting to transcribe video: ${videoId}`);
     
-    // Method 1: Try yt-dlp for subtitle extraction (most reliable)
-    console.log("Trying yt-dlp subtitle extraction...");
-    const { ytdlpTranscription } = await import('./ytdlpTranscription');
-    const ytdlpResult = await ytdlpTranscription.extractTranscript(videoId);
+    // Primary method: Use whisper-youtube (yt-dlp + Whisper)
+    // This bypasses YouTube's restrictions by downloading audio directly
+    console.log("Trying whisper-youtube (yt-dlp + Whisper)...");
+    const whisperYoutubeResult = await whisperYoutubeService.extractAndTranscribe(videoId, 'base');
     
-    if (ytdlpResult.success && ytdlpResult.transcript && ytdlpResult.transcript.length > 100) {
-      console.log(`Successfully extracted transcript via yt-dlp: ${ytdlpResult.transcript.length} characters`);
-      return ytdlpResult.transcript;
+    if (whisperYoutubeResult.success && whisperYoutubeResult.transcript && whisperYoutubeResult.transcript.length > 100) {
+      console.log(`Successfully extracted transcript via whisper-youtube: ${whisperYoutubeResult.transcript.length} characters`);
+      return whisperYoutubeResult.transcript;
     }
-    
-    // Method 2: Fallback to youtube-transcript library
-    console.log("yt-dlp failed, trying youtube-transcript library...");
+
+    // Fallback 1: Try youtube-transcript library (fastest, if available)
+    console.log("whisper-youtube failed, trying youtube-transcript library...");
     const transcript = await getYouTubeTranscript(videoId);
     if (transcript && transcript.length > 100) {
       console.log(`Successfully extracted transcript via youtube-transcript: ${transcript.length} characters`);
       return transcript;
     }
     
-    // Method 3: Last resort - try Whisper transcription (rarely works)
-    console.log("No captions found, attempting Whisper transcription...");
-    const whisperTranscript = await transcribeWithWhisper(videoId);
-    if (whisperTranscript) {
-      return whisperTranscript;
+    // Fallback 2: Try yt-dlp for subtitle extraction
+    console.log("Trying yt-dlp subtitle extraction...");
+    let ytdlpResult: any = { success: false, error: 'Not attempted' };
+    try {
+      const { ytdlpTranscriptionService } = await import('./ytdlpTranscription');
+      ytdlpResult = await ytdlpTranscriptionService.extractTranscript(videoId);
+      
+      if (ytdlpResult.success && ytdlpResult.transcript && ytdlpResult.transcript.length > 100) {
+        console.log(`Successfully extracted transcript via yt-dlp: ${ytdlpResult.transcript.length} characters`);
+        return ytdlpResult.transcript;
+      }
+    } catch (error) {
+      console.log("yt-dlp import/execution failed:", error);
     }
     
-    // Check if yt-dlp successfully connected but found no subtitles
-    if (ytdlpResult.error && ytdlpResult.error.includes('No subtitles found')) {
-      throw new Error(`NO_CAPTIONS_AVAILABLE: This YouTube video doesn't have captions or subtitles available.\n\nSuggestions:\n• Try a different video that has captions enabled\n• Use the Audio Upload feature to transcribe downloaded audio\n• Copy/paste a manual transcript if you have one\n• Educational channels often have better caption support`);
+    // No need for legacy Whisper transcription fallback - whisper-youtube is better
+    
+    // Provide specific error messaging based on what failed
+    if (whisperYoutubeResult.error) {
+      if (whisperYoutubeResult.error.includes('AGE_RESTRICTED')) {
+        throw new Error(`AGE_RESTRICTED: This video requires age verification and cannot be processed automatically.\n\nAlternatives:\n• Use Audio Upload feature with downloaded audio\n• Try a different public video\n• Copy/paste manual transcript if available`);
+      }
+      if (whisperYoutubeResult.error.includes('PRIVATE_VIDEO')) {
+        throw new Error(`PRIVATE_VIDEO: This video is private and cannot be accessed.\n\nAlternatives:\n• Try a public video\n• Use Audio Upload with downloaded audio\n• Copy/paste manual transcript`);
+      }
+      if (whisperYoutubeResult.error.includes('VIDEO_UNAVAILABLE')) {
+        throw new Error(`VIDEO_UNAVAILABLE: This video is not available for processing.\n\nAlternatives:\n• Check if the video URL is correct\n• Try a different video\n• Use Audio Upload feature`);
+      }
+    }
+    
+    // Check if yt-dlp found no subtitles
+    if (ytdlpResult?.error && ytdlpResult.error.includes('No subtitles found')) {
+      throw new Error(`NO_CAPTIONS_AVAILABLE: Multiple transcription methods failed. The video may not have accessible audio or captions.\n\nSuggestions:\n• Try a different video with confirmed captions\n• Use the Audio Upload feature to transcribe downloaded audio\n• Copy/paste a manual transcript if you have one\n• Educational channels often have better processing success`);
     }
     
     // General failure case
-    const errorDetails = ytdlpResult.error ? ytdlpResult.error.substring(0, 150) : 'Multiple extraction methods failed';
-    throw new Error(`TRANSCRIPTION_FAILED: Unable to extract transcript. ${errorDetails}\n\nAlternatives:\n• Upload audio file for AI transcription\n• Paste manual transcript\n• Try a different video with confirmed captions`);
+    const errorDetails = whisperYoutubeResult.error || ytdlpResult?.error || 'All transcription methods failed';
+    throw new Error(`TRANSCRIPTION_FAILED: Unable to extract transcript using any method. ${errorDetails.substring(0, 150)}\n\nAlternatives:\n• Upload audio file for AI transcription\n• Paste manual transcript\n• Try a different video with confirmed accessibility`);
     
   } catch (error) {
     console.error("Transcription error:", error);
     
     // Check if it's our specific error type
-    if ((error as Error).message.startsWith("TRANSCRIPTION_FAILED:")) {
+    if ((error as Error).message.startsWith("TRANSCRIPTION_FAILED:") || 
+        (error as Error).message.startsWith("AGE_RESTRICTED:") ||
+        (error as Error).message.startsWith("PRIVATE_VIDEO:") ||
+        (error as Error).message.startsWith("VIDEO_UNAVAILABLE:") ||
+        (error as Error).message.startsWith("NO_CAPTIONS_AVAILABLE:")) {
       throw error;
     }
     
