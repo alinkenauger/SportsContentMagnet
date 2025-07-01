@@ -32,7 +32,9 @@ import {
   Edit3,
   Settings,
   Layout,
-  Play
+  Play,
+  ChevronLeft,
+  ChevronRight
 } from "lucide-react";
 
 interface EditableElement {
@@ -68,6 +70,7 @@ export default function GuideEditorEnhanced() {
   const [dragOverColumn, setDragOverColumn] = useState<string | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
   const [isResizing, setIsResizing] = useState<string | null>(null);
+  const [isToolbarCollapsed, setIsToolbarCollapsed] = useState(false);
 
   // Fetch guide data
   const { data: guide, isLoading: guideLoading } = useQuery<Guide>({
@@ -994,15 +997,23 @@ export default function GuideEditorEnhanced() {
         </div>
 
         <div className="flex-1 flex overflow-hidden">
-          {/* Enhanced Element Toolbar */}
-          <div className="w-64 border-r bg-card p-4 overflow-y-auto">
-            <h3 className="font-semibold mb-4">Add Elements</h3>
-            <div className="space-y-2">
-              <p className="text-xs text-muted-foreground mb-4">
-                Drag elements onto the canvas or into columns
-              </p>
-              
-              <div className="grid grid-cols-2 gap-2">
+          {/* Enhanced Element Toolbar - Accordion Style */}
+          <div className={`${isToolbarCollapsed ? 'w-12' : 'w-64'} border-r bg-card overflow-y-auto transition-all duration-300 ease-in-out relative`}>
+            {/* Toggle Button */}
+            <div className="absolute top-4 -right-3 z-10">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsToolbarCollapsed(!isToolbarCollapsed)}
+                className="h-6 w-6 p-0 rounded-full bg-background border shadow-sm hover:shadow-md transition-shadow"
+              >
+                {isToolbarCollapsed ? <ChevronRight className="h-3 w-3" /> : <ChevronLeft className="h-3 w-3" />}
+              </Button>
+            </div>
+
+            {isToolbarCollapsed ? (
+              /* Collapsed State - Icon Only */
+              <div className="p-2 space-y-2">
                 {[
                   { type: 'heading', icon: Type, label: 'Heading' },
                   { type: 'paragraph', icon: AlignLeft, label: 'Text' },
@@ -1018,34 +1029,71 @@ export default function GuideEditorEnhanced() {
                     variant="outline"
                     size="sm"
                     onClick={() => addElement(type as EditableElement['type'])}
-                    className="flex flex-col h-16 cursor-grab active:cursor-grabbing"
+                    className="w-8 h-8 p-0 cursor-grab active:cursor-grabbing"
                     draggable
                     onDragStart={(e) => handleToolbarDragStart(e, type as EditableElement['type'])}
                     onDragEnd={handleToolbarDragEnd}
+                    title={label}
                   >
-                    <Icon className="h-4 w-4 mb-1" />
-                    <span className="text-xs">{label}</span>
+                    <Icon className="h-4 w-4" />
                   </Button>
                 ))}
               </div>
-            </div>
-            
-            <Separator className="my-4" />
-            
-            <div className="space-y-2">
-              <p className="text-xs text-muted-foreground">
-                • Click elements to edit inline
-              </p>
-              <p className="text-xs text-muted-foreground">
-                • Drag elements to reorder
-              </p>
-              <p className="text-xs text-muted-foreground">
-                • Drop into columns for layouts
-              </p>
-              <p className="text-xs text-muted-foreground">
-                • Adjust column widths when selected
-              </p>
-            </div>
+            ) : (
+              /* Expanded State - Full Toolbar */
+              <div className="p-4">
+                <h3 className="font-semibold mb-4">Add Elements</h3>
+                <div className="space-y-2">
+                  <p className="text-xs text-muted-foreground mb-4">
+                    Drag elements onto the canvas or into columns
+                  </p>
+                  
+                  <div className="grid grid-cols-2 gap-2">
+                    {[
+                      { type: 'heading', icon: Type, label: 'Heading' },
+                      { type: 'paragraph', icon: AlignLeft, label: 'Text' },
+                      { type: 'image', icon: Image, label: 'Image' },
+                      { type: 'video', icon: Video, label: 'Video' },
+                      { type: 'audio', icon: Music, label: 'Audio' },
+                      { type: 'columns', icon: Columns, label: 'Columns' },
+                      { type: 'button', icon: MousePointer, label: 'Button' },
+                      { type: 'spacing', icon: Minus, label: 'Spacing' },
+                    ].map(({ type, icon: Icon, label }) => (
+                      <Button
+                        key={type}
+                        variant="outline"
+                        size="sm"
+                        onClick={() => addElement(type as EditableElement['type'])}
+                        className="flex flex-col h-16 cursor-grab active:cursor-grabbing"
+                        draggable
+                        onDragStart={(e) => handleToolbarDragStart(e, type as EditableElement['type'])}
+                        onDragEnd={handleToolbarDragEnd}
+                      >
+                        <Icon className="h-4 w-4 mb-1" />
+                        <span className="text-xs">{label}</span>
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+                
+                <Separator className="my-4" />
+                
+                <div className="space-y-2">
+                  <p className="text-xs text-muted-foreground">
+                    • Click elements to edit inline
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    • Drag elements to reorder
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    • Drop into columns for layouts
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    • Adjust column widths when selected
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Enhanced Editor Canvas */}
