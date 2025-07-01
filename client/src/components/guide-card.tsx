@@ -181,15 +181,39 @@ export default function GuideCard({ guide, onEdit, onViewLanding, onViewAnalytic
 
           {/* Action Buttons */}
           <div className="flex gap-2 pt-4 border-t">
-            <Button onClick={() => onViewLanding?.(guide)} variant="outline">
+            <Button 
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                console.log('View Landing button clicked');
+                onViewLanding?.(guide);
+              }} 
+              variant="outline"
+            >
               <ExternalLink className="w-4 h-4 mr-2" />
               View Landing Page
             </Button>
-            <Button onClick={() => onEdit?.(guide)} variant="outline">
+            <Button 
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                console.log('Edit button clicked');
+                onEdit?.(guide);
+              }} 
+              variant="outline"
+            >
               <Edit className="w-4 h-4 mr-2" />
               Edit Guide
             </Button>
-            <Button onClick={() => onViewAnalytics?.(guide)} variant="outline">
+            <Button 
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                console.log('Analytics button clicked');
+                onViewAnalytics?.(guide);
+              }} 
+              variant="outline"
+            >
               <BarChart3 className="w-4 h-4 mr-2" />
               Analytics
             </Button>
