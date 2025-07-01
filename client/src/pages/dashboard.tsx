@@ -565,10 +565,7 @@ export default function Dashboard() {
             />
           </div>
 
-          {/* Google Auth Status */}
-          <div className="mb-6">
-            <GoogleAuthButton />
-          </div>
+
 
           {/* Quick Action - Create New Guide */}
           <Card className="gradient-primary text-white mb-8">

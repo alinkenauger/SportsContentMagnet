@@ -100,8 +100,40 @@ export async function transcribeVideo(videoId: string): Promise<string> {
     } catch (error) {
       console.log("yt-dlp import/execution failed:", error);
     }
-    
-    // No need for legacy Whisper transcription fallback - whisper-youtube is better
+
+    // Fallback 3: Audio extraction + OpenAI Whisper transcription
+    console.log("Trying automated audio extraction + AI transcription...");
+    let audioResult: any = { success: false, error: 'Not attempted' };
+    try {
+      const { audioExtractionService } = await import('./audioExtractionService');
+      const { audioTranscription } = await import('./audioTranscription');
+      
+      const videoUrl = `https://www.youtube.com/watch?v=${videoId}`;
+      const extractionResult = await audioExtractionService.extractAudioFromYoutube(videoUrl);
+      
+      if (extractionResult.success && extractionResult.audioPath) {
+        console.log(`Audio extracted successfully, now transcribing with OpenAI Whisper...`);
+        
+        const transcriptionResult = await audioTranscription.transcribeFile(extractionResult.audioPath);
+        
+        // Clean up the temporary audio file
+        if (extractionResult.cleanup) {
+          await extractionResult.cleanup();
+        }
+        
+        if (transcriptionResult.success && transcriptionResult.text && transcriptionResult.text.length > 100) {
+          console.log(`Successfully transcribed via audio extraction: ${transcriptionResult.text.length} characters`);
+          return transcriptionResult.text;
+        } else {
+          audioResult.error = transcriptionResult.error || 'Audio transcription failed';
+        }
+      } else {
+        audioResult.error = extractionResult.error || 'Audio extraction failed';
+      }
+    } catch (error) {
+      console.log("Audio extraction + transcription failed:", error);
+      audioResult.error = `Audio processing error: ${error}`;
+    }
     
     // Provide specific error messaging based on what failed
     if (whisperYoutubeResult.error) {
@@ -122,8 +154,13 @@ export async function transcribeVideo(videoId: string): Promise<string> {
     }
     
     // General failure case
-    const errorDetails = whisperYoutubeResult.error || ytdlpResult?.error || 'All transcription methods failed';
-    throw new Error(`TRANSCRIPTION_FAILED: Unable to extract transcript using any method. ${errorDetails.substring(0, 150)}\n\nAlternatives:\n• Upload audio file for AI transcription\n• Paste manual transcript\n• Try a different video with confirmed accessibility`);
+    const errorDetails = {
+      whisperYoutube: whisperYoutubeResult.error || 'Failed',
+      ytdlp: ytdlpResult?.error || 'Failed', 
+      audioExtraction: audioResult.error || 'Failed'
+    };
+    
+    throw new Error(`TRANSCRIPTION_FAILED: All methods failed including automated audio extraction.\n\nError details:\n• Whisper-YouTube: ${errorDetails.whisperYoutube}\n• yt-dlp: ${errorDetails.ytdlp}\n• Audio extraction: ${errorDetails.audioExtraction}\n\nAlternatives:\n• Upload audio file manually for AI transcription\n• Paste manual transcript\n• Try a different video with confirmed accessibility`);
     
   } catch (error) {
     console.error("Transcription error:", error);
