@@ -67,27 +67,40 @@ export async function transcribeVideo(videoId: string): Promise<string> {
   try {
     console.log(`Attempting to transcribe video: ${videoId}`);
     
-    // First, try to get captions using youtube-transcript library
+    // Method 1: Try yt-dlp for subtitle extraction (most reliable)
+    console.log("Trying yt-dlp subtitle extraction...");
+    const { ytdlpTranscription } = await import('./ytdlpTranscription');
+    const ytdlpResult = await ytdlpTranscription.extractTranscript(videoId);
+    
+    if (ytdlpResult.success && ytdlpResult.transcript && ytdlpResult.transcript.length > 100) {
+      console.log(`Successfully extracted transcript via yt-dlp: ${ytdlpResult.transcript.length} characters`);
+      return ytdlpResult.transcript;
+    }
+    
+    // Method 2: Fallback to youtube-transcript library
+    console.log("yt-dlp failed, trying youtube-transcript library...");
     const transcript = await getYouTubeTranscript(videoId);
-    if (transcript && transcript.length > 100) { // Ensure we got meaningful content
-      console.log(`Successfully extracted transcript: ${transcript.length} characters`);
+    if (transcript && transcript.length > 100) {
+      console.log(`Successfully extracted transcript via youtube-transcript: ${transcript.length} characters`);
       return transcript;
     }
     
-    // If no captions available or transcript too short, use OpenAI Whisper
+    // Method 3: Last resort - try Whisper transcription (rarely works)
     console.log("No captions found, attempting Whisper transcription...");
     const whisperTranscript = await transcribeWithWhisper(videoId);
     if (whisperTranscript) {
       return whisperTranscript;
     }
     
-    throw new Error("YOUTUBE_BLOCKED: YouTube blocks automatic transcription due to anti-bot measures. WORKING ALTERNATIVES:\n\n✓ Upload audio files (MP3, WAV) - AI transcription with Whisper works perfectly\n✓ Copy/paste manual transcripts - Full text processing available\n✓ Upload PDF documents - Text extraction and analysis\n\nFor YouTube videos: Download audio separately and upload as MP3/WAV file.");
+    // Provide helpful error with what we tried
+    const errorDetails = ytdlpResult.error ? `yt-dlp: ${ytdlpResult.error.substring(0, 100)}...` : 'yt-dlp failed';
+    throw new Error(`TRANSCRIPTION_FAILED: Unable to extract transcript using multiple methods. ${errorDetails}\n\nThis video may not have captions available or may be restricted. Try videos with confirmed subtitles or use alternative input methods.`);
     
   } catch (error) {
     console.error("Transcription error:", error);
     
     // Check if it's our specific error type
-    if ((error as Error).message.startsWith("YOUTUBE_BLOCKED:")) {
+    if ((error as Error).message.startsWith("TRANSCRIPTION_FAILED:")) {
       throw error;
     }
     
