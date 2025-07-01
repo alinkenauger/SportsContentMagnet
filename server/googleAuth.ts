@@ -131,7 +131,24 @@ export function setupGoogleAuth(app: Express) {
     if (req.query.error) {
       console.log("OAuth Error:", req.query.error);
       console.log("Error Description:", req.query.error_description);
-      return res.redirect(`/?error=${req.query.error}&desc=${encodeURIComponent(req.query.error_description || '')}`);
+      res.send(`
+        <html>
+          <body style="font-family: Arial; padding: 20px;">
+            <h2>Google OAuth Error</h2>
+            <p><strong>Error:</strong> ${req.query.error}</p>
+            <p><strong>Description:</strong> ${req.query.error_description || 'No description'}</p>
+            <p><a href="/">← Back to homepage</a></p>
+            <hr>
+            <h3>Common Solutions:</h3>
+            <ul>
+              <li>Make sure you're added as a test user in Google Cloud Console</li>
+              <li>Check that your OAuth consent screen is properly configured</li>
+              <li>Try using "Sign In with Replit" instead</li>
+            </ul>
+          </body>
+        </html>
+      `);
+      return;
     }
     
     // If no error, proceed with Passport authentication
