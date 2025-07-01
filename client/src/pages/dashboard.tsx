@@ -374,67 +374,88 @@ export default function Dashboard() {
             </CardContent>
           </Card>
 
-          {/* Performance Overview - Centered */}
-          <div className="max-w-4xl mx-auto">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Top Performing Guides */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Top Performers</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {guides && guides.length > 0 ? (
-                    <div className="space-y-4">
-                      {guides
-                        .sort((a: any, b: any) => (b.conversionRate || 0) - (a.conversionRate || 0))
-                        .slice(0, 3)
-                        .map((guide: any) => (
-                          <div key={guide.id} className="flex items-center justify-between">
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm font-medium text-foreground truncate">
-                                {guide.title}
-                              </p>
-                              <p className="text-xs text-muted-foreground">
-                                {guide.downloads || 0} conversions
-                              </p>
-                            </div>
-                            <Badge variant="secondary">
-                              {guide.conversionRate || 0}%
-                            </Badge>
+          {/* Performance Overview - Full Width */}
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+            {/* Top Performing Guides */}
+            <Card className="lg:col-span-2">
+              <CardHeader>
+                <CardTitle>Top Performers</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {guides && guides.length > 0 ? (
+                  <div className="space-y-4">
+                    {guides
+                      .sort((a: any, b: any) => (b.conversionRate || 0) - (a.conversionRate || 0))
+                      .slice(0, 3)
+                      .map((guide: any) => (
+                        <div key={guide.id} className="flex items-center justify-between">
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-foreground truncate">
+                              {guide.title}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {guide.downloads || 0} conversions
+                            </p>
                           </div>
-                        ))}
-                    </div>
-                  ) : (
-                    <p className="text-sm text-muted-foreground text-center py-4">
-                      Create guides to see top performers
-                    </p>
-                  )}
-                </CardContent>
-              </Card>
-
-              {/* Quick Actions */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Quick Actions</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    <Button variant="ghost" className="w-full justify-start">
-                      <Palette className="w-4 h-4 mr-3" />
-                      Update Branding
-                    </Button>
-                    <Button variant="ghost" className="w-full justify-start">
-                      <ExternalLink className="w-4 h-4 mr-3" />
-                      Manage Integrations
-                    </Button>
-                    <Button variant="ghost" className="w-full justify-start">
-                      <TrendingUp className="w-4 h-4 mr-3" />
-                      Export Data
-                    </Button>
+                          <Badge variant="secondary">
+                            {guide.conversionRate || 0}%
+                          </Badge>
+                        </div>
+                      ))}
                   </div>
-                </CardContent>
-              </Card>
-            </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground text-center py-4">
+                    Create guides to see top performers
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Quick Actions */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Quick Actions</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  <Button variant="ghost" className="w-full justify-start">
+                    <Palette className="w-4 h-4 mr-3" />
+                    Update Branding
+                  </Button>
+                  <Button variant="ghost" className="w-full justify-start">
+                    <ExternalLink className="w-4 h-4 mr-3" />
+                    Manage Integrations
+                  </Button>
+                  <Button variant="ghost" className="w-full justify-start">
+                    <TrendingUp className="w-4 h-4 mr-3" />
+                    Export Data
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Recent Activity */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Recent Activity</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  <div className="flex items-center text-sm">
+                    <div className="w-2 h-2 bg-green-500 rounded-full mr-3"></div>
+                    <span className="text-muted-foreground">New lead captured</span>
+                  </div>
+                  <div className="flex items-center text-sm">
+                    <div className="w-2 h-2 bg-blue-500 rounded-full mr-3"></div>
+                    <span className="text-muted-foreground">Guide viewed 12 times</span>
+                  </div>
+                  <div className="flex items-center text-sm">
+                    <div className="w-2 h-2 bg-purple-500 rounded-full mr-3"></div>
+                    <span className="text-muted-foreground">Landing page updated</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           </div>
         </main>
       </div>
