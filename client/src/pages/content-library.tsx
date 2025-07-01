@@ -83,13 +83,28 @@ export default function ContentLibrary() {
   };
 
   const handleViewLanding = async (guide: Guide) => {
+    console.log('Clicked View Landing Page for guide:', guide.id);
     try {
       // Fetch landing page URL for this guide
       const response = await fetch(`/api/guides/${guide.id}/landing-page`);
+      console.log('API response status:', response.status);
+      
       if (response.ok) {
         const landingPage = await response.json();
-        window.open(`/landing/${landingPage.customUrl}`, '_blank');
+        console.log('Landing page data:', landingPage);
+        const url = `/landing/${landingPage.customUrl}`;
+        console.log('Opening URL:', url);
+        
+        const newWindow = window.open(url, '_blank');
+        if (!newWindow) {
+          toast({
+            title: "Popup Blocked",
+            description: "Please allow popups and try again.",
+            variant: "destructive",
+          });
+        }
       } else {
+        console.log('API error response:', await response.text());
         toast({
           title: "Landing Page Not Found",
           description: "No landing page exists for this guide yet.",
@@ -97,6 +112,7 @@ export default function ContentLibrary() {
         });
       }
     } catch (error) {
+      console.error('Error in handleViewLanding:', error);
       toast({
         title: "Error",
         description: "Failed to open landing page",
