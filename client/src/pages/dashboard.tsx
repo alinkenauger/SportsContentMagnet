@@ -575,7 +575,7 @@ export default function Dashboard() {
             <CardContent className="p-8">
               <div className="max-w-4xl">
                 <h3 className="text-2xl font-bold mb-3">Transform Any Content into Lead Magnets</h3>
-                <p className="text-white/80 mb-6">
+                <p className="text-blue-100 mb-6">
                   {inputMethod === "youtube" && "Paste a YouTube URL and let our AI extract valuable coaching insights to create your next lead magnet in minutes."}
                   {inputMethod === "manual" && "Manually upload your video transcript or drag and drop a text file to bypass YouTube restrictions."}
                   {inputMethod === "pdf" && "Upload PDF documents, articles, or guides to extract key insights and convert them into practice guides."}
@@ -674,11 +674,11 @@ export default function Dashboard() {
                         value={manualTranscript}
                         onChange={(e) => setManualTranscript(e.target.value)}
                         placeholder="Paste or drag transcript here... (YouTube transcript, manual notes, or upload a .txt file)"
-                        className="w-full h-full min-h-[100px] bg-transparent text-white placeholder-white/60 resize-none border-none outline-none"
+                        className="w-full h-full min-h-[100px] bg-transparent text-white placeholder-blue-100 resize-none border-none outline-none"
                         disabled={isProcessing}
                       />
                       {!manualTranscript && (
-                        <div className="text-center text-white/60 text-sm mt-2">
+                        <div className="text-center text-blue-100 text-sm mt-2">
                           💡 Tip: Drag a .txt file here or paste transcript text
                         </div>
                       )}
@@ -746,9 +746,9 @@ export default function Dashboard() {
                           </div>
                         ) : (
                           <div className="text-center">
-                            <div className="text-white/70 text-xl mb-2">📄</div>
+                            <div className="text-blue-100 text-xl mb-2">📄</div>
                             <div className="text-white font-medium mb-1">Drop PDF here or click to upload</div>
-                            <div className="text-white/60 text-sm">
+                            <div className="text-blue-100 text-sm">
                               Supports articles, guides, research papers, ebooks
                             </div>
                           </div>
