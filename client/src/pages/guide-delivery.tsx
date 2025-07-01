@@ -13,7 +13,8 @@ import {
   Clock,
   Target,
   Users,
-  PlayCircle
+  PlayCircle,
+  BookOpen
 } from "lucide-react";
 
 interface DeliveryPageData {
@@ -167,7 +168,7 @@ export default function GuideDelivery() {
               <Button 
                 variant="outline"
                 size="sm"
-                onClick={() => window.location.href = '/library'}
+                onClick={() => window.location.href = '/public/library'}
                 className="flex items-center space-x-2 border-slate-300 hover:bg-slate-50"
               >
                 <BookOpen className="w-4 h-4" />

@@ -13,6 +13,7 @@ import Analytics from "@/pages/analytics";
 import Branding from "@/pages/branding";
 import GuideLanding from "@/pages/guide-landing";
 import GuideDelivery from "@/pages/guide-delivery";
+import Library from "@/pages/library";
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -34,6 +35,7 @@ function Router() {
       {/* Public routes for landing and delivery pages */}
       <Route path="/landing/:customUrl" component={GuideLanding} />
       <Route path="/delivery/:customUrl/:leadId" component={GuideDelivery} />
+      <Route path="/public/library" component={Library} />
       
       {/* Fallback to 404 */}
       <Route component={NotFound} />

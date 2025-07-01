@@ -250,22 +250,6 @@ export default function GuideLanding() {
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-4" id="lead-form">
-              {/* Email Field */}
-              <div>
-                <Label htmlFor="email" className="text-sm font-medium text-gray-700">
-                  Email Address *
-                </Label>
-                <Input
-                  id="email"
-                  type="email"
-                  required
-                  className="mt-1 block w-full border-gray-300 rounded-md focus:ring-green-500 focus:border-green-500"
-                  value={formData.email || ""}
-                  onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
-                  placeholder="your@email.com"
-                />
-              </div>
-
               {/* Custom Fields */}
               {(landingPage as any).customFields?.map((field: any) => (
                 <div key={field.name}>
