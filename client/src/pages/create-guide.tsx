@@ -23,6 +23,7 @@ export default function CreateGuide() {
     difficulty: "",
     collectSms: false,
     smsConsentText: "I consent to receive text messages from this business. Message and data rates may apply. Reply STOP to opt out.",
+    leadTags: "",
   });
   const [isProcessing, setIsProcessing] = useState(false);
   const [processingSteps, setProcessingSteps] = useState([
@@ -99,6 +100,7 @@ export default function CreateGuide() {
         difficulty: "",
         collectSms: false,
         smsConsentText: "I consent to receive text messages from this business. Message and data rates may apply. Reply STOP to opt out.",
+        leadTags: "",
       });
       
     } catch (error) {
@@ -280,6 +282,28 @@ export default function CreateGuide() {
                         </p>
                       </div>
                     )}
+                  </div>
+                </div>
+
+                {/* Lead Tagging Settings */}
+                <div className="border-t pt-6">
+                  <h4 className="font-semibold mb-4 flex items-center space-x-2">
+                    <Zap className="w-4 h-4" />
+                    <span>Lead Tagging (Optional)</span>
+                  </h4>
+                  
+                  <div>
+                    <Label htmlFor="lead-tags">Lead Tags</Label>
+                    <Input
+                      id="lead-tags"
+                      value={customSettings.leadTags}
+                      onChange={(e) => setCustomSettings(prev => ({ ...prev, leadTags: e.target.value }))}
+                      placeholder="e.g., fitness-enthusiast, basketball-player, beginner"
+                      className="mt-1"
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Add comma-separated tags that will be applied to all leads captured from this guide. Perfect for email platform integrations and Zapier automation.
+                    </p>
                   </div>
                 </div>
               </CardContent>

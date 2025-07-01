@@ -39,7 +39,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/guides', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const { youtubeUrl, category, customInstructions, targetAudience, difficulty, collectSms, smsConsentText } = req.body;
+      const { youtubeUrl, category, customInstructions, targetAudience, difficulty, collectSms, smsConsentText, leadTags } = req.body;
 
       if (!youtubeUrl) {
         return res.status(400).json({ message: "YouTube URL is required" });
@@ -244,6 +244,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Email is required" });
       }
 
+      // Get guide to access leadTags
+      const guide = await storage.getGuide(landingPage.guideId);
+      
       // Create lead
       const lead = await storage.createLead({
         landingPageId: landingPage.id,
@@ -253,6 +256,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         firstName,
         phone: phone && phone.trim() ? phone : undefined,
         smsConsent: phone && phone.trim() ? (smsConsent === "true") : false,
+        tags: guide?.leadTags || [], // Apply lead tags from guide
         customFieldData,
         ipAddress: req.ip,
         userAgent: req.get('User-Agent'),
