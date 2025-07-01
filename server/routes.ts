@@ -181,6 +181,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Public library route for displaying all public guides
+  app.get('/api/library/public-guides', async (req, res) => {
+    try {
+      const publicGuides = await storage.getPublicGuides();
+      res.json(publicGuides);
+    } catch (error) {
+      console.error("Error fetching public guides:", error);
+      res.status(500).json({ message: "Failed to fetch public guides" });
+    }
+  });
+
   // Landing page routes
   app.get('/api/landing/:customUrl', async (req, res) => {
     try {

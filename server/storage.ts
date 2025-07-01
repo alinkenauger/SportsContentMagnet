@@ -36,6 +36,21 @@ export interface IStorage {
   updateGuide(id: number, guide: Partial<InsertGuide>): Promise<Guide>;
   deleteGuide(id: number): Promise<void>;
   searchGuides(userId: string, query?: string, category?: string): Promise<Guide[]>;
+  getPublicGuides(): Promise<Array<{
+    id: number;
+    title: string;
+    description: string;
+    thumbnailUrl: string;
+    category: string;
+    tags: string[];
+    views: number;
+    downloads: number;
+    createdAt: string;
+    author: {
+      companyName?: string;
+      logoUrl?: string;
+    };
+  }>>;
 
   // Landing page operations
   createLandingPage(landingPage: InsertLandingPage): Promise<LandingPage>;
@@ -146,6 +161,43 @@ export class DatabaseStorage implements IStorage {
     }
 
     return await queryBuilder.orderBy(desc(guides.createdAt));
+  }
+
+  async getPublicGuides() {
+    const guidesWithBranding = await db
+      .select({
+        id: guides.id,
+        title: guides.title,
+        description: guides.description,
+        thumbnailUrl: guides.thumbnailUrl,
+        category: guides.category,
+        tags: guides.tags,
+        views: guides.views,
+        downloads: guides.downloads,
+        createdAt: guides.createdAt,
+        companyName: brandingSettings.companyName,
+        logoUrl: brandingSettings.logoUrl,
+      })
+      .from(guides)
+      .leftJoin(brandingSettings, eq(guides.userId, brandingSettings.userId))
+      .where(eq(guides.isPublic, true))
+      .orderBy(desc(guides.createdAt));
+
+    return guidesWithBranding.map(guide => ({
+      id: guide.id,
+      title: guide.title,
+      description: guide.description,
+      thumbnailUrl: guide.thumbnailUrl,
+      category: guide.category || '',
+      tags: guide.tags || [],
+      views: guide.views || 0,
+      downloads: guide.downloads || 0,
+      createdAt: guide.createdAt?.toISOString() || new Date().toISOString(),
+      author: {
+        companyName: guide.companyName || undefined,
+        logoUrl: guide.logoUrl || undefined,
+      },
+    }));
   }
 
   // Landing page operations

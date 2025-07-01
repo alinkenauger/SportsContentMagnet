@@ -35,6 +35,7 @@ function Router() {
       {/* Public routes for landing and delivery pages */}
       <Route path="/landing/:customUrl" component={GuideLanding} />
       <Route path="/delivery/:customUrl/:leadId" component={GuideDelivery} />
+      <Route path="/guide/:guideId" component={GuideLanding} />
       <Route path="/public/library" component={Library} />
       
       {/* Fallback to 404 */}
