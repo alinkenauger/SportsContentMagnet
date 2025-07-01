@@ -30,6 +30,10 @@ export default function Dashboard() {
   const [, setLocation] = useLocation();
   const [youtubeUrl, setYoutubeUrl] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
+  const [inputMethod, setInputMethod] = useState<"youtube" | "manual">("youtube");
+  const [manualTitle, setManualTitle] = useState("");
+  const [manualTranscript, setManualTranscript] = useState("");
+  const [isDragOver, setIsDragOver] = useState(false);
   const [columnWidths, setColumnWidths] = useState([35, 20, 15, 15, 15]);
   const [showNotifications, setShowNotifications] = useState(false);
   const tableRef = useRef<HTMLTableElement>(null);
@@ -191,14 +195,25 @@ export default function Dashboard() {
       }
 
       // Actually create the guide
-      await apiRequest("POST", "/api/guides", { youtubeUrl });
+      const requestData = inputMethod === "youtube" ? {
+        youtubeUrl
+      } : {
+        manualTranscript,
+        manualTitle,
+        inputMethod: "manual"
+      };
+      
+      await apiRequest("POST", "/api/guides", requestData);
       
       toast({
         title: "Success",
         description: "Guide created successfully!",
       });
       
+      // Reset form
       setYoutubeUrl("");
+      setManualTitle("");
+      setManualTranscript("");
       refetchGuides();
     } catch (error) {
       if (isUnauthorizedError(error as Error)) {
@@ -232,6 +247,57 @@ export default function Dashboard() {
       setIsProcessing(false);
       setProcessingSteps(prev => prev.map(s => ({ ...s, status: "pending" })));
       setProgress(0);
+    }
+  };
+
+  // Drag and drop handlers for manual transcripts
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(false);
+    
+    const files = Array.from(e.dataTransfer.files);
+    const textFile = files.find(file => file.type === 'text/plain');
+    
+    if (textFile) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const content = event.target?.result as string;
+        if (content) {
+          setManualTranscript(content);
+          setInputMethod("manual");
+          // Auto-fill title with filename if empty
+          if (!manualTitle) {
+            setManualTitle(textFile.name.replace(/\.[^/.]+$/, ""));
+          }
+        }
+      };
+      reader.readAsText(textFile);
+    } else {
+      // Handle dragged text
+      const text = e.dataTransfer.getData('text/plain');
+      if (text) {
+        setManualTranscript(text);
+        setInputMethod("manual");
+      }
+    }
+  };
+
+  // Paste handler for manual transcripts
+  const handlePaste = (e: React.ClipboardEvent) => {
+    const pastedText = e.clipboardData.getData('text');
+    if (pastedText && pastedText.length > 100) { // Likely a transcript if it's long
+      setManualTranscript(pastedText);
+      setInputMethod("manual");
     }
   };
 
@@ -418,29 +484,102 @@ export default function Dashboard() {
           {/* Quick Action - Create New Guide */}
           <Card className="gradient-primary text-white mb-8">
             <CardContent className="p-8">
-              <div className="max-w-2xl">
+              <div className="max-w-4xl">
                 <h3 className="text-2xl font-bold mb-3">Transform Your Next Video</h3>
                 <p className="text-blue-100 mb-6">
-                  Paste a YouTube URL and let our AI extract valuable coaching insights to create your next lead magnet in minutes.
+                  {inputMethod === "youtube" 
+                    ? "Paste a YouTube URL and let our AI extract valuable coaching insights to create your next lead magnet in minutes."
+                    : "Manually upload your video transcript or drag and drop a text file to bypass YouTube restrictions."
+                  }
                 </p>
                 
-                <div className="flex space-x-4">
-                  <Input
-                    value={youtubeUrl}
-                    onChange={(e) => setYoutubeUrl(e.target.value)}
-                    placeholder="https://youtube.com/watch?v=..."
-                    className="flex-1 bg-white text-slate-800 placeholder-slate-500"
-                    disabled={isProcessing}
-                  />
-                  <Button 
-                    onClick={handleCreateGuide}
-                    disabled={isProcessing}
-                    className="bg-white text-primary hover:bg-gray-50"
+                {/* Input Method Toggle */}
+                <div className="flex space-x-2 mb-4">
+                  <Button
+                    variant={inputMethod === "youtube" ? "secondary" : "ghost"}
+                    size="sm"
+                    onClick={() => setInputMethod("youtube")}
+                    className={inputMethod === "youtube" ? "bg-white text-primary" : "bg-transparent text-white border-white hover:bg-white/10"}
                   >
-                    <Sparkles className="w-4 h-4 mr-2" />
-                    Generate Guide
+                    YouTube URL
+                  </Button>
+                  <Button
+                    variant={inputMethod === "manual" ? "secondary" : "ghost"}
+                    size="sm"
+                    onClick={() => setInputMethod("manual")}
+                    className={inputMethod === "manual" ? "bg-white text-primary" : "bg-transparent text-white border-white hover:bg-white/10"}
+                  >
+                    Manual Transcript
                   </Button>
                 </div>
+
+                {inputMethod === "youtube" ? (
+                  <div className="flex space-x-4">
+                    <Input
+                      value={youtubeUrl}
+                      onChange={(e) => setYoutubeUrl(e.target.value)}
+                      placeholder="https://youtube.com/watch?v=..."
+                      className="flex-1 bg-white text-slate-800 placeholder-slate-500"
+                      disabled={isProcessing}
+                    />
+                    <Button 
+                      onClick={handleCreateGuide}
+                      disabled={isProcessing || !youtubeUrl}
+                      className="bg-white text-primary hover:bg-gray-50"
+                    >
+                      <Sparkles className="w-4 h-4 mr-2" />
+                      Generate Guide
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {/* Title Input */}
+                    <Input
+                      value={manualTitle}
+                      onChange={(e) => setManualTitle(e.target.value)}
+                      placeholder="Enter video title..."
+                      className="bg-white text-slate-800 placeholder-slate-500"
+                      disabled={isProcessing}
+                    />
+                    
+                    {/* Drag and Drop Transcript Area */}
+                    <div
+                      onDragOver={handleDragOver}
+                      onDragLeave={handleDragLeave}
+                      onDrop={handleDrop}
+                      onPaste={handlePaste}
+                      className={`min-h-[120px] p-4 rounded-lg border-2 border-dashed transition-all ${
+                        isDragOver 
+                          ? 'border-yellow-300 bg-yellow-50/10' 
+                          : 'border-white/30 bg-white/5'
+                      } ${manualTranscript ? 'border-green-300 bg-green-50/10' : ''}`}
+                    >
+                      <textarea
+                        value={manualTranscript}
+                        onChange={(e) => setManualTranscript(e.target.value)}
+                        placeholder="Paste or drag transcript here... (YouTube transcript, manual notes, or upload a .txt file)"
+                        className="w-full h-full min-h-[100px] bg-transparent text-white placeholder-blue-100 resize-none border-none outline-none"
+                        disabled={isProcessing}
+                      />
+                      {!manualTranscript && (
+                        <div className="text-center text-blue-100 text-sm mt-2">
+                          💡 Tip: Drag a .txt file here or paste transcript text
+                        </div>
+                      )}
+                    </div>
+                    
+                    <div className="flex justify-end">
+                      <Button 
+                        onClick={handleCreateGuide}
+                        disabled={isProcessing || !manualTitle || !manualTranscript}
+                        className="bg-white text-primary hover:bg-gray-50"
+                      >
+                        <Sparkles className="w-4 h-4 mr-2" />
+                        Generate Guide
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
