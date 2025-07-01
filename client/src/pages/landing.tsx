@@ -16,7 +16,7 @@ export default function Landing() {
             <div className="w-10 h-10 gradient-primary rounded-lg flex items-center justify-center">
               <Video className="w-6 h-6 text-white" />
             </div>
-            <h1 className="text-2xl font-bold text-foreground">CoachCraft</h1>
+            <h1 className="text-2xl font-bold text-foreground">VidMagnet</h1>
           </div>
           <Button onClick={handleLogin} className="gradient-primary text-white">
             Get Started

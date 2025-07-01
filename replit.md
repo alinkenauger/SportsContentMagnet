@@ -1,8 +1,8 @@
-# Video-to-Lead-Magnet SAAS for Fitness & Sports Content Creators
+# VidMagnet - Video-to-Lead-Magnet SAAS for Fitness & Sports Content Creators
 
 ## Overview
 
-CoachCraft is a SAAS application that transforms YouTube videos into high-converting lead magnets specifically for fitness, sports, and how-to content creators. The platform automatically extracts video content, transcribes it, uses AI to analyze coaching insights, and generates branded practice guides with customizable landing pages for lead capture.
+VidMagnet is a SAAS application that transforms YouTube videos into high-converting lead magnets specifically for fitness, sports, and how-to content creators. The platform automatically extracts video content, transcribes it, uses AI to analyze coaching insights, and generates branded practice guides with customizable landing pages for lead capture with optional SMS collection and legal compliance features.
 
 ## System Architecture
 

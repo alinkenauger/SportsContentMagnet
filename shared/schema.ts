@@ -86,6 +86,8 @@ export const landingPages = pgTable("landing_pages", {
   customFields: jsonb("custom_fields"), // Dynamic form fields
   customUrl: varchar("custom_url").unique(),
   trackingPixel: text("tracking_pixel"),
+  collectSms: boolean("collect_sms").default(false), // Whether to collect SMS on form
+  smsConsentText: text("sms_consent_text").default("I consent to receive text messages from this business. Message and data rates may apply. Reply STOP to opt out."),
   isActive: boolean("is_active").default(true),
   views: integer("views").default(0),
   conversions: integer("conversions").default(0),
@@ -102,6 +104,8 @@ export const leads = pgTable("leads", {
   email: varchar("email").notNull(),
   firstName: varchar("first_name"),
   lastName: varchar("last_name"),
+  phone: varchar("phone", { length: 20 }),
+  smsConsent: boolean("sms_consent").default(false),
   customFieldData: jsonb("custom_field_data"), // Responses to custom fields
   ipAddress: varchar("ip_address"),
   userAgent: text("user_agent"),
