@@ -223,6 +223,12 @@ Changelog:
   * Simplified OAuth scopes to basic profile/email to avoid verification requirements
   * Added universal logout functionality that works with both authentication methods
   * Maintained backward compatibility with existing Replit Auth users
+- July 01, 2025. Added manual transcript input option to bypass YouTube transcription issues:
+  * Implemented input method selector with YouTube URL and Manual Transcript options
+  * Added manual title and transcript input fields for direct content upload
+  * Updated backend guide creation to handle both YouTube and manual input methods
+  * Provided clear user guidance about YouTube transcription limitations
+  * Enabled immediate testing of AI guide generation with user-provided transcripts
 ```
 
 ## User Preferences

@@ -106,17 +106,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/guides', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const { youtubeUrl, category, customInstructions, targetAudience, difficulty, collectSms, smsConsentText, leadTags } = req.body;
+      const { youtubeUrl, manualTranscript, manualTitle, inputMethod, category, customInstructions, targetAudience, difficulty, collectSms, smsConsentText, leadTags } = req.body;
 
-      if (!youtubeUrl) {
-        return res.status(400).json({ message: "YouTube URL is required" });
+      let videoData: any;
+      let transcript: string;
+
+      if (inputMethod === "manual") {
+        // Handle manual transcript input
+        if (!manualTranscript || !manualTitle) {
+          return res.status(400).json({ message: "Manual transcript and title are required" });
+        }
+        
+        // Create mock video data for manual input
+        videoData = {
+          videoId: `manual-${Date.now()}`,
+          title: manualTitle,
+          description: "",
+          thumbnailUrl: "",
+          duration: "0:00",
+          channelTitle: "Manual Upload",
+          publishedAt: new Date().toISOString(),
+          viewCount: 0,
+          likeCount: 0
+        };
+        
+        transcript = manualTranscript;
+      } else {
+        // Handle YouTube URL input
+        if (!youtubeUrl) {
+          return res.status(400).json({ message: "YouTube URL is required" });
+        }
+
+        // Step 1: Extract video metadata
+        videoData = await getYouTubeVideoData(youtubeUrl);
+        
+        // Step 2: Transcribe video
+        transcript = await transcribeVideo(videoData.videoId);
       }
-
-      // Step 1: Extract video metadata
-      const videoData = await getYouTubeVideoData(youtubeUrl);
-      
-      // Step 2: Transcribe video
-      const transcript = await transcribeVideo(videoData.videoId);
       
       // Step 3: Analyze content with AI
       const analysis = await analyzeVideoContent(transcript, videoData.title, videoData.description);
