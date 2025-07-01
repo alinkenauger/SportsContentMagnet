@@ -60,46 +60,66 @@ export default function GuideEditor() {
   const [guideDescription, setGuideDescription] = useState("");
   
   // Fetch guide data
-  const { data: guide, isLoading: guideLoading } = useQuery({
-    queryKey: ["/api/guides", guideId],
+  const { data: guide, isLoading: guideLoading } = useQuery<Guide>({
+    queryKey: [`/api/guides/${guideId}`],
     enabled: !!guideId && isAuthenticated,
     retry: false,
   });
 
   // Initialize elements from guide content
   useEffect(() => {
-    if (guide?.content) {
-      setGuideTitle(guide.title);
-      setGuideDescription(guide.description);
+    if (guide) {
+      setGuideTitle(guide.title || '');
+      setGuideDescription(guide.description || '');
       
       const initialElements: EditableElement[] = [];
       let order = 0;
       
-      // Convert guide content to editable elements
-      if (guide.content.introduction) {
+      // Convert guide content to editable elements if content exists
+      const content = guide.content as any;
+      if (content) {
+        if (content.introduction) {
+          initialElements.push({
+            id: `intro-${Date.now()}`,
+            type: 'paragraph',
+            content: { text: content.introduction },
+            order: order++
+          });
+        }
+        
+        if (content.sections) {
+          content.sections.forEach((section: any, index: number) => {
+            initialElements.push({
+              id: `section-title-${index}`,
+              type: 'heading',
+              content: { text: section.title, level: 2 },
+              order: order++
+            });
+            
+            initialElements.push({
+              id: `section-content-${index}`,
+              type: 'paragraph',
+              content: { text: section.content },
+              order: order++
+            });
+          });
+        }
+      } else {
+        // If no content exists, create a basic structure
         initialElements.push({
-          id: `intro-${Date.now()}`,
-          type: 'paragraph',
-          content: { text: guide.content.introduction },
-          order: order++
-        });
-      }
-      
-      guide.content.sections?.forEach((section: any, index: number) => {
-        initialElements.push({
-          id: `section-title-${index}`,
+          id: `title-${Date.now()}`,
           type: 'heading',
-          content: { text: section.title, level: 2 },
+          content: { text: guide.title || 'Guide Title', level: 1 },
           order: order++
         });
         
         initialElements.push({
-          id: `section-content-${index}`,
+          id: `intro-${Date.now()}`,
           type: 'paragraph',
-          content: { text: section.content },
+          content: { text: 'Click to add your introduction...' },
           order: order++
         });
-      });
+      }
       
       setElements(initialElements);
     }
@@ -162,12 +182,13 @@ export default function GuideEditor() {
       sections.push(currentSection);
     }
 
+    const content = guide?.content as any;
     const updatedContent = {
       title: guideTitle,
       introduction: elements.find(e => e.id.startsWith('intro-'))?.content.text || '',
       sections,
-      conclusion: guide?.content?.conclusion || '',
-      callToAction: guide?.content?.callToAction || ''
+      conclusion: content?.conclusion || '',
+      callToAction: content?.callToAction || ''
     };
 
     saveGuideMutation.mutate({
