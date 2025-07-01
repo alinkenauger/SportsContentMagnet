@@ -1,14 +1,21 @@
+import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Guide } from "@shared/schema";
-import { Eye, Download, Percent, ExternalLink, Edit, MoreVertical, BarChart3 } from "lucide-react";
+import { Eye, Download, Percent, ExternalLink, Edit, MoreVertical, BarChart3, X } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 interface GuideCardProps {
   guide: Guide;
@@ -18,6 +25,8 @@ interface GuideCardProps {
 }
 
 export default function GuideCard({ guide, onEdit, onViewLanding, onViewAnalytics }: GuideCardProps) {
+  const [showModal, setShowModal] = useState(false);
+  
   const formatNumber = (num: number) => {
     return num.toLocaleString();
   };
@@ -36,8 +45,9 @@ export default function GuideCard({ guide, onEdit, onViewLanding, onViewAnalytic
   };
 
   return (
-    <Card className="hover:shadow-md transition-shadow">
-      <CardContent className="p-6">
+    <>
+      <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => setShowModal(true)}>
+        <CardContent className="p-6">
         <div className="flex items-start space-x-4">
           {/* Thumbnail */}
           <img 
@@ -124,5 +134,69 @@ export default function GuideCard({ guide, onEdit, onViewLanding, onViewAnalytic
         </div>
       </CardContent>
     </Card>
+
+    {/* Guide Detail Modal */}
+    <Dialog open={showModal} onOpenChange={setShowModal}>
+      <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>{guide.title}</DialogTitle>
+        </DialogHeader>
+        
+        <div className="space-y-6">
+          {/* Video Thumbnail */}
+          <div className="aspect-video rounded-lg overflow-hidden bg-muted">
+            <img 
+              src={guide.thumbnailUrl || "/api/placeholder/600/400"} 
+              alt={guide.title}
+              className="w-full h-full object-cover"
+            />
+          </div>
+
+          {/* Guide Content */}
+          {guide.content && (
+            <div className="prose prose-sm max-w-none">
+              <h3>{guide.content.title}</h3>
+              <p className="lead">{guide.content.introduction}</p>
+              
+              {guide.content.sections?.map((section, index) => (
+                <div key={index} className="mb-6">
+                  <h4 className="font-semibold mb-2">{section.title}</h4>
+                  <div className="text-sm text-muted-foreground whitespace-pre-wrap">
+                    {section.content}
+                  </div>
+                </div>
+              ))}
+              
+              <div className="mt-6 p-4 bg-muted rounded-lg">
+                <p className="font-semibold mb-2">Conclusion</p>
+                <p className="text-sm">{guide.content.conclusion}</p>
+              </div>
+              
+              <div className="mt-4 p-4 bg-primary/10 rounded-lg">
+                <p className="font-semibold mb-2 text-primary">Next Steps</p>
+                <p className="text-sm">{guide.content.callToAction}</p>
+              </div>
+            </div>
+          )}
+
+          {/* Action Buttons */}
+          <div className="flex gap-2 pt-4 border-t">
+            <Button onClick={() => onViewLanding?.(guide)} variant="outline">
+              <ExternalLink className="w-4 h-4 mr-2" />
+              View Landing Page
+            </Button>
+            <Button onClick={() => onEdit?.(guide)} variant="outline">
+              <Edit className="w-4 h-4 mr-2" />
+              Edit Guide
+            </Button>
+            <Button onClick={() => onViewAnalytics?.(guide)} variant="outline">
+              <BarChart3 className="w-4 h-4 mr-2" />
+              Analytics
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+    </>
   );
 }
