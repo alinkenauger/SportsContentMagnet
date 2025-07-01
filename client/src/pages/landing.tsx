@@ -4,10 +4,6 @@ import { Video, Users, TrendingUp, Zap } from "lucide-react";
 import GoogleAuthButton from "@/components/google-auth-button";
 
 export default function Landing() {
-  const handleLogin = () => {
-    window.location.href = "/auth/google";
-  };
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 dark:from-slate-900 dark:to-blue-950">
       {/* Header */}
@@ -113,11 +109,9 @@ export default function Landing() {
               Ready to Turn Your Videos Into Lead Magnets?
             </h3>
             <p className="text-blue-100 mb-8 max-w-2xl mx-auto">
-              Join thousands of fitness and sports coaches who are already converting their audience with CoachCraft.
+              Join thousands of fitness and sports coaches who are already converting their audience with VidMagnet.
             </p>
-            <Button size="lg" variant="secondary" onClick={handleLogin}>
-              Get Started Free
-            </Button>
+            <GoogleAuthButton variant="hero" size="lg" />
           </CardContent>
         </Card>
       </section>

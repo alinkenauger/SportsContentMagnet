@@ -68,8 +68,8 @@ export function setupGoogleAuth(app: Express) {
     "/api/auth/google/callback",
     passport.authenticate("google", { failureRedirect: "/?error=google_auth_failed" }),
     (req, res) => {
-      // Successful authentication
-      res.redirect("/?google_connected=true");
+      // Successful authentication, redirect to dashboard
+      res.redirect("/dashboard");
     }
   );
 

@@ -19,7 +19,7 @@ export default function GoogleAuthButton({ variant = 'card', size = 'default' }:
   });
 
   const handleGoogleAuth = () => {
-    window.location.href = '/auth/google';
+    window.location.href = '/api/auth/google';
   };
 
   // Button variants for landing page
@@ -32,7 +32,7 @@ export default function GoogleAuthButton({ variant = 'card', size = 'default' }:
       );
     }
 
-    if (googleStatus?.connected) {
+    if (googleStatus && googleStatus.connected) {
       return (
         <Button 
           onClick={() => window.location.href = '/dashboard'}
@@ -74,7 +74,7 @@ export default function GoogleAuthButton({ variant = 'card', size = 'default' }:
     );
   }
 
-  if (googleStatus?.connected) {
+  if (googleStatus && googleStatus.connected) {
     return (
       <Card className="w-full max-w-md border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-950">
         <CardHeader>
