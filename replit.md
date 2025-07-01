@@ -115,6 +115,13 @@ Changelog:
   * Updated guide creation form with SMS collection toggle
   * Added legal consent checkbox requirement for phone collection
   * Updated landing page forms to conditionally show SMS fields
+- July 01, 2025. Implemented AMG-style landing page template as default:
+  * Clean, professional design with header navigation
+  * YouTube thumbnail with lock overlay visual
+  * Benefit points with green checkmarks
+  * Centered form with professional styling
+  * Legal disclaimer footer matching industry standards
+  * Responsive design for mobile and desktop
 ```
 
 ## User Preferences
