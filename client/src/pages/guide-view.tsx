@@ -1,6 +1,6 @@
 import { useParams } from "wouter";
 import { useQuery } from "@tanstack/react-query";
-import { useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -12,7 +12,8 @@ import {
   Eye, 
   Share2, 
   ExternalLink,
-  ArrowLeft
+  ArrowLeft,
+  Play
 } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 

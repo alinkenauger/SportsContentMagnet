@@ -38,6 +38,8 @@ export interface GuideContent {
     title: string;
     content: string;
     type: 'tip' | 'drill' | 'technique' | 'equipment';
+    timestamp?: string; // Time in video when this section is discussed (e.g., "2:30")
+    timestampSeconds?: number; // Timestamp in seconds for YouTube API
   }>;
   conclusion: string;
   callToAction: string;
@@ -135,7 +137,9 @@ export async function generatePracticeGuide(analysis: VideoAnalysis, videoTitle:
         {
           "title": "section title",
           "content": "detailed content with actionable steps",
-          "type": "tip|drill|technique|equipment"
+          "type": "tip|drill|technique|equipment",
+          "timestamp": "2:30",
+          "timestampSeconds": 150
         }
       ],
       "conclusion": "motivating conclusion paragraph",
@@ -150,6 +154,9 @@ export async function generatePracticeGuide(analysis: VideoAnalysis, videoTitle:
     - Make it valuable enough to be worth exchanging an email for
     - Include ${brandingSettings?.companyName || 'your coach'} branding naturally
     - IMPORTANT: In the introduction, specifically mention that this guide is based on insights from ${channelTitle || 'the original content creator'} to give proper attribution
+    - For each section, include a "timestamp" field (format: "2:30") and "timestampSeconds" field (format: 150) based on when that topic is discussed in the keyMoments data
+    - Match sections to relevant keyMoments timestamps when possible - if a section covers drills mentioned at 3:45, use "3:45" and 225 seconds
+    - If no specific timestamp matches, estimate a reasonable time based on the overall video structure
     `;
 
     const response = await openai.chat.completions.create({
