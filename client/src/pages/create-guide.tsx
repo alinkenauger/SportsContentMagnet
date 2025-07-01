@@ -10,7 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Sparkles, Youtube, FileText, Settings, Zap } from "lucide-react";
+import { Sparkles, Youtube, FileText, Settings, Zap, Info, Mic, Upload } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 
 export default function CreateGuide() {
@@ -396,6 +396,41 @@ export default function CreateGuide() {
               </CardContent>
             </Card>
 
+            {/* Alternative Methods */}
+            <Card className="border-blue-200 bg-blue-50">
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-2 text-blue-800">
+                  <Info className="w-5 h-5" />
+                  <span>Video Won't Work? Try These Alternatives</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3 text-blue-700">
+                  <div className="flex items-start space-x-3">
+                    <Mic className="w-5 h-5 mt-0.5" />
+                    <div>
+                      <p className="font-medium">Audio Upload (Recommended)</p>
+                      <p className="text-sm">Download your video's audio and upload it for perfect AI transcription</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start space-x-3">
+                    <FileText className="w-5 h-5 mt-0.5" />
+                    <div>
+                      <p className="font-medium">Manual Transcript</p>
+                      <p className="text-sm">Copy/paste any transcript or notes you have from your content</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start space-x-3">
+                    <Upload className="w-5 h-5 mt-0.5" />
+                    <div>
+                      <p className="font-medium">Multiple Formats</p>
+                      <p className="text-sm">Upload PDFs, documents, or any other content for analysis</p>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
             {/* How It Works */}
             <Card>
               <CardHeader>
@@ -409,8 +444,8 @@ export default function CreateGuide() {
                   <div className="flex items-start space-x-3">
                     <div className="w-6 h-6 bg-primary rounded-full flex items-center justify-center text-white text-xs font-bold">1</div>
                     <div>
-                      <p className="font-medium">Video Analysis</p>
-                      <p className="text-sm text-muted-foreground">We extract metadata and transcribe your video content</p>
+                      <p className="font-medium">Content Analysis</p>
+                      <p className="text-sm text-muted-foreground">We extract and transcribe your content using advanced AI</p>
                     </div>
                   </div>
                   <div className="flex items-start space-x-3">

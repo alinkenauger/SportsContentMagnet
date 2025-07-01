@@ -56,8 +56,30 @@ export class WhisperYoutubeService {
       pythonProcess.on('close', (code) => {
         try {
           if (code === 0 && stdout.trim()) {
-            const result = JSON.parse(stdout.trim());
-            resolve(result);
+            // Try to find JSON in the output (might have download progress mixed in)
+            const lines = stdout.trim().split('\n');
+            let jsonResult = null;
+            
+            for (const line of lines) {
+              try {
+                if (line.trim().startsWith('{')) {
+                  jsonResult = JSON.parse(line.trim());
+                  break;
+                }
+              } catch {
+                // Continue looking for valid JSON
+              }
+            }
+            
+            if (jsonResult) {
+              resolve(jsonResult);
+            } else {
+              resolve({
+                success: false,
+                error: `No valid JSON found in output: ${stdout.substring(0, 200)}`,
+                method: 'whisper_youtube_parse_failed'
+              });
+            }
           } else {
             resolve({
               success: false,
@@ -68,7 +90,7 @@ export class WhisperYoutubeService {
         } catch (error) {
           resolve({
             success: false,
-            error: `Failed to parse response: ${error}`,
+            error: `Failed to parse response: ${error}. Output: ${stdout.substring(0, 200)}`,
             method: 'whisper_youtube_error'
           });
         }

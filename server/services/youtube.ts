@@ -90,8 +90,8 @@ export async function transcribeVideo(videoId: string): Promise<string> {
     console.log("Trying yt-dlp subtitle extraction...");
     let ytdlpResult: any = { success: false, error: 'Not attempted' };
     try {
-      const { ytdlpTranscriptionService } = await import('./ytdlpTranscription');
-      ytdlpResult = await ytdlpTranscriptionService.extractTranscript(videoId);
+      const { ytdlpTranscription } = await import('./ytdlpTranscription');
+      ytdlpResult = await ytdlpTranscription.extractTranscript(videoId);
       
       if (ytdlpResult.success && ytdlpResult.transcript && ytdlpResult.transcript.length > 100) {
         console.log(`Successfully extracted transcript via yt-dlp: ${ytdlpResult.transcript.length} characters`);
