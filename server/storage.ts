@@ -6,6 +6,8 @@ import {
   qrCodes,
   analyticsEvents,
   brandingSettings,
+  trainingSettings,
+  knowledgebaseEntries,
   type User,
   type UpsertUser,
   type Guide,
@@ -20,6 +22,10 @@ import {
   type InsertQrCode,
   type AnalyticsEvent,
   type InsertAnalyticsEvent,
+  type TrainingSettings,
+  type InsertTrainingSettings,
+  type KnowledgebaseEntry,
+  type InsertKnowledgebaseEntry,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, sql, count, avg } from "drizzle-orm";
@@ -88,6 +94,17 @@ export interface IStorage {
   // Branding operations
   getBrandingSettings(userId: string): Promise<BrandingSettings | undefined>;
   upsertBrandingSettings(settings: InsertBrandingSettings): Promise<BrandingSettings>;
+
+  // Training settings operations
+  getTrainingSettings(userId: string): Promise<TrainingSettings | undefined>;
+  upsertTrainingSettings(settings: InsertTrainingSettings): Promise<TrainingSettings>;
+
+  // Knowledgebase operations
+  createKnowledgebaseEntry(entry: InsertKnowledgebaseEntry): Promise<KnowledgebaseEntry>;
+  getKnowledgebaseEntries(userId: string): Promise<KnowledgebaseEntry[]>;
+  updateKnowledgebaseEntry(id: number, entry: Partial<InsertKnowledgebaseEntry>): Promise<KnowledgebaseEntry>;
+  deleteKnowledgebaseEntry(id: number): Promise<void>;
+  searchKnowledgebaseEntries(userId: string, query?: string): Promise<KnowledgebaseEntry[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -376,6 +393,91 @@ export class DatabaseStorage implements IStorage {
       })
       .returning();
     return result;
+  }
+
+  // Training settings operations
+  async getTrainingSettings(userId: string): Promise<TrainingSettings | undefined> {
+    const [settings] = await db
+      .select()
+      .from(trainingSettings)
+      .where(eq(trainingSettings.userId, userId));
+    return settings;
+  }
+
+  async upsertTrainingSettings(settings: InsertTrainingSettings): Promise<TrainingSettings> {
+    const [result] = await db
+      .insert(trainingSettings)
+      .values(settings)
+      .onConflictDoUpdate({
+        target: trainingSettings.userId,
+        set: {
+          ...settings,
+          updatedAt: new Date(),
+        },
+      })
+      .returning();
+    return result;
+  }
+
+  // Knowledgebase operations
+  async createKnowledgebaseEntry(entry: InsertKnowledgebaseEntry): Promise<KnowledgebaseEntry> {
+    const [result] = await db
+      .insert(knowledgebaseEntries)
+      .values(entry)
+      .returning();
+    return result;
+  }
+
+  async getKnowledgebaseEntries(userId: string): Promise<KnowledgebaseEntry[]> {
+    return await db
+      .select()
+      .from(knowledgebaseEntries)
+      .where(and(
+        eq(knowledgebaseEntries.userId, userId),
+        eq(knowledgebaseEntries.isActive, true)
+      ))
+      .orderBy(desc(knowledgebaseEntries.createdAt));
+  }
+
+  async updateKnowledgebaseEntry(id: number, entry: Partial<InsertKnowledgebaseEntry>): Promise<KnowledgebaseEntry> {
+    const [result] = await db
+      .update(knowledgebaseEntries)
+      .set({
+        ...entry,
+        updatedAt: new Date(),
+      })
+      .where(eq(knowledgebaseEntries.id, id))
+      .returning();
+    return result;
+  }
+
+  async deleteKnowledgebaseEntry(id: number): Promise<void> {
+    await db
+      .update(knowledgebaseEntries)
+      .set({ isActive: false, updatedAt: new Date() })
+      .where(eq(knowledgebaseEntries.id, id));
+  }
+
+  async searchKnowledgebaseEntries(userId: string, query?: string): Promise<KnowledgebaseEntry[]> {
+    let queryBuilder = db
+      .select()
+      .from(knowledgebaseEntries)
+      .where(and(
+        eq(knowledgebaseEntries.userId, userId),
+        eq(knowledgebaseEntries.isActive, true)
+      ));
+
+    if (query) {
+      queryBuilder = queryBuilder.where(
+        and(
+          eq(knowledgebaseEntries.userId, userId),
+          eq(knowledgebaseEntries.isActive, true),
+          sql`(${knowledgebaseEntries.title} ILIKE ${`%${query}%`} OR ${knowledgebaseEntries.content} ILIKE ${`%${query}%`})`
+        )
+      );
+    }
+
+    return await queryBuilder.orderBy(desc(knowledgebaseEntries.createdAt));
   }
 }
 
