@@ -15,6 +15,7 @@ import Settings from "@/pages/settings";
 import GuideLanding from "@/pages/guide-landing";
 import GuideDelivery from "@/pages/guide-delivery";
 import Library from "@/pages/library";
+import GuideEditor from "@/pages/guide-editor";
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
