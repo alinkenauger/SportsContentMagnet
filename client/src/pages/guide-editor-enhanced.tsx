@@ -65,6 +65,8 @@ export default function GuideEditorEnhanced() {
   const [guideTitle, setGuideTitle] = useState("");
   const [guideDescription, setGuideDescription] = useState("");
   const [dragOverColumn, setDragOverColumn] = useState<string | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+  const [isResizing, setIsResizing] = useState<string | null>(null);
 
   // Fetch guide data
   const { data: guide, isLoading: guideLoading } = useQuery<Guide>({
@@ -251,17 +253,28 @@ export default function GuideEditorEnhanced() {
     });
   };
 
-  const addElement = (type: EditableElement['type'], columnId?: string, parentId?: string) => {
+  const addElement = (type: EditableElement['type'], columnId?: string, parentId?: string, insertIndex?: number) => {
     const newElement: EditableElement = {
       id: `${type}-${Date.now()}`,
       type,
       content: getDefaultContent(type),
-      order: elements.length,
+      order: insertIndex !== undefined ? insertIndex : elements.length,
       ...(columnId && { columnId }),
       ...(parentId && { parentId })
     };
     
-    setElements([...elements, newElement]);
+    const newElements = [...elements];
+    if (insertIndex !== undefined) {
+      newElements.splice(insertIndex, 0, newElement);
+      // Reorder elements
+      newElements.forEach((el, index) => {
+        el.order = index;
+      });
+    } else {
+      newElements.push(newElement);
+    }
+    
+    setElements(newElements);
     
     // Auto-edit the new element
     setTimeout(() => setIsEditing(newElement.id), 100);
@@ -329,14 +342,31 @@ export default function GuideEditorEnhanced() {
     e.preventDefault();
     
     if (draggedFromToolbar) {
-      addElement(draggedFromToolbar, columnId, parentId);
+      addElement(draggedFromToolbar, columnId, parentId, insertIndex);
       setDraggedFromToolbar(null);
       setDropZoneVisible(false);
       setDragOverColumn(null);
+      setDragOverIndex(null);
     } else if (draggedElement) {
       moveElement(draggedElement, insertIndex, columnId, parentId);
       setDraggedElement(null);
+      setDragOverIndex(null);
     }
+  };
+
+  const handleElementDragOver = (e: DragEvent, index: number) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragOverIndex(index);
+    if (draggedFromToolbar) {
+      e.dataTransfer.dropEffect = 'copy';
+    } else {
+      e.dataTransfer.dropEffect = 'move';
+    }
+  };
+
+  const handleElementDragLeave = () => {
+    setDragOverIndex(null);
   };
 
   const handleColumnDragOver = (e: DragEvent, columnId: string) => {
@@ -427,6 +457,42 @@ export default function GuideEditorEnhanced() {
   const deleteElement = (id: string) => {
     setElements(elements.filter(el => el.id !== id && el.parentId !== id));
     setIsEditing(null);
+  };
+
+  const handleColumnResizeStart = (e: React.MouseEvent, elementId: string, columnId: string, columnIndex: number) => {
+    e.preventDefault();
+    setIsResizing(`${elementId}-${columnId}`);
+    
+    const handleMouseMove = (e: MouseEvent) => {
+      const container = (e.target as HTMLElement).closest('.relative.flex.w-full');
+      if (!container) return;
+      
+      const rect = container.getBoundingClientRect();
+      const mouseX = e.clientX - rect.left;
+      const containerWidth = rect.width;
+      const newLeftWidth = Math.max(15, Math.min(85, (mouseX / containerWidth) * 100));
+      const newRightWidth = 100 - newLeftWidth;
+      
+      // Update both columns
+      setElements(elements.map(el => {
+        if (el.id === elementId && el.type === 'columns') {
+          const updatedColumns = [...el.content.columns];
+          updatedColumns[columnIndex] = { ...updatedColumns[columnIndex], width: newLeftWidth };
+          updatedColumns[columnIndex + 1] = { ...updatedColumns[columnIndex + 1], width: newRightWidth };
+          return { ...el, content: { ...el.content, columns: updatedColumns } };
+        }
+        return el;
+      }));
+    };
+    
+    const handleMouseUp = () => {
+      setIsResizing(null);
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+    
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
   };
 
   const renderElement = (element: EditableElement): JSX.Element => {
@@ -531,17 +597,21 @@ export default function GuideEditorEnhanced() {
         );
 
       case 'columns':
+        const columns = element.content.columns || [];
+        const totalColumns = columns.length;
+        
         return (
           <div className="space-y-4">
             {isActive && (
-              <div className="flex items-center gap-2 p-2 bg-muted rounded">
-                <span className="text-sm font-medium">Columns:</span>
-                <Badge variant="outline">{element.content.columns?.length || 2}</Badge>
+              <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-lg border">
+                <span className="text-sm font-medium">Layout:</span>
+                <Badge variant="outline">{totalColumns} Columns</Badge>
                 <Button
                   size="sm"
                   variant="outline"
                   onClick={() => addColumnToElement(element.id)}
-                  disabled={(element.content.columns?.length || 0) >= 4}
+                  disabled={totalColumns >= 4}
+                  className="h-7"
                 >
                   <Plus className="h-3 w-3 mr-1" />
                   Add Column
@@ -549,49 +619,57 @@ export default function GuideEditorEnhanced() {
               </div>
             )}
             
-            <div className="grid gap-4" style={{ gridTemplateColumns: `repeat(${element.content.columns?.length || 2}, 1fr)` }}>
-              {element.content.columns?.map((column: ColumnData, index: number) => (
-                <div
-                  key={column.id}
-                  className={`min-h-32 border-2 border-dashed rounded-lg p-4 transition-colors ${
-                    dragOverColumn === column.id 
-                      ? 'border-primary bg-primary/10' 
-                      : 'border-muted-foreground/30'
-                  } ${dropZoneVisible ? 'border-muted-foreground/50' : ''}`}
-                  onDragOver={(e) => handleColumnDragOver(e, column.id)}
-                  onDragLeave={handleColumnDragLeave}
-                  onDrop={(e) => handleCanvasDrop(e, undefined, column.id, element.id)}
-                >
-                  {isActive && (
-                    <div className="mb-3 space-y-2">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-medium">Column {index + 1}</span>
-                        <span className="text-xs text-muted-foreground">{column.width}%</span>
-                      </div>
-                      <Slider
-                        value={[column.width]}
-                        onValueChange={([value]) => updateColumnWidth(element.id, column.id, value)}
-                        max={80}
-                        min={20}
-                        step={5}
-                        className="w-full"
-                      />
-                    </div>
-                  )}
-                  
-                  <div className="space-y-4">
-                    {elements
-                      .filter(el => el.columnId === column.id && el.parentId === element.id)
-                      .sort((a, b) => a.order - b.order)
-                      .map(el => renderElement(el))}
-                    
-                    {elements.filter(el => el.columnId === column.id && el.parentId === element.id).length === 0 && (
-                      <div className="text-center text-muted-foreground py-8">
-                        <Layout className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                        <p className="text-sm">Drop elements here</p>
+            <div className="relative flex w-full min-h-48 bg-background border rounded-lg overflow-hidden">
+              {columns.map((column: ColumnData, index: number) => (
+                <div key={column.id} className="relative flex">
+                  {/* Column Content */}
+                  <div
+                    className={`flex-shrink-0 border-r border-muted p-4 transition-colors ${
+                      dragOverColumn === column.id 
+                        ? 'bg-primary/5 border-primary/20' 
+                        : ''
+                    } ${dropZoneVisible ? 'bg-muted/30' : ''}`}
+                    style={{ width: `${column.width}%` }}
+                    onDragOver={(e) => handleColumnDragOver(e, column.id)}
+                    onDragLeave={handleColumnDragLeave}
+                    onDrop={(e) => handleCanvasDrop(e, undefined, column.id, element.id)}
+                  >
+                    {isActive && (
+                      <div className="mb-3 pb-2 border-b border-muted">
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="font-medium text-muted-foreground">Col {index + 1}</span>
+                          <span className="text-primary font-mono">{column.width}%</span>
+                        </div>
                       </div>
                     )}
+                    
+                    <div className="space-y-3">
+                      {elements
+                        .filter(el => el.columnId === column.id && el.parentId === element.id)
+                        .sort((a, b) => a.order - b.order)
+                        .map(el => renderElement(el))}
+                      
+                      {elements.filter(el => el.columnId === column.id && el.parentId === element.id).length === 0 && (
+                        <div className="text-center text-muted-foreground py-12">
+                          <Layout className="h-6 w-6 mx-auto mb-2 opacity-40" />
+                          <p className="text-xs">Drop elements here</p>
+                        </div>
+                      )}
+                    </div>
                   </div>
+                  
+                  {/* Draggable Separator */}
+                  {index < totalColumns - 1 && (
+                    <div
+                      className="relative flex items-center justify-center w-2 bg-muted/50 hover:bg-primary/20 cursor-col-resize group transition-colors"
+                      onMouseDown={(e) => handleColumnResizeStart(e, element.id, column.id, index)}
+                    >
+                      <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
+                        <div className="w-1 h-8 bg-muted-foreground/30 group-hover:bg-primary/60 rounded-full transition-colors"></div>
+                        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-3 h-3 bg-background border-2 border-muted-foreground/40 group-hover:border-primary rounded-full transition-colors"></div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
@@ -722,14 +800,10 @@ export default function GuideEditorEnhanced() {
             className={`flex-1 overflow-y-auto p-8 ${dropZoneVisible ? 'bg-primary/5' : ''}`}
             onDragOver={handleDragOver}
             onDrop={(e) => handleCanvasDrop(e)}
+            onDragLeave={handleElementDragLeave}
           >
-            <div className="max-w-4xl mx-auto space-y-6">
-              {elements
-                .filter(el => !el.parentId) // Only show top-level elements
-                .sort((a, b) => a.order - b.order)
-                .map(element => renderElement(element))}
-              
-              {elements.filter(el => !el.parentId).length === 0 && (
+            <div className="max-w-4xl mx-auto space-y-2">
+              {elements.filter(el => !el.parentId).length === 0 ? (
                 <div className="text-center py-16 text-muted-foreground">
                   <Type className="h-12 w-12 mx-auto mb-4 opacity-50" />
                   <h3 className="text-lg font-medium mb-2">Start Building Your Guide</h3>
@@ -739,11 +813,40 @@ export default function GuideEditorEnhanced() {
                     Add Your First Element
                   </Button>
                 </div>
+              ) : (
+                <>
+                  {/* Drop zone at top */}
+                  <div
+                    className={`h-4 transition-all duration-200 ${
+                      dragOverIndex === 0 ? 'h-12 border-2 border-dashed border-primary bg-primary/10 rounded-lg' : ''
+                    }`}
+                    onDragOver={(e) => handleElementDragOver(e, 0)}
+                    onDrop={(e) => handleCanvasDrop(e, 0)}
+                  />
+                  
+                  {elements
+                    .filter(el => !el.parentId)
+                    .sort((a, b) => a.order - b.order)
+                    .map((element, index) => (
+                      <div key={element.id}>
+                        {renderElement(element)}
+                        
+                        {/* Drop zone between elements */}
+                        <div
+                          className={`h-4 transition-all duration-200 ${
+                            dragOverIndex === index + 1 ? 'h-12 border-2 border-dashed border-primary bg-primary/10 rounded-lg' : ''
+                          }`}
+                          onDragOver={(e) => handleElementDragOver(e, index + 1)}
+                          onDrop={(e) => handleCanvasDrop(e, index + 1)}
+                        />
+                      </div>
+                    ))}
+                </>
               )}
 
-              {/* Drop zone indicator */}
-              {dropZoneVisible && (
-                <div className="border-2 border-dashed border-primary rounded-lg p-8 text-center bg-primary/10">
+              {/* Global drop zone indicator */}
+              {dropZoneVisible && dragOverIndex === null && (
+                <div className="border-2 border-dashed border-primary rounded-lg p-8 text-center bg-primary/10 mt-6">
                   <Plus className="h-8 w-8 mx-auto mb-2 opacity-50" />
                   <p className="text-sm text-muted-foreground">Drop element here</p>
                 </div>
