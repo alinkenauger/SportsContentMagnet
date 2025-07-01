@@ -16,6 +16,9 @@ import { apiRequest } from "@/lib/queryClient";
 export default function CreateGuide() {
   const { toast } = useToast();
   const [youtubeUrl, setYoutubeUrl] = useState("");
+  const [inputMethod, setInputMethod] = useState<"youtube" | "manual">("youtube");
+  const [manualTranscript, setManualTranscript] = useState("");
+  const [manualTitle, setManualTitle] = useState("");
   const [customSettings, setCustomSettings] = useState({
     category: "",
     customInstructions: "",
@@ -37,10 +40,19 @@ export default function CreateGuide() {
   const [progress, setProgress] = useState(0);
 
   const handleCreateGuide = async () => {
-    if (!youtubeUrl.trim()) {
+    if (inputMethod === "youtube" && !youtubeUrl.trim()) {
       toast({
         title: "Error",
         description: "Please enter a YouTube URL",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (inputMethod === "manual" && (!manualTitle.trim() || !manualTranscript.trim())) {
+      toast({
+        title: "Error",
+        description: "Please enter both video title and transcript",
         variant: "destructive",
       });
       return;
@@ -79,10 +91,17 @@ export default function CreateGuide() {
       }
 
       // Actually create the guide
-      const response = await apiRequest("POST", "/api/guides", { 
+      const requestData = inputMethod === "youtube" ? {
         youtubeUrl,
-        ...customSettings 
-      });
+        ...customSettings
+      } : {
+        manualTranscript: manualTranscript,
+        manualTitle: manualTitle,
+        inputMethod: "manual",
+        ...customSettings
+      };
+      
+      const response = await apiRequest("POST", "/api/guides", requestData);
       
       const result = await response.json();
       
@@ -158,18 +177,60 @@ export default function CreateGuide() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
-                  <Label htmlFor="youtube-url">YouTube URL</Label>
-                  <Input
-                    id="youtube-url"
-                    value={youtubeUrl}
-                    onChange={(e) => setYoutubeUrl(e.target.value)}
-                    placeholder="https://youtube.com/watch?v=..."
-                    className="mt-1"
-                  />
-                  <p className="text-sm text-muted-foreground mt-1">
-                    Paste the URL of your YouTube video to analyze
-                  </p>
+                  <Label>Input Method</Label>
+                  <Select value={inputMethod} onValueChange={(value: "youtube" | "manual") => setInputMethod(value)}>
+                    <SelectTrigger className="mt-1">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="youtube">YouTube URL (may have transcription issues)</SelectItem>
+                      <SelectItem value="manual">Manual Transcript Upload</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
+
+                {inputMethod === "youtube" ? (
+                  <div>
+                    <Label htmlFor="youtube-url">YouTube URL</Label>
+                    <Input
+                      id="youtube-url"
+                      value={youtubeUrl}
+                      onChange={(e) => setYoutubeUrl(e.target.value)}
+                      placeholder="https://youtube.com/watch?v=..."
+                      className="mt-1"
+                    />
+                    <p className="text-sm text-muted-foreground mt-1">
+                      ⚠️ Note: Most modern YouTube videos are protected by anti-bot measures and cannot be transcribed automatically.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    <div>
+                      <Label htmlFor="manual-title">Video Title</Label>
+                      <Input
+                        id="manual-title"
+                        value={manualTitle}
+                        onChange={(e) => setManualTitle(e.target.value)}
+                        placeholder="Enter the title of your video..."
+                        className="mt-1"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="manual-transcript">Video Transcript</Label>
+                      <Textarea
+                        id="manual-transcript"
+                        value={manualTranscript}
+                        onChange={(e) => setManualTranscript(e.target.value)}
+                        placeholder="Paste the transcript of your video here..."
+                        className="mt-1"
+                        rows={8}
+                      />
+                      <p className="text-sm text-muted-foreground mt-1">
+                        💡 Tip: You can get transcripts from YouTube manually by clicking the transcript button below the video.
+                      </p>
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
 
