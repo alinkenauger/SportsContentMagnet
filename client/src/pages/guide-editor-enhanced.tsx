@@ -580,7 +580,6 @@ export default function GuideEditorEnhanced() {
     
     switch (element.type) {
       case 'heading':
-        console.log('Matched heading case');
         try {
           const HeadingTag = `h${element.content.level || 2}` as keyof JSX.IntrinsicElements;
           return isActive ? (
@@ -619,7 +618,6 @@ export default function GuideEditorEnhanced() {
         }
 
       case 'paragraph':
-        console.log('Matched paragraph case');
         return isActive ? (
           <Textarea
             value={element.content.text || ''}
