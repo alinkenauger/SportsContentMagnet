@@ -215,7 +215,7 @@ export default function ContentLibrary() {
           </Card>
 
           {/* Stats Summary - Condensed */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+          <div className="grid grid-cols-4 gap-3 mb-4">
             <Card>
               <CardContent className="p-3">
                 <div className="flex items-center justify-between">
