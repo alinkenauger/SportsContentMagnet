@@ -138,6 +138,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get('/api/guides/:id/landing-page', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const guideId = parseInt(req.params.id);
+      const guide = await storage.getGuide(guideId);
+      
+      if (!guide || guide.userId !== userId) {
+        return res.status(404).json({ message: "Guide not found" });
+      }
+
+      const landingPages = await storage.getLandingPagesByUser(userId);
+      const landingPage = landingPages.find(lp => lp.guideId === guideId);
+      
+      if (!landingPage) {
+        return res.status(404).json({ message: "Landing page not found" });
+      }
+
+      res.json({ customUrl: landingPage.customUrl });
+    } catch (error) {
+      console.error("Error fetching landing page:", error);
+      res.status(500).json({ message: "Failed to fetch landing page" });
+    }
+  });
+
   app.put('/api/guides/:id', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;

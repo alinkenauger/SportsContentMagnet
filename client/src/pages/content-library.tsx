@@ -82,9 +82,27 @@ export default function ContentLibrary() {
     });
   };
 
-  const handleViewLanding = (guide: Guide) => {
-    // Open landing page in new tab
-    window.open(`/landing/${guide.slug}-landing`, '_blank');
+  const handleViewLanding = async (guide: Guide) => {
+    try {
+      // Fetch landing page URL for this guide
+      const response = await fetch(`/api/guides/${guide.id}/landing-page`);
+      if (response.ok) {
+        const landingPage = await response.json();
+        window.open(`/landing/${landingPage.customUrl}`, '_blank');
+      } else {
+        toast({
+          title: "Landing Page Not Found",
+          description: "No landing page exists for this guide yet.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to open landing page",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleViewAnalytics = (guide: Guide) => {
