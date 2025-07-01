@@ -150,16 +150,10 @@ export default function ContentLibrary() {
 
         {/* Main Content */}
         <main className="flex-1 overflow-y-auto p-6">
-          {/* Filters */}
-          <Card className="mb-6">
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <Filter className="w-5 h-5" />
-                <span>Filters & Search</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex flex-col lg:flex-row gap-4">
+          {/* Filters - Condensed */}
+          <Card className="mb-4">
+            <CardContent className="p-4">
+              <div className="flex flex-col lg:flex-row gap-3">
                 <div className="flex-1">
                   <div className="relative">
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
@@ -167,13 +161,13 @@ export default function ContentLibrary() {
                       placeholder="Search guides..."
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
-                      className="pl-10"
+                      className="pl-10 h-9"
                     />
                   </div>
                 </div>
                 
                 <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-                  <SelectTrigger className="w-full lg:w-48">
+                  <SelectTrigger className="w-full lg:w-40 h-9">
                     <SelectValue placeholder="Category" />
                   </SelectTrigger>
                   <SelectContent>
@@ -186,7 +180,7 @@ export default function ContentLibrary() {
                 </Select>
 
                 <Select value={selectedStatus} onValueChange={setSelectedStatus}>
-                  <SelectTrigger className="w-full lg:w-48">
+                  <SelectTrigger className="w-full lg:w-36 h-9">
                     <SelectValue placeholder="Status" />
                   </SelectTrigger>
                   <SelectContent>
@@ -203,6 +197,7 @@ export default function ContentLibrary() {
                     variant={viewMode === "grid" ? "default" : "outline"}
                     size="sm"
                     onClick={() => setViewMode("grid")}
+                    className="h-9 w-9 p-0"
                   >
                     <Grid className="w-4 h-4" />
                   </Button>
@@ -210,6 +205,7 @@ export default function ContentLibrary() {
                     variant={viewMode === "list" ? "default" : "outline"}
                     size="sm"
                     onClick={() => setViewMode("list")}
+                    className="h-9 w-9 p-0"
                   >
                     <List className="w-4 h-4" />
                   </Button>
@@ -218,58 +214,58 @@ export default function ContentLibrary() {
             </CardContent>
           </Card>
 
-          {/* Stats Summary */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+          {/* Stats Summary - Condensed */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
             <Card>
-              <CardContent className="p-4">
+              <CardContent className="p-3">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-muted-foreground">Total Guides</p>
-                    <p className="text-2xl font-bold">{guides?.length || 0}</p>
+                    <p className="text-xs text-muted-foreground">Total Guides</p>
+                    <p className="text-lg font-bold">{guides?.length || 0}</p>
                   </div>
-                  <Book className="w-8 h-8 text-primary" />
+                  <Book className="w-5 h-5 text-primary" />
                 </div>
               </CardContent>
             </Card>
             
             <Card>
-              <CardContent className="p-4">
+              <CardContent className="p-3">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-muted-foreground">Published</p>
-                    <p className="text-2xl font-bold">
+                    <p className="text-xs text-muted-foreground">Published</p>
+                    <p className="text-lg font-bold">
                       {guides?.filter(g => g.status === "published").length || 0}
                     </p>
                   </div>
-                  <Badge className="bg-secondary/10 text-secondary">Live</Badge>
+                  <Badge className="bg-secondary/10 text-secondary text-xs px-1.5 py-0.5">Live</Badge>
                 </div>
               </CardContent>
             </Card>
             
             <Card>
-              <CardContent className="p-4">
+              <CardContent className="p-3">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-muted-foreground">Drafts</p>
-                    <p className="text-2xl font-bold">
+                    <p className="text-xs text-muted-foreground">Drafts</p>
+                    <p className="text-lg font-bold">
                       {guides?.filter(g => g.status === "draft").length || 0}
                     </p>
                   </div>
-                  <Badge className="bg-accent/10 text-accent">Draft</Badge>
+                  <Badge className="bg-accent/10 text-accent text-xs px-1.5 py-0.5">Draft</Badge>
                 </div>
               </CardContent>
             </Card>
             
             <Card>
-              <CardContent className="p-4">
+              <CardContent className="p-3">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-muted-foreground">Total Views</p>
-                    <p className="text-2xl font-bold">
+                    <p className="text-xs text-muted-foreground">Total Views</p>
+                    <p className="text-lg font-bold">
                       {guides?.reduce((sum, g) => sum + (g.views || 0), 0).toLocaleString() || 0}
                     </p>
                   </div>
-                  <Badge variant="outline">Views</Badge>
+                  <Badge variant="outline" className="text-xs px-1.5 py-0.5">Views</Badge>
                 </div>
               </CardContent>
             </Card>
