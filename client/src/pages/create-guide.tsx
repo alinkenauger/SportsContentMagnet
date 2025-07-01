@@ -130,7 +130,7 @@ export default function CreateGuide() {
     <div className="flex h-screen bg-background">
       <Sidebar />
       
-      <div className="flex-1 overflow-hidden">
+      <div className="flex-1 flex flex-col">
         {/* Header */}
         <header className="bg-card border-b border-border px-6 py-4">
           <div className="flex items-center justify-between">
