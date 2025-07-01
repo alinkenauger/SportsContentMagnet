@@ -1,8 +1,8 @@
-# VidMagnet - Video-to-Lead-Magnet SAAS for Fitness & Sports Content Creators
+# VidMagnet - Video-to-Lead-Magnet SAAS for Content Creators
 
 ## Overview
 
-VidMagnet is a SAAS application that transforms YouTube videos into high-converting lead magnets specifically for fitness, sports, and how-to content creators. The platform automatically extracts video content, transcribes it, uses AI to analyze coaching insights, and generates branded practice guides with customizable landing pages for lead capture with optional SMS collection and legal compliance features.
+VidMagnet is a comprehensive SAAS application that transforms YouTube videos into high-converting lead magnets for content creators across multiple niches including fitness, sports, how-to skill teaching, cooking, and coding. The platform automatically extracts video content, transcribes it, uses AI to analyze expertise and insights, and generates branded practice guides with customizable landing pages for lead capture with optional SMS collection and legal compliance features.
 
 ## System Architecture
 
@@ -139,6 +139,11 @@ Changelog:
   * Each template includes customized prompts for analysis, guide generation, and personalization
   * Templates auto-populate all training fields with coaching-specific instructions
   * Collapsible template selector with one-click application
+- July 01, 2025. Expanded platform beyond fitness to multiple niches:
+  * Added templates for sport-specific coaching, how-to skill teaching, cooking, and coding
+  * Expanded platform scope from fitness-only to comprehensive content creator tool
+  * Updated project description to reflect multi-niche capabilities
+  * Created 8 total templates covering diverse content creation needs
 ```
 
 ## User Preferences

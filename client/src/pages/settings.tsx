@@ -80,6 +80,30 @@ export default function Settings() {
       analysisPrompt: "Identify fun elements, skill-building opportunities, age-appropriate movements, and ways to make activities engaging for young participants.",
       guideGenerationPrompt: "Create fun, engaging guides with games, challenges, skill progressions, and positive reinforcement. Use simple language and include variety.",
       personalizationPrompt: "Adapt content for different age groups, attention spans, skill levels, and developmental stages. Focus on fun, participation, and building confidence."
+    },
+    sport: {
+      customInstructions: "Focus on sport-specific techniques, rules, strategies, and position-based training. Emphasize competitive performance and game situations.",
+      analysisPrompt: "Analyze sport-specific techniques, tactical elements, position responsibilities, rule applications, and competitive scenarios shown in videos.",
+      guideGenerationPrompt: "Generate detailed guides covering sport rules, position-specific skills, game strategies, drills, and competitive preparation tailored to the specific sport.",
+      personalizationPrompt: "Customize content based on player position, skill level, competitive level (recreational to professional), and specific sport requirements."
+    },
+    howto: {
+      customInstructions: "Break down complex skills into clear, actionable steps. Focus on practical application, troubleshooting, and hands-on learning.",
+      analysisPrompt: "Identify key steps, common mistakes, required tools/materials, safety considerations, and alternative methods for completing tasks or learning skills.",
+      guideGenerationPrompt: "Create step-by-step instructional guides with clear visuals, material lists, troubleshooting tips, and progressive skill building.",
+      personalizationPrompt: "Adapt instructions based on skill level, available tools, time constraints, and learning preferences (visual, hands-on, theoretical)."
+    },
+    cooking: {
+      customInstructions: "Focus on culinary techniques, ingredient knowledge, kitchen safety, and flavor development. Emphasize both technique and creativity.",
+      analysisPrompt: "Analyze cooking techniques, ingredient preparation, timing, temperature control, presentation, and flavor combinations demonstrated in videos.",
+      guideGenerationPrompt: "Generate detailed recipe guides with technique explanations, ingredient substitutions, timing tips, troubleshooting, and presentation ideas.",
+      personalizationPrompt: "Customize recipes based on dietary restrictions, skill level, available equipment, time constraints, and flavor preferences."
+    },
+    coding: {
+      customInstructions: "Explain programming concepts clearly, emphasize best practices, debugging techniques, and practical problem-solving approaches.",
+      analysisPrompt: "Identify key programming concepts, code patterns, best practices, common errors, optimization techniques, and real-world applications shown in videos.",
+      guideGenerationPrompt: "Create comprehensive coding guides with clear explanations, code examples, best practices, debugging tips, and practical exercises.",
+      personalizationPrompt: "Adapt content based on programming experience, preferred languages, project types, and learning goals (beginner concepts vs advanced optimization)."
     }
   };
 
@@ -386,7 +410,7 @@ export default function Settings() {
                 </div>
                 
                 {showTemplates && (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 border rounded-lg bg-gray-50">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-4 border rounded-lg bg-gray-50 max-h-96 overflow-y-auto">
                     <div className="space-y-2">
                       <h4 className="font-medium">Beginner-Friendly Coach</h4>
                       <p className="text-sm text-gray-600">Focus on fundamentals, safety, and step-by-step progression</p>
@@ -430,6 +454,54 @@ export default function Settings() {
                         variant="outline" 
                         size="sm"
                         onClick={() => applyTemplate('youth')}
+                      >
+                        Apply Template
+                      </Button>
+                    </div>
+
+                    <div className="space-y-2">
+                      <h4 className="font-medium">Sport-Specific Coach</h4>
+                      <p className="text-sm text-gray-600">Specialized techniques, sport rules, position-specific training</p>
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => applyTemplate('sport')}
+                      >
+                        Apply Template
+                      </Button>
+                    </div>
+
+                    <div className="space-y-2">
+                      <h4 className="font-medium">How-To Skill Teacher</h4>
+                      <p className="text-sm text-gray-600">Clear instructions, practical skills, hands-on learning</p>
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => applyTemplate('howto')}
+                      >
+                        Apply Template
+                      </Button>
+                    </div>
+
+                    <div className="space-y-2">
+                      <h4 className="font-medium">Cooking Instructor</h4>
+                      <p className="text-sm text-gray-600">Culinary techniques, recipe guidance, kitchen tips</p>
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => applyTemplate('cooking')}
+                      >
+                        Apply Template
+                      </Button>
+                    </div>
+
+                    <div className="space-y-2">
+                      <h4 className="font-medium">Coding Mentor</h4>
+                      <p className="text-sm text-gray-600">Programming concepts, best practices, problem-solving</p>
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => applyTemplate('coding')}
                       >
                         Apply Template
                       </Button>
@@ -498,7 +570,7 @@ export default function Settings() {
               <div>
                 <h2 className="text-2xl font-bold">AI Training Knowledgebase</h2>
                 <p className="text-gray-600">
-                  Train your AI bot with your expertise - add workouts, training programs, books, blog posts, and coaching materials to help it provide better guidance to your viewers
+                  Train your AI bot with your expertise - add training content, instructional materials, books, blog posts, and teaching resources to help it provide better guidance to your audience
                 </p>
               </div>
               <Dialog open={isAddingEntry} onOpenChange={setIsAddingEntry}>
