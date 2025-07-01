@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Book, Users, TrendingUp, ExternalLink, Plus, Sparkles } from "lucide-react";
+import { Book, Users, TrendingUp, ExternalLink, Plus, Sparkles, Palette } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 
 interface DashboardStats {
