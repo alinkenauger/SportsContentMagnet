@@ -81,13 +81,13 @@ export async function transcribeVideo(videoId: string): Promise<string> {
       return whisperTranscript;
     }
     
-    throw new Error("TRANSCRIPTION_BLOCKED: YouTube's anti-bot measures prevent automatic transcription of this video. This affects most modern videos, even those with captions. Consider:\n\n• Using older educational videos (pre-2020) which may still be accessible\n• Educational channels that allow captions API access\n• Manual transcript upload feature (coming soon)\n• Contacting support for enterprise transcription options");
+    throw new Error("YOUTUBE_BLOCKED: YouTube blocks automatic transcription due to anti-bot measures. WORKING ALTERNATIVES:\n\n✓ Upload audio files (MP3, WAV) - AI transcription with Whisper works perfectly\n✓ Copy/paste manual transcripts - Full text processing available\n✓ Upload PDF documents - Text extraction and analysis\n\nFor YouTube videos: Download audio separately and upload as MP3/WAV file.");
     
   } catch (error) {
     console.error("Transcription error:", error);
     
     // Check if it's our specific error type
-    if ((error as Error).message.startsWith("TRANSCRIPTION_BLOCKED:")) {
+    if ((error as Error).message.startsWith("YOUTUBE_BLOCKED:")) {
       throw error;
     }
     
