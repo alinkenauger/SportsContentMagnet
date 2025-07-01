@@ -151,6 +151,13 @@ Changelog:
   * Built nested drag-and-drop functionality for elements within columns
   * Enhanced column design with clean borders and intuitive resize handles
   * Added drop zone indicators and smooth positioning animations
+- July 01, 2025. Expanded settings menu with comprehensive user management:
+  * Added Profile tab with personal information, avatar, and contact details
+  * Implemented Billing tab with subscription management and payment methods
+  * Created Security tab with 2FA, password management, and session controls
+  * Built Notifications tab with email, SMS, and push notification preferences
+  * Added Integrations tab with API keys, webhooks, and connected services
+  * Included Advanced tab with data export and account deletion options
 ```
 
 ## User Preferences

@@ -78,9 +78,11 @@ export default function ContentLibrary() {
   }) || [];
 
   const handleEditGuide = (guide: Guide) => {
-    console.log('Edit button clicked');
-    console.log('Navigating to:', `/guide-editor/${guide.id}`);
-    navigate(`/guide-editor/${guide.id}`);
+    console.log('Edit button clicked, guide ID:', guide.id);
+    const path = `/guide-editor/${guide.id}`;
+    console.log('Navigating to:', path);
+    navigate(path);
+    console.log('Navigate function called');
   };
 
   const handleViewLanding = async (guide: Guide) => {
