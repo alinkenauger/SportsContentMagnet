@@ -31,7 +31,8 @@ import {
   MousePointer,
   Edit3,
   Settings,
-  Layout
+  Layout,
+  Play
 } from "lucide-react";
 
 interface EditableElement {
@@ -764,6 +765,163 @@ export default function GuideEditorEnhanced() {
                 </div>
               ))}
             </div>
+          </div>
+        );
+
+      case 'image':
+        return isActive ? (
+          <div className="space-y-2">
+            <Input
+              placeholder="Image URL"
+              value={element.content.src || ''}
+              onChange={(e) => updateElement(element.id, { ...element.content, src: e.target.value })}
+            />
+            <Input
+              placeholder="Alt text"
+              value={element.content.alt || ''}
+              onChange={(e) => updateElement(element.id, { ...element.content, alt: e.target.value })}
+            />
+            <Input
+              placeholder="Caption (optional)"
+              value={element.content.caption || ''}
+              onChange={(e) => updateElement(element.id, { ...element.content, caption: e.target.value })}
+            />
+          </div>
+        ) : element.content.src ? (
+          <div className="text-center">
+            <img
+              src={element.content.src}
+              alt={element.content.alt || 'Guide image'}
+              className="max-w-full h-auto rounded-lg mx-auto cursor-pointer"
+              onClick={() => setIsEditing(element.id)}
+            />
+            {element.content.caption && (
+              <p className="text-sm text-muted-foreground mt-2 italic">
+                {element.content.caption}
+              </p>
+            )}
+          </div>
+        ) : (
+          <div 
+            className="border-2 border-dashed border-muted-foreground/30 rounded-lg p-8 text-center cursor-pointer hover:border-primary/50 transition-colors"
+            onClick={() => setIsEditing(element.id)}
+          >
+            <Image className="h-12 w-12 mx-auto mb-2 text-muted-foreground/50" />
+            <p className="text-sm font-medium">Click to add image</p>
+            <p className="text-xs text-muted-foreground">Enter image URL and details</p>
+          </div>
+        );
+
+      case 'video':
+        return isActive ? (
+          <div className="space-y-2">
+            <Input
+              placeholder="Video URL (YouTube, Vimeo, or direct link)"
+              value={element.content.src || ''}
+              onChange={(e) => updateElement(element.id, { ...element.content, src: e.target.value })}
+            />
+            <Input
+              placeholder="Video title"
+              value={element.content.title || ''}
+              onChange={(e) => updateElement(element.id, { ...element.content, title: e.target.value })}
+            />
+          </div>
+        ) : element.content.src ? (
+          <div className="text-center">
+            <div className="relative bg-black rounded-lg overflow-hidden cursor-pointer" onClick={() => setIsEditing(element.id)}>
+              <div className="aspect-video flex items-center justify-center">
+                <Play className="h-16 w-16 text-white/80" />
+              </div>
+              <div className="absolute inset-0 bg-black/20 hover:bg-black/10 transition-colors" />
+            </div>
+            {element.content.title && (
+              <p className="text-sm font-medium mt-2">
+                {element.content.title}
+              </p>
+            )}
+          </div>
+        ) : (
+          <div 
+            className="border-2 border-dashed border-muted-foreground/30 rounded-lg p-8 text-center cursor-pointer hover:border-primary/50 transition-colors"
+            onClick={() => setIsEditing(element.id)}
+          >
+            <Video className="h-12 w-12 mx-auto mb-2 text-muted-foreground/50" />
+            <p className="text-sm font-medium">Click to add video</p>
+            <p className="text-xs text-muted-foreground">Enter video URL and title</p>
+          </div>
+        );
+
+      case 'audio':
+        return isActive ? (
+          <div className="space-y-2">
+            <Input
+              placeholder="Audio URL"
+              value={element.content.src || ''}
+              onChange={(e) => updateElement(element.id, { ...element.content, src: e.target.value })}
+            />
+            <Input
+              placeholder="Audio title"
+              value={element.content.title || ''}
+              onChange={(e) => updateElement(element.id, { ...element.content, title: e.target.value })}
+            />
+          </div>
+        ) : element.content.src ? (
+          <div className="text-center cursor-pointer" onClick={() => setIsEditing(element.id)}>
+            <div className="bg-muted rounded-lg p-4 inline-flex items-center gap-3">
+              <Music className="h-6 w-6 text-primary" />
+              <div className="text-left">
+                <p className="text-sm font-medium">{element.content.title || 'Audio Track'}</p>
+                <p className="text-xs text-muted-foreground">Click to play</p>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div 
+            className="border-2 border-dashed border-muted-foreground/30 rounded-lg p-8 text-center cursor-pointer hover:border-primary/50 transition-colors"
+            onClick={() => setIsEditing(element.id)}
+          >
+            <Music className="h-12 w-12 mx-auto mb-2 text-muted-foreground/50" />
+            <p className="text-sm font-medium">Click to add audio</p>
+            <p className="text-xs text-muted-foreground">Enter audio URL and title</p>
+          </div>
+        );
+
+      case 'button':
+        return isActive ? (
+          <div className="space-y-2">
+            <Input
+              placeholder="Button text"
+              value={element.content.text || ''}
+              onChange={(e) => updateElement(element.id, { ...element.content, text: e.target.value })}
+            />
+            <Input
+              placeholder="Button URL"
+              value={element.content.url || ''}
+              onChange={(e) => updateElement(element.id, { ...element.content, url: e.target.value })}
+            />
+            <Select
+              value={element.content.style || 'primary'}
+              onValueChange={(value) => updateElement(element.id, { ...element.content, style: value })}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="primary">Primary</SelectItem>
+                <SelectItem value="secondary">Secondary</SelectItem>
+                <SelectItem value="outline">Outline</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        ) : (
+          <div className="text-center">
+            <Button
+              variant={element.content.style === 'primary' ? 'default' : element.content.style === 'secondary' ? 'secondary' : 'outline'}
+              onClick={() => setIsEditing(element.id)}
+              className="cursor-pointer"
+            >
+              {element.content.text || 'Button Text'}
+            </Button>
           </div>
         );
 
