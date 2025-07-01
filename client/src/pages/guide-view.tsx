@@ -284,7 +284,7 @@ export default function GuideView() {
                     </div>
 
                     {section.timestamp && (
-                      <div className="flex justify-center pt-3 border-t border-slate-100">
+                      <div className="flex justify-start pt-3 border-t border-slate-100">
                         <Button
                           variant="default"
                           size="sm"
