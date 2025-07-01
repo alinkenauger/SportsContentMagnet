@@ -134,6 +134,11 @@ Changelog:
   * Clarified that system helps train AI with workouts, training programs, coaching philosophy
   * Improved UI text to focus on helping AI provide better guidance to viewers
   * Added specific examples like exercise tutorials, nutrition guides, and coaching materials
+- July 01, 2025. Added AI training templates for quick start:
+  * Created 4 coaching style templates: Beginner-Friendly, Advanced Performance, Fitness & Wellness, and Youth Sports
+  * Each template includes customized prompts for analysis, guide generation, and personalization
+  * Templates auto-populate all training fields with coaching-specific instructions
+  * Collapsible template selector with one-click application
 ```
 
 ## User Preferences

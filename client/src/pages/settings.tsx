@@ -41,6 +41,7 @@ export default function Settings() {
   const [isAddingEntry, setIsAddingEntry] = useState(false);
   const [editingEntry, setEditingEntry] = useState<KnowledgebaseEntry | null>(null);
   const [uploadProgress, setUploadProgress] = useState<{ [key: string]: number }>({});
+  const [showTemplates, setShowTemplates] = useState(false);
 
   // Form states
   const [newEntry, setNewEntry] = useState({
@@ -53,6 +54,49 @@ export default function Settings() {
   });
 
   const [trainingForm, setTrainingForm] = useState<TrainingSettings>({});
+
+  // Template configurations
+  const templates = {
+    beginner: {
+      customInstructions: "Focus on fundamental movements, safety first approach, and clear step-by-step progression. Always emphasize proper form over intensity. Target audience is new to fitness with little to no experience.",
+      analysisPrompt: "When analyzing videos, identify basic movements, common beginner mistakes, safety considerations, and simple modifications. Focus on foundational skills and clear explanations.",
+      guideGenerationPrompt: "Generate beginner-friendly guides with simple language, safety warnings, progression steps, and modifications for different fitness levels. Include equipment alternatives and emphasize proper form.",
+      personalizationPrompt: "Adapt content for beginners by simplifying terminology, adding extra safety notes, providing easier variations, and encouraging gradual progression."
+    },
+    advanced: {
+      customInstructions: "Focus on technical analysis, performance optimization, and advanced training concepts. Target audience has significant experience and training background.",
+      analysisPrompt: "Analyze videos for technical details, biomechanics, performance metrics, advanced techniques, and competitive applications. Identify subtle form cues and optimization opportunities.",
+      guideGenerationPrompt: "Create detailed technical guides with advanced terminology, performance metrics, periodization concepts, and competition preparation strategies.",
+      personalizationPrompt: "Customize for experienced athletes with advanced training variables, periodization schedules, performance tracking, and competitive preparation focus."
+    },
+    wellness: {
+      customInstructions: "Emphasize holistic health, lifestyle integration, sustainable habits, and overall well-being. Focus on long-term health benefits over performance metrics.",
+      analysisPrompt: "Look for lifestyle integration opportunities, stress management benefits, mobility improvements, and sustainable practice elements in videos.",
+      guideGenerationPrompt: "Generate wellness-focused guides that integrate fitness with daily life, emphasize stress relief, include mindfulness elements, and promote sustainable habits.",
+      personalizationPrompt: "Adapt content to support work-life balance, stress management, energy improvement, and sustainable wellness practices tailored to busy lifestyles."
+    },
+    youth: {
+      customInstructions: "Make fitness fun, age-appropriate, and focused on skill development. Emphasize enjoyment, participation, and positive experiences over competition.",
+      analysisPrompt: "Identify fun elements, skill-building opportunities, age-appropriate movements, and ways to make activities engaging for young participants.",
+      guideGenerationPrompt: "Create fun, engaging guides with games, challenges, skill progressions, and positive reinforcement. Use simple language and include variety.",
+      personalizationPrompt: "Adapt content for different age groups, attention spans, skill levels, and developmental stages. Focus on fun, participation, and building confidence."
+    }
+  };
+
+  const applyTemplate = (templateType: keyof typeof templates) => {
+    const template = templates[templateType];
+    setTrainingForm({
+      ...trainingForm,
+      ...template
+    });
+    
+    toast({
+      title: "Template Applied",
+      description: `${templateType.charAt(0).toUpperCase() + templateType.slice(1)} coaching template has been applied to your settings.`,
+    });
+    
+    setShowTemplates(false);
+  };
 
   // Fetch training settings
   const { data: trainingSettings, isLoading: trainingLoading } = useQuery({
@@ -328,6 +372,72 @@ export default function Settings() {
               <CardDescription>Customize how your AI bot analyzes content videos and generates coaching guidance to match your training philosophy and style.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
+              {/* Template Selection */}
+              <div className="space-y-4">
+                <div className="flex justify-between items-center">
+                  <Label>Quick Start Templates</Label>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => setShowTemplates(!showTemplates)}
+                  >
+                    {showTemplates ? "Hide Templates" : "Show Templates"}
+                  </Button>
+                </div>
+                
+                {showTemplates && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 border rounded-lg bg-gray-50">
+                    <div className="space-y-2">
+                      <h4 className="font-medium">Beginner-Friendly Coach</h4>
+                      <p className="text-sm text-gray-600">Focus on fundamentals, safety, and step-by-step progression</p>
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => applyTemplate('beginner')}
+                      >
+                        Apply Template
+                      </Button>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <h4 className="font-medium">Advanced Performance Coach</h4>
+                      <p className="text-sm text-gray-600">Technical analysis, performance optimization, competitive training</p>
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => applyTemplate('advanced')}
+                      >
+                        Apply Template
+                      </Button>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <h4 className="font-medium">Fitness & Wellness Coach</h4>
+                      <p className="text-sm text-gray-600">Holistic approach, lifestyle integration, motivation-focused</p>
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => applyTemplate('wellness')}
+                      >
+                        Apply Template
+                      </Button>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <h4 className="font-medium">Youth Sports Coach</h4>
+                      <p className="text-sm text-gray-600">Fun-focused, skill development, age-appropriate guidance</p>
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => applyTemplate('youth')}
+                      >
+                        Apply Template
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
               <div className="space-y-2">
                 <Label htmlFor="customInstructions">General Instructions</Label>
                 <Textarea
