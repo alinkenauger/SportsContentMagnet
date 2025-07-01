@@ -33,6 +33,7 @@ const statusOptions = [
 
 export default function ContentLibrary() {
   const { toast } = useToast();
+  const [location, navigate] = useLocation();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [selectedStatus, setSelectedStatus] = useState("all");
@@ -77,10 +78,7 @@ export default function ContentLibrary() {
   }) || [];
 
   const handleEditGuide = (guide: Guide) => {
-    toast({
-      title: "Edit Guide",
-      description: `Editing functionality will be available soon for "${guide.title}"`,
-    });
+    navigate(`/guide-editor/${guide.id}`);
   };
 
   const handleViewLanding = async (guide: Guide) => {
