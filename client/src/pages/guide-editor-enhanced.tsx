@@ -258,23 +258,45 @@ export default function GuideEditorEnhanced() {
       id: `${type}-${Date.now()}`,
       type,
       content: getDefaultContent(type),
-      order: insertIndex !== undefined ? insertIndex : elements.length,
+      order: 0,
       ...(columnId && { columnId }),
       ...(parentId && { parentId })
     };
     
-    const newElements = [...elements];
-    if (insertIndex !== undefined) {
-      newElements.splice(insertIndex, 0, newElement);
-      // Reorder elements
-      newElements.forEach((el, index) => {
-        el.order = index;
+    setElements(prevElements => {
+      // Get relevant elements (same context: top-level, or same column/parent)
+      const relevantElements = prevElements.filter(el => {
+        if (columnId && parentId) {
+          return el.columnId === columnId && el.parentId === parentId;
+        }
+        return !el.parentId; // Top-level elements
+      }).sort((a, b) => a.order - b.order);
+      
+      // Determine insertion position
+      let targetIndex = insertIndex;
+      if (targetIndex === undefined) {
+        targetIndex = relevantElements.length; // Add at end
+      }
+      
+      // Update orders for insertion
+      const updatedElements = prevElements.map(el => {
+        // Only update elements in the same context
+        const isSameContext = columnId && parentId 
+          ? (el.columnId === columnId && el.parentId === parentId)
+          : !el.parentId;
+          
+        if (isSameContext && el.order >= targetIndex) {
+          return { ...el, order: el.order + 1 };
+        }
+        return el;
       });
-    } else {
-      newElements.push(newElement);
-    }
-    
-    setElements(newElements);
+      
+      // Set the new element's order
+      newElement.order = targetIndex;
+      
+      // Add the new element
+      return [...updatedElements, newElement];
+    });
     
     // Auto-edit the new element
     setTimeout(() => setIsEditing(newElement.id), 100);
@@ -643,17 +665,70 @@ export default function GuideEditorEnhanced() {
                       </div>
                     )}
                     
-                    <div className="space-y-3">
-                      {elements
-                        .filter(el => el.columnId === column.id && el.parentId === element.id)
-                        .sort((a, b) => a.order - b.order)
-                        .map(el => renderElement(el))}
-                      
-                      {elements.filter(el => el.columnId === column.id && el.parentId === element.id).length === 0 && (
-                        <div className="text-center text-muted-foreground py-12">
+                    <div className="space-y-2">
+                      {elements.filter(el => el.columnId === column.id && el.parentId === element.id).length === 0 ? (
+                        <div className={`text-center text-muted-foreground py-12 transition-colors ${
+                          dragOverColumn === column.id ? 'bg-primary/5 border border-primary/20 rounded-lg' : ''
+                        }`}>
                           <Layout className="h-6 w-6 mx-auto mb-2 opacity-40" />
                           <p className="text-xs">Drop elements here</p>
+                          {dragOverColumn === column.id && (
+                            <p className="text-xs text-primary font-medium mt-1">Drop Element Here</p>
+                          )}
                         </div>
+                      ) : (
+                        <>
+                          {/* Top drop zone for columns */}
+                          <div
+                            className={`transition-all duration-200 ${
+                              dragOverColumn === column.id && dragOverIndex === 0
+                                ? 'h-12 border-2 border-dashed border-primary bg-primary/10 rounded-lg flex items-center justify-center' 
+                                : 'h-1'
+                            }`}
+                            onDragOver={(e) => {
+                              handleColumnDragOver(e, column.id);
+                              handleElementDragOver(e, 0);
+                            }}
+                            onDrop={(e) => handleCanvasDrop(e, 0, column.id, element.id)}
+                          >
+                            {dragOverColumn === column.id && dragOverIndex === 0 && (
+                              <div className="flex items-center gap-2 text-primary font-medium text-xs">
+                                <Plus className="h-3 w-3" />
+                                <span>Drop Element Here</span>
+                              </div>
+                            )}
+                          </div>
+                          
+                          {elements
+                            .filter(el => el.columnId === column.id && el.parentId === element.id)
+                            .sort((a, b) => a.order - b.order)
+                            .map((el, elIndex) => (
+                              <div key={el.id}>
+                                {renderElement(el)}
+                                
+                                {/* Drop zone between column elements */}
+                                <div
+                                  className={`transition-all duration-200 ${
+                                    dragOverColumn === column.id && dragOverIndex === elIndex + 1
+                                      ? 'h-12 border-2 border-dashed border-primary bg-primary/10 rounded-lg flex items-center justify-center' 
+                                      : 'h-1'
+                                  }`}
+                                  onDragOver={(e) => {
+                                    handleColumnDragOver(e, column.id);
+                                    handleElementDragOver(e, elIndex + 1);
+                                  }}
+                                  onDrop={(e) => handleCanvasDrop(e, elIndex + 1, column.id, element.id)}
+                                >
+                                  {dragOverColumn === column.id && dragOverIndex === elIndex + 1 && (
+                                    <div className="flex items-center gap-2 text-primary font-medium text-xs">
+                                      <Plus className="h-3 w-3" />
+                                      <span>Drop Element Here</span>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            ))}
+                        </>
                       )}
                     </div>
                   </div>
@@ -817,12 +892,21 @@ export default function GuideEditorEnhanced() {
                 <>
                   {/* Drop zone at top */}
                   <div
-                    className={`h-4 transition-all duration-200 ${
-                      dragOverIndex === 0 ? 'h-12 border-2 border-dashed border-primary bg-primary/10 rounded-lg' : ''
+                    className={`transition-all duration-200 ${
+                      dragOverIndex === 0 
+                        ? 'h-16 border-2 border-dashed border-primary bg-primary/10 rounded-lg flex items-center justify-center' 
+                        : 'h-2'
                     }`}
                     onDragOver={(e) => handleElementDragOver(e, 0)}
                     onDrop={(e) => handleCanvasDrop(e, 0)}
-                  />
+                  >
+                    {dragOverIndex === 0 && (
+                      <div className="flex items-center gap-2 text-primary font-medium">
+                        <Plus className="h-4 w-4" />
+                        <span>Drop Element Here</span>
+                      </div>
+                    )}
+                  </div>
                   
                   {elements
                     .filter(el => !el.parentId)
@@ -833,12 +917,21 @@ export default function GuideEditorEnhanced() {
                         
                         {/* Drop zone between elements */}
                         <div
-                          className={`h-4 transition-all duration-200 ${
-                            dragOverIndex === index + 1 ? 'h-12 border-2 border-dashed border-primary bg-primary/10 rounded-lg' : ''
+                          className={`transition-all duration-200 ${
+                            dragOverIndex === index + 1 
+                              ? 'h-16 border-2 border-dashed border-primary bg-primary/10 rounded-lg flex items-center justify-center' 
+                              : 'h-2'
                           }`}
                           onDragOver={(e) => handleElementDragOver(e, index + 1)}
                           onDrop={(e) => handleCanvasDrop(e, index + 1)}
-                        />
+                        >
+                          {dragOverIndex === index + 1 && (
+                            <div className="flex items-center gap-2 text-primary font-medium">
+                              <Plus className="h-4 w-4" />
+                              <span>Drop Element Here</span>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     ))}
                 </>
