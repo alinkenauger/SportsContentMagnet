@@ -15,7 +15,9 @@ export default function Landing() {
             </div>
             <h1 className="text-2xl font-bold text-foreground">VidMagnet</h1>
           </div>
-          <GoogleAuthButton variant="header" />
+          <Button onClick={() => window.location.href = '/api/login'}>
+            Sign In
+          </Button>
         </div>
       </header>
 
