@@ -342,7 +342,7 @@ export default function ContentLibrary() {
                               <div className="min-w-0 flex-1">
                                 <p className="font-medium text-foreground truncate">{guide.title}</p>
                                 <p className="text-sm text-muted-foreground truncate">
-                                  {guide.category || 'Uncategorized'} • {guide.createdAt ? new Date(guide.createdAt).toLocaleDateString() : 'No date'}
+                                  {guide.createdAt ? new Date(guide.createdAt).toLocaleDateString() : 'No date'}
                                 </p>
                               </div>
                             </div>
