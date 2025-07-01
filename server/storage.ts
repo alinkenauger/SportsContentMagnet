@@ -36,6 +36,8 @@ import { eq, desc, and, sql, count, avg } from "drizzle-orm";
 export interface IStorage {
   // User operations (required for Replit Auth)
   getUser(id: string): Promise<User | undefined>;
+  getUserByEmail(email: string): Promise<User | undefined>;
+  getUserByGoogleId(googleId: string): Promise<User | undefined>;
   upsertUser(user: UpsertUser): Promise<User>;
 
   // Guide operations
@@ -119,6 +121,20 @@ export class DatabaseStorage implements IStorage {
   async getUser(id: string): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.id, id));
     return user;
+  }
+
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.email, email));
+    return user;
+  }
+
+  async getUserByGoogleId(googleId: string): Promise<User | undefined> {
+    const [connection] = await db
+      .select({ user: users })
+      .from(googleConnections)
+      .innerJoin(users, eq(googleConnections.userId, users.id))
+      .where(eq(googleConnections.googleId, googleId));
+    return connection?.user;
   }
 
   async upsertUser(userData: UpsertUser): Promise<User> {

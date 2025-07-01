@@ -18,28 +18,56 @@ export function setupGoogleAuth(app: Express) {
     },
     async (accessToken, refreshToken, profile, done) => {
       try {
-        // Store Google tokens for YouTube API access
-        const user = {
-          id: profile.id,
-          email: profile.emails?.[0]?.value,
-          name: profile.displayName,
-          picture: profile.photos?.[0]?.value,
-          googleAccessToken: accessToken,
-          googleRefreshToken: refreshToken,
-        };
+        // Use Google OAuth as primary authentication
+        // Create or update user based on Google profile
+        const googleEmail = profile.emails?.[0]?.value;
+        const googleId = profile.id;
+        
+        if (!googleEmail || !googleId) {
+          return done(new Error("Google profile missing required data"), undefined);
+        }
 
-        // Update user's Google connection in database
-        await storage.updateUserGoogleConnection(profile.id, {
-          userId: profile.id,
-          googleId: profile.id,
-          googleAccessToken: accessToken,
-          googleRefreshToken: refreshToken,
-          googleEmail: profile.emails?.[0]?.value,
-          googleName: profile.displayName,
-          googlePicture: profile.photos?.[0]?.value,
-        });
+        // Check if user already exists by Google ID or email
+        let existingUser = await storage.getUserByGoogleId(googleId);
+        if (!existingUser) {
+          existingUser = await storage.getUserByEmail(googleEmail);
+        }
 
-        return done(null, user);
+        let user;
+        if (existingUser) {
+          // Update existing user with latest Google info
+          user = await storage.updateUserGoogleConnection(existingUser.id, {
+            userId: existingUser.id,
+            googleId: googleId,
+            googleAccessToken: accessToken,
+            googleRefreshToken: refreshToken,
+            googleEmail: googleEmail,
+            googleName: profile.displayName,
+            googlePicture: profile.photos?.[0]?.value,
+          });
+        } else {
+          // Create new user with Google profile
+          user = await storage.upsertUser({
+            id: googleId, // Use Google ID as primary user ID
+            email: googleEmail,
+            firstName: profile.name?.givenName,
+            lastName: profile.name?.familyName,
+            profileImageUrl: profile.photos?.[0]?.value,
+          });
+
+          // Create Google connection
+          await storage.updateUserGoogleConnection(googleId, {
+            userId: googleId,
+            googleId: googleId,
+            googleAccessToken: accessToken,
+            googleRefreshToken: refreshToken,
+            googleEmail: googleEmail,
+            googleName: profile.displayName,
+            googlePicture: profile.photos?.[0]?.value,
+          });
+        }
+
+        return done(null, user || undefined);
       } catch (error) {
         console.error("Google auth error:", error);
         return done(error, undefined);
@@ -48,6 +76,15 @@ export function setupGoogleAuth(app: Express) {
   );
 
   passport.use("google", googleStrategy);
+  
+  // Serialize/deserialize user for session management
+  passport.serializeUser((user: any, done) => {
+    done(null, user);
+  });
+
+  passport.deserializeUser((user: any, done) => {
+    done(null, user);
+  });
 
   // Google OAuth routes
   app.get(
@@ -68,7 +105,7 @@ export function setupGoogleAuth(app: Express) {
     "/api/auth/google/callback",
     passport.authenticate("google", { failureRedirect: "/?error=google_auth_failed" }),
     (req, res) => {
-      // Successful authentication, redirect to dashboard
+      // Successful Google authentication
       res.redirect("/dashboard");
     }
   );
