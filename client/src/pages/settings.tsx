@@ -315,7 +315,6 @@ export default function Settings() {
         <SettingsIcon className="h-8 w-8" />
         <h1 className="text-3xl font-bold">Settings</h1>
       </div>
-
       <Tabs value={selectedTab} onValueChange={setSelectedTab} className="space-y-6">
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="training">AI Training</TabsTrigger>
@@ -326,9 +325,7 @@ export default function Settings() {
           <Card>
             <CardHeader>
               <CardTitle>AI Training Instructions</CardTitle>
-              <CardDescription>
-                Customize how your AI bot analyzes fitness videos and generates coaching guidance to match your training philosophy and style.
-              </CardDescription>
+              <CardDescription>Customize how your AI bot analyzes content videos and generates coaching guidance to match your training philosophy and style.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="space-y-2">
