@@ -50,7 +50,7 @@ export default function Sidebar() {
           variant="ghost"
           size="sm"
           onClick={() => setIsCollapsed(!isCollapsed)}
-          className="absolute -right-3 top-1/2 transform -translate-y-1/2 bg-white border border-gray-300 rounded-full p-1 h-6 w-6 shadow-md hover:shadow-lg transition-all"
+          className="absolute -right-3 top-20 bg-white border border-gray-300 rounded-full p-1 h-6 w-6 shadow-md hover:shadow-lg transition-all"
         >
           {isCollapsed ? <ChevronRight className="w-3 h-3" /> : <ChevronLeft className="w-3 h-3" />}
         </Button>
