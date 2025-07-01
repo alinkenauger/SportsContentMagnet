@@ -34,6 +34,8 @@ interface GuideViewData {
         title: string;
         content: string;
         type: 'tip' | 'drill' | 'technique' | 'equipment';
+        timestamp?: string;
+        timestampSeconds?: number;
       }>;
       conclusion: string;
       callToAction: string;
@@ -296,7 +298,7 @@ export default function GuideView() {
                       <div className="mb-4">
                         <div className="relative group cursor-pointer border-2 border-slate-200 rounded-lg overflow-hidden bg-slate-100 hover:border-blue-400 transition-colors">
                           <img 
-                            src={`https://img.youtube.com/vi/${guide.youtubeVideoId}/maxresdefault.jpg`}
+                            src={`https://img.youtube.com/vi/${guide.youtubeVideoId}/hqdefault.jpg`}
                             alt={`Video screenshot at ${section.timestamp}`}
                             className="w-full h-32 object-cover"
                             onClick={() => {
