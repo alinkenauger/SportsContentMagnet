@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Book, Users, TrendingUp, ExternalLink, Plus, Sparkles, Palette, Eye, Edit, BarChart3 } from "lucide-react";
+import { Book, Users, TrendingUp, ExternalLink, Plus, Sparkles, Palette, Eye, Edit, BarChart3, Bell } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 
 interface DashboardStats {
@@ -166,10 +166,18 @@ export default function Dashboard() {
                 Transform your YouTube videos into high-converting lead magnets
               </p>
             </div>
-            <Button className="gradient-primary text-white">
-              <Plus className="w-4 h-4 mr-2" />
-              Create New Guide
-            </Button>
+            <div className="flex items-center space-x-3">
+              <Button variant="ghost" size="sm" className="relative">
+                <Bell className="w-5 h-5" />
+                <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full text-xs flex items-center justify-center text-white">
+                  3
+                </span>
+              </Button>
+              <Button className="gradient-primary text-white">
+                <Plus className="w-4 h-4 mr-2" />
+                Create New Guide
+              </Button>
+            </div>
           </div>
         </header>
 
@@ -417,7 +425,7 @@ export default function Dashboard() {
                 <CardTitle>Quick Actions</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="space-y-3">
+                <div className="grid grid-cols-1 gap-3">
                   <Button variant="ghost" className="w-full justify-start">
                     <Palette className="w-4 h-4 mr-3" />
                     Update Branding
