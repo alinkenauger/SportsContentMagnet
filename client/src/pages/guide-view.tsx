@@ -1,4 +1,4 @@
-import { useParams } from "wouter";
+import { useParams, Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
@@ -290,6 +290,15 @@ export default function GuideView() {
                 <Eye className="w-4 h-4 mr-1" />
                 {guide.views} views
               </div>
+              <Link href="/library/public">
+                <Button
+                  variant="outline"
+                  size="sm"
+                >
+                  <Target className="w-4 h-4 mr-2" />
+                  Browse Library
+                </Button>
+              </Link>
               <Button
                 onClick={handleShare}
                 variant="outline"
@@ -321,7 +330,7 @@ export default function GuideView() {
                 <div className="relative w-full h-0 pb-[56.25%] rounded-lg overflow-hidden bg-slate-100">
                   <iframe
                     className="absolute top-0 left-0 w-full h-full"
-                    src={`https://www.youtube.com/embed/${guide.youtubeVideoId}`}
+                    src={`https://www.youtube.com/embed/${guide.youtubeVideoId}?rel=0&showinfo=0&end_screen_mode=3`}
                     title={guide.title}
                     frameBorder="0"
                     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
@@ -413,9 +422,25 @@ export default function GuideView() {
               {guide.content.conclusion}
             </p>
             <div className="bg-white p-6 rounded-lg">
-              <p className="text-slate-800 font-medium">
+              <p className="text-slate-800 font-medium mb-4">
                 {guide.content.callToAction}
               </p>
+              <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                <Link href="/library/public">
+                  <Button className="bg-orange-600 hover:bg-orange-700 text-white">
+                    <Target className="w-4 h-4 mr-2" />
+                    Browse More Practice Guides
+                  </Button>
+                </Link>
+                <Button
+                  onClick={handleWatchVideo}
+                  variant="outline"
+                  className="border-orange-600 text-orange-600 hover:bg-orange-50"
+                >
+                  <ExternalLink className="w-4 h-4 mr-2" />
+                  Watch Original Video
+                </Button>
+              </div>
             </div>
           </CardContent>
         </Card>

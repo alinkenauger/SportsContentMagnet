@@ -17,6 +17,7 @@ import GuideLanding from "@/pages/guide-landing";
 import GuideDelivery from "@/pages/guide-delivery";
 import GuideView from "@/pages/guide-view";
 import Library from "@/pages/library";
+import PublicLibrary from "@/pages/public-library";
 import GuideEditorEnhanced from "@/pages/guide-editor-enhanced";
 
 function Router() {
@@ -44,6 +45,7 @@ function Router() {
       <Route path="/delivery/:customUrl/:leadId" component={GuideDelivery} />
       <Route path="/guide/:guideId" component={GuideView} />
       <Route path="/public/library" component={Library} />
+      <Route path="/library/public" component={PublicLibrary} />
       
       {/* Fallback to 404 */}
       <Route component={NotFound} />
