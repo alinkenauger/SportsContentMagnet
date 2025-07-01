@@ -49,74 +49,49 @@ export default function GuideLanding() {
   const { customUrl } = useParams<{ customUrl: string }>();
   const { toast } = useToast();
   const [formData, setFormData] = useState<Record<string, string>>({});
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const { data: landingData, isLoading } = useQuery<LandingPageData>({
-    queryKey: ["/api/landing", customUrl],
-    queryFn: async () => {
-      const response = await fetch(`/api/landing/${customUrl}`, {
-        credentials: "include",
-      });
-      
-      if (!response.ok) {
-        throw new Error(`${response.status}: ${response.statusText}`);
-      }
-      
-      return response.json();
-    },
-    enabled: !!customUrl,
+  const { data: landingData, isLoading } = useQuery({
+    queryKey: ["/api/landing-pages/url", customUrl],
   });
 
   const submitLeadMutation = useMutation({
     mutationFn: async (data: Record<string, string>) => {
-      const response = await fetch(`/api/landing/${customUrl}/submit`, {
+      return await apiRequest(`/api/landing-pages/${landingData?.landingPage.id}/leads`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          firstName: data.firstName,
-          email: data.email,
-          customFieldData: data,
-        }),
+        body: JSON.stringify(data),
       });
-
-      if (!response.ok) {
-        throw new Error(`${response.status}: ${response.statusText}`);
-      }
-
-      return response.json();
     },
-    onSuccess: (result) => {
-      // Redirect to delivery page
-      window.location.href = result.deliveryUrl;
+    onSuccess: () => {
+      toast({
+        title: "Success!",
+        description: "Check your email for your free practice guide.",
+      });
+      // Redirect to guide delivery page
+      window.location.href = `/delivery/${landingData?.guide.id}`;
     },
-    onError: (error) => {
+    onError: (error: Error) => {
       toast({
         title: "Error",
-        description: "Failed to submit form. Please try again.",
+        description: error.message || "Something went wrong. Please try again.",
         variant: "destructive",
       });
     },
   });
 
-  const handleInputChange = (field: string, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!landingData?.landingPage.customFields) return;
+    if (!landingData) return;
 
     // Validate required fields
-    const requiredFields = landingData.landingPage.customFields.filter(field => field.required);
-    const missingFields = requiredFields.filter(field => !formData[field.name]?.trim());
+    const missingFields = landingData.landingPage.customFields
+      .filter(field => field.required && !formData[field.name])
+      .map(field => field.label);
 
     if (missingFields.length > 0) {
       toast({
-        title: "Missing Required Fields",
-        description: `Please fill in: ${missingFields.map(f => f.label).join(", ")}`,
+        title: "Missing Information",
+        description: `Please fill in: ${missingFields.join(", ")}`,
         variant: "destructive",
       });
       return;
@@ -161,10 +136,10 @@ export default function GuideLanding() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-slate-600">Loading...</p>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading...</p>
         </div>
       </div>
     );
@@ -172,11 +147,11 @@ export default function GuideLanding() {
 
   if (!landingData) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <Card className="max-w-md mx-4">
           <CardContent className="p-8 text-center">
-            <h1 className="text-2xl font-bold text-slate-800 mb-4">Page Not Found</h1>
-            <p className="text-slate-600">
+            <h1 className="text-2xl font-bold text-gray-800 mb-4">Page Not Found</h1>
+            <p className="text-gray-600">
               The landing page you're looking for doesn't exist or has been removed.
             </p>
           </CardContent>
