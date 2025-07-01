@@ -466,21 +466,21 @@ export default function Dashboard() {
             </CardContent>
           </Card>
 
-          {/* Performance Overview - Full Width */}
-          <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+          {/* Performance Overview - Horizontal Layout */}
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
             {/* Top Performing Guides */}
-            <Card className="lg:col-span-2">
+            <Card className="md:col-span-2 xl:col-span-3">
               <CardHeader>
                 <CardTitle>Top Performers</CardTitle>
               </CardHeader>
               <CardContent>
                 {guides && guides.length > 0 ? (
-                  <div className="space-y-4">
+                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
                     {guides
                       .sort((a: any, b: any) => (b.conversionRate || 0) - (a.conversionRate || 0))
                       .slice(0, 3)
                       .map((guide: any) => (
-                        <div key={guide.id} className="flex items-center justify-between">
+                        <div key={guide.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                           <div className="flex-1 min-w-0">
                             <p className="text-sm font-medium text-foreground truncate">
                               {guide.title}
@@ -504,29 +504,27 @@ export default function Dashboard() {
             </Card>
 
             {/* Quick Actions */}
-            <Card>
+            <Card className="xl:col-span-1">
               <CardHeader>
                 <CardTitle>Quick Actions</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-1 gap-3">
-                  <Button variant="ghost" className="w-full justify-start">
-                    <Palette className="w-4 h-4 mr-3" />
+                <div className="space-y-2">
+                  <Button variant="ghost" size="sm" className="w-full justify-start text-xs">
+                    <Palette className="w-3 h-3 mr-2" />
                     Update Branding
                   </Button>
-                  <Button variant="ghost" className="w-full justify-start">
-                    <ExternalLink className="w-4 h-4 mr-3" />
+                  <Button variant="ghost" size="sm" className="w-full justify-start text-xs">
+                    <ExternalLink className="w-3 h-3 mr-2" />
                     Manage Integrations
                   </Button>
-                  <Button variant="ghost" className="w-full justify-start">
-                    <TrendingUp className="w-4 h-4 mr-3" />
+                  <Button variant="ghost" size="sm" className="w-full justify-start text-xs">
+                    <TrendingUp className="w-3 h-3 mr-2" />
                     Export Data
                   </Button>
                 </div>
               </CardContent>
             </Card>
-
-
           </div>
         </main>
       </div>
