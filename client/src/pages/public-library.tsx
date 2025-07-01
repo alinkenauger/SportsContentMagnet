@@ -127,7 +127,7 @@ export default function PublicLibrary() {
               </Link>
               <div>
                 <h1 className="text-xl font-bold text-slate-800">
-                  Public Practice Library
+                  Practice Library
                 </h1>
                 <p className="text-sm text-slate-600">
                   Discover practice guides by pain point, benefit, or body part

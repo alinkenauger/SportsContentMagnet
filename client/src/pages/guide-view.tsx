@@ -296,7 +296,7 @@ export default function GuideView() {
                   size="sm"
                 >
                   <Target className="w-4 h-4 mr-2" />
-                  Browse Library
+                  Practice Library
                 </Button>
               </Link>
               <Button
