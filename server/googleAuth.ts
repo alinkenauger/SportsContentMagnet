@@ -22,14 +22,15 @@ export function setupGoogleAuth(app: Express) {
     return;
   }
 
+  const callbackUrl = `https://${process.env.REPLIT_DOMAINS?.split(',')[0]}/api/auth/google/callback`;
   console.log("Setting up Google OAuth with Client ID:", clientId?.substring(0, 20) + "...");
-  console.log("Callback URL configured as: /api/auth/google/callback");
+  console.log("Callback URL configured as:", callbackUrl);
 
   const googleStrategy = new GoogleStrategy(
     {
       clientID: clientId,
       clientSecret: clientSecret,
-      callbackURL: "/api/auth/google/callback",
+      callbackURL: callbackUrl,
     },
     async (accessToken, refreshToken, profile, done) => {
       try {
@@ -121,12 +122,29 @@ export function setupGoogleAuth(app: Express) {
 
   app.get(
     "/api/auth/google/callback",
-    passport.authenticate("google", { failureRedirect: "/?error=google_auth_failed" }),
+    (req, res, next) => {
+      console.log("Google callback received - Query params:", req.query);
+      console.log("Google callback - Session before auth:", !!req.session);
+      next();
+    },
+    passport.authenticate("google", { 
+      failureRedirect: "/?error=google_auth_failed",
+      failureFlash: false
+    }),
     (req, res) => {
-      // Successful Google authentication
+      console.log("Google authentication successful - User:", !!req.user);
+      console.log("Redirecting to dashboard");
       res.redirect("/dashboard");
     }
   );
+
+  // Add error handling for failed OAuth
+  app.get("/", (req, res, next) => {
+    if (req.query.error) {
+      console.log("OAuth error received:", req.query.error);
+    }
+    next();
+  });
 
   // Universal logout (works for both Google OAuth and Replit Auth)
   app.get("/api/auth/logout", (req, res) => {
