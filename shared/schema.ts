@@ -37,6 +37,19 @@ export const users = pgTable("users", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+export const googleConnections = pgTable("google_connections", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  googleId: varchar("google_id").notNull(),
+  googleAccessToken: text("google_access_token").notNull(),
+  googleRefreshToken: text("google_refresh_token"),
+  googleEmail: varchar("google_email"),
+  googleName: varchar("google_name"),
+  googlePicture: varchar("google_picture"),
+  connectedAt: timestamp("connected_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Branding settings for each user
 export const brandingSettings = pgTable("branding_settings", {
   id: serial("id").primaryKey(),
@@ -224,6 +237,7 @@ export const usersRelations = relations(users, ({ many, one }) => ({
   knowledgebaseEntries: many(knowledgebaseEntries),
   personalizationProfiles: many(personalizationProfiles),
   personalizationRules: many(personalizationRules),
+  googleConnection: one(googleConnections),
 }));
 
 export const guidesRelations = relations(guides, ({ one, many }) => ({
@@ -283,6 +297,13 @@ export const personalizationRulesRelations = relations(personalizationRules, ({ 
 export const contentVariantsRelations = relations(contentVariants, ({ one }) => ({
   guide: one(guides, { fields: [contentVariants.guideId], references: [guides.id] }),
   profile: one(personalizationProfiles, { fields: [contentVariants.profileId], references: [personalizationProfiles.id] }),
+}));
+
+export const googleConnectionsRelations = relations(googleConnections, ({ one }) => ({
+  user: one(users, {
+    fields: [googleConnections.userId],
+    references: [users.id],
+  }),
 }));
 
 // Insert schemas
@@ -349,6 +370,12 @@ export const insertContentVariantSchema = createInsertSchema(contentVariants).om
   updatedAt: true,
 });
 
+export const insertGoogleConnectionSchema = createInsertSchema(googleConnections).omit({
+  id: true,
+  connectedAt: true,
+  updatedAt: true,
+});
+
 // Types
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
@@ -374,3 +401,5 @@ export type PersonalizationRule = typeof personalizationRules.$inferSelect;
 export type InsertPersonalizationRule = z.infer<typeof insertPersonalizationRuleSchema>;
 export type ContentVariant = typeof contentVariants.$inferSelect;
 export type InsertContentVariant = z.infer<typeof insertContentVariantSchema>;
+export type GoogleConnection = typeof googleConnections.$inferSelect;
+export type InsertGoogleConnection = z.infer<typeof insertGoogleConnectionSchema>;
