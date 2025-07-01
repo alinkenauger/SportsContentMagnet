@@ -2,8 +2,33 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
 import { isUnauthorizedError } from "@/lib/authUtils";
-import { Settings as SettingsIcon, Book, Upload, Link, FileText, Trash2, Edit3, Plus, Mic, Video, Download } from "lucide-react";
+import Sidebar from "@/components/sidebar";
+import { 
+  Settings as SettingsIcon, 
+  User,
+  CreditCard,
+  Shield,
+  Bell,
+  Zap,
+  Key,
+  Mail,
+  Phone,
+  Camera,
+  Save,
+  AlertCircle,
+  CheckCircle,
+  X,
+  Edit,
+  Trash2,
+  Plus,
+  Calendar,
+  DollarSign,
+  FileText,
+  Globe,
+  Lock
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -13,696 +38,765 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-
-interface KnowledgebaseEntry {
-  id: number;
-  title: string;
-  content: string;
-  contentType: string;
-  sourceUrl?: string;
-  sourceType: string;
-  fileType?: string;
-  tags: string[];
-  createdAt: string;
-  updatedAt: string;
-}
-
-interface TrainingSettings {
-  customInstructions?: string;
-  analysisPrompt?: string;
-  guideGenerationPrompt?: string;
-  personalizationPrompt?: string;
-}
+import { Switch } from "@/components/ui/switch";
+import { Separator } from "@/components/ui/separator";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 
 export default function Settings() {
   const { toast } = useToast();
+  const { user } = useAuth();
   const queryClient = useQueryClient();
-  const [selectedTab, setSelectedTab] = useState("training");
-  const [isAddingEntry, setIsAddingEntry] = useState(false);
-  const [editingEntry, setEditingEntry] = useState<KnowledgebaseEntry | null>(null);
-  const [uploadProgress, setUploadProgress] = useState<{ [key: string]: number }>({});
+  const [selectedTab, setSelectedTab] = useState("profile");
 
-  // Form states
-  const [newEntry, setNewEntry] = useState({
-    title: "",
-    content: "",
-    sourceUrl: "",
-    sourceType: "manual" as const,
-    contentType: "text" as const,
-    tags: [] as string[],
+  // Profile form states
+  const [profileForm, setProfileForm] = useState({
+    firstName: user?.firstName || "",
+    lastName: user?.lastName || "",
+    email: user?.email || "",
+    phone: "",
+    bio: "",
+    website: "",
+    company: "",
+    jobTitle: ""
   });
 
-  const [trainingForm, setTrainingForm] = useState<TrainingSettings>({});
-
-  // Template configurations
-  const templates = {
-    beginner: {
-      customInstructions: "Focus on fundamental movements, safety first approach, and clear step-by-step progression. Always emphasize proper form over intensity. Target audience is new to fitness with little to no experience.",
-      analysisPrompt: "When analyzing videos, identify basic movements, common beginner mistakes, safety considerations, and simple modifications. Focus on foundational skills and clear explanations.",
-      guideGenerationPrompt: "Generate beginner-friendly guides with simple language, safety warnings, progression steps, and modifications for different fitness levels. Include equipment alternatives and emphasize proper form.",
-      personalizationPrompt: "Adapt content for beginners by simplifying terminology, adding extra safety notes, providing easier variations, and encouraging gradual progression."
-    },
-    advanced: {
-      customInstructions: "Focus on technical analysis, performance optimization, and advanced training concepts. Target audience has significant experience and training background.",
-      analysisPrompt: "Analyze videos for technical details, biomechanics, performance metrics, advanced techniques, and competitive applications. Identify subtle form cues and optimization opportunities.",
-      guideGenerationPrompt: "Create detailed technical guides with advanced terminology, performance metrics, periodization concepts, and competition preparation strategies.",
-      personalizationPrompt: "Customize for experienced athletes with advanced training variables, periodization schedules, performance tracking, and competitive preparation focus."
-    },
-    wellness: {
-      customInstructions: "Emphasize holistic health, lifestyle integration, sustainable habits, and overall well-being. Focus on long-term health benefits over performance metrics.",
-      analysisPrompt: "Look for lifestyle integration opportunities, stress management benefits, mobility improvements, and sustainable practice elements in videos.",
-      guideGenerationPrompt: "Generate wellness-focused guides that integrate fitness with daily life, emphasize stress relief, include mindfulness elements, and promote sustainable habits.",
-      personalizationPrompt: "Adapt content to support work-life balance, stress management, energy improvement, and sustainable wellness practices tailored to busy lifestyles."
-    },
-    youth: {
-      customInstructions: "Make fitness fun, age-appropriate, and focused on skill development. Emphasize enjoyment, participation, and positive experiences over competition.",
-      analysisPrompt: "Identify fun elements, skill-building opportunities, age-appropriate movements, and ways to make activities engaging for young participants.",
-      guideGenerationPrompt: "Create fun, engaging guides with games, challenges, skill progressions, and positive reinforcement. Use simple language and include variety.",
-      personalizationPrompt: "Adapt content for different age groups, attention spans, skill levels, and developmental stages. Focus on fun, participation, and building confidence."
-    },
-    sport: {
-      customInstructions: "Focus on sport-specific techniques, rules, strategies, and position-based training. Emphasize competitive performance and game situations.",
-      analysisPrompt: "Analyze sport-specific techniques, tactical elements, position responsibilities, rule applications, and competitive scenarios shown in videos.",
-      guideGenerationPrompt: "Generate detailed guides covering sport rules, position-specific skills, game strategies, drills, and competitive preparation tailored to the specific sport.",
-      personalizationPrompt: "Customize content based on player position, skill level, competitive level (recreational to professional), and specific sport requirements."
-    },
-    howto: {
-      customInstructions: "Break down complex skills into clear, actionable steps. Focus on practical application, troubleshooting, and hands-on learning.",
-      analysisPrompt: "Identify key steps, common mistakes, required tools/materials, safety considerations, and alternative methods for completing tasks or learning skills.",
-      guideGenerationPrompt: "Create step-by-step instructional guides with clear visuals, material lists, troubleshooting tips, and progressive skill building.",
-      personalizationPrompt: "Adapt instructions based on skill level, available tools, time constraints, and learning preferences (visual, hands-on, theoretical)."
-    },
-    cooking: {
-      customInstructions: "Focus on culinary techniques, ingredient knowledge, kitchen safety, and flavor development. Emphasize both technique and creativity.",
-      analysisPrompt: "Analyze cooking techniques, ingredient preparation, timing, temperature control, presentation, and flavor combinations demonstrated in videos.",
-      guideGenerationPrompt: "Generate detailed recipe guides with technique explanations, ingredient substitutions, timing tips, troubleshooting, and presentation ideas.",
-      personalizationPrompt: "Customize recipes based on dietary restrictions, skill level, available equipment, time constraints, and flavor preferences."
-    },
-    coding: {
-      customInstructions: "Explain programming concepts clearly, emphasize best practices, debugging techniques, and practical problem-solving approaches.",
-      analysisPrompt: "Identify key programming concepts, code patterns, best practices, common errors, optimization techniques, and real-world applications shown in videos.",
-      guideGenerationPrompt: "Create comprehensive coding guides with clear explanations, code examples, best practices, debugging tips, and practical exercises.",
-      personalizationPrompt: "Adapt content based on programming experience, preferred languages, project types, and learning goals (beginner concepts vs advanced optimization)."
-    }
-  };
-
-  const applyTemplate = (templateType: keyof typeof templates) => {
-    const template = templates[templateType];
-    setTrainingForm({
-      ...trainingForm,
-      ...template
-    });
-    
-    toast({
-      title: "Template Applied",
-      description: `${templateType.charAt(0).toUpperCase() + templateType.slice(1)} coaching template has been applied to your settings.`,
-    });
-  };
-
-  // Fetch training settings
-  const { data: trainingSettings, isLoading: trainingLoading } = useQuery({
-    queryKey: ["/api/training-settings"],
-    onSuccess: (data) => {
-      setTrainingForm(data || {});
-    },
-    onError: (error: Error) => {
-      if (isUnauthorizedError(error)) {
-        toast({
-          title: "Unauthorized",
-          description: "You are logged out. Logging in again...",
-          variant: "destructive",
-        });
-        setTimeout(() => {
-          window.location.href = "/api/login";
-        }, 500);
-      }
-    },
+  // Notification preferences
+  const [notifications, setNotifications] = useState({
+    emailNewLeads: true,
+    emailGuideUpdates: true,
+    emailMarketing: false,
+    smsNewLeads: false,
+    pushNotifications: true,
+    weeklyReports: true
   });
 
-  // Fetch knowledgebase entries
-  const { data: knowledgebaseEntries = [], isLoading: entriesLoading } = useQuery({
-    queryKey: ["/api/knowledgebase"],
-    onError: (error: Error) => {
-      if (isUnauthorizedError(error)) {
-        toast({
-          title: "Unauthorized",
-          description: "You are logged out. Logging in again...",
-          variant: "destructive",
-        });
-        setTimeout(() => {
-          window.location.href = "/api/login";
-        }, 500);
-      }
-    },
+  // Security settings
+  const [securitySettings, setSecuritySettings] = useState({
+    twoFactorEnabled: false,
+    loginAlerts: true,
+    sessionTimeout: "30",
+    passwordChanged: "2024-06-15"
   });
 
-  // Update training settings mutation
-  const updateTrainingMutation = useMutation({
-    mutationFn: async (data: TrainingSettings) => {
-      return await apiRequest("/api/training-settings", {
-        method: "POST",
-        body: JSON.stringify(data),
-      });
+  // Update profile mutation
+  const updateProfileMutation = useMutation({
+    mutationFn: async (data: typeof profileForm) => {
+      return await apiRequest("/api/profile", "PUT", JSON.stringify(data));
     },
     onSuccess: () => {
       toast({
-        title: "Success",
-        description: "Training settings updated successfully",
+        title: "Profile Updated",
+        description: "Your profile has been successfully updated.",
       });
-      queryClient.invalidateQueries({ queryKey: ["/api/training-settings"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
     },
-    onError: (error: Error) => {
-      if (isUnauthorizedError(error)) {
-        toast({
-          title: "Unauthorized",
-          description: "You are logged out. Logging in again...",
-          variant: "destructive",
-        });
-        setTimeout(() => {
-          window.location.href = "/api/login";
-        }, 500);
-        return;
-      }
-      
+    onError: (error) => {
+      console.error("Profile update error:", error);
       toast({
-        title: "Error",
-        description: "Failed to update training settings",
+        title: "Update Failed",
+        description: "Failed to update profile. Please try again.",
         variant: "destructive",
       });
     },
   });
 
-  // Create knowledgebase entry mutation
-  const createEntryMutation = useMutation({
-    mutationFn: async (data: typeof newEntry) => {
-      return await apiRequest("/api/knowledgebase", {
-        method: "POST",
-        body: JSON.stringify(data),
-      });
-    },
-    onSuccess: () => {
-      toast({
-        title: "Success",
-        description: "Knowledgebase entry created successfully",
-      });
-      queryClient.invalidateQueries({ queryKey: ["/api/knowledgebase"] });
-      setIsAddingEntry(false);
-      setNewEntry({
-        title: "",
-        content: "",
-        sourceUrl: "",
-        sourceType: "manual",
-        contentType: "text",
-        tags: [],
-      });
-    },
-    onError: (error: Error) => {
-      if (isUnauthorizedError(error)) {
-        toast({
-          title: "Unauthorized",
-          description: "You are logged out. Logging in again...",
-          variant: "destructive",
-        });
-        setTimeout(() => {
-          window.location.href = "/api/login";
-        }, 500);
-        return;
-      }
-      
-      toast({
-        title: "Error",
-        description: "Failed to create entry",
-        variant: "destructive",
-      });
-    },
-  });
-
-  // Delete knowledgebase entry mutation
-  const deleteEntryMutation = useMutation({
-    mutationFn: async (id: number) => {
-      return await apiRequest(`/api/knowledgebase/${id}`, {
-        method: "DELETE",
-      });
-    },
-    onSuccess: () => {
-      toast({
-        title: "Success",
-        description: "Entry deleted successfully",
-      });
-      queryClient.invalidateQueries({ queryKey: ["/api/knowledgebase"] });
-    },
-    onError: (error: Error) => {
-      if (isUnauthorizedError(error)) {
-        toast({
-          title: "Unauthorized",
-          description: "You are logged out. Logging in again...",
-          variant: "destructive",
-        });
-        setTimeout(() => {
-          window.location.href = "/api/login";
-        }, 500);
-        return;
-      }
-      
-      toast({
-        title: "Error",
-        description: "Failed to delete entry",
-        variant: "destructive",
-      });
-    },
-  });
-
-  // Handle file upload with transcription
-  const handleFileUpload = async (file: File) => {
-    const formData = new FormData();
-    formData.append("file", file);
-    
-    const uploadId = Math.random().toString(36).substr(2, 9);
-    setUploadProgress({ ...uploadProgress, [uploadId]: 0 });
-
-    try {
-      // For audio/video files, transcribe them
-      if (file.type.startsWith("audio/") || file.type.startsWith("video/")) {
-        setUploadProgress({ ...uploadProgress, [uploadId]: 50 });
-        
-        const transcriptionResponse = await apiRequest("/api/transcribe", {
-          method: "POST",
-          body: formData,
-        });
-
-        const transcription = await transcriptionResponse.text();
-        
-        setNewEntry({
-          ...newEntry,
-          title: file.name.replace(/\.[^/.]+$/, ""),
-          content: transcription,
-          sourceType: "file_upload",
-          contentType: "transcription",
-          fileType: file.type.startsWith("audio/") ? "audio" : "video",
-        });
-        
-        setUploadProgress({ ...uploadProgress, [uploadId]: 100 });
-        
-        toast({
-          title: "File Processed",
-          description: "Audio/video has been transcribed successfully",
-        });
-      } else {
-        // For text files, read content directly
-        const text = await file.text();
-        setNewEntry({
-          ...newEntry,
-          title: file.name.replace(/\.[^/.]+$/, ""),
-          content: text,
-          sourceType: "file_upload",
-          contentType: "text",
-          fileType: file.type || "text",
-        });
-        
-        setUploadProgress({ ...uploadProgress, [uploadId]: 100 });
-        
-        toast({
-          title: "File Processed",
-          description: "Text content extracted successfully",
-        });
-      }
-    } catch (error) {
-      toast({
-        title: "Upload Failed",
-        description: "Failed to process the uploaded file",
-        variant: "destructive",
-      });
-    } finally {
-      setTimeout(() => {
-        const newProgress = { ...uploadProgress };
-        delete newProgress[uploadId];
-        setUploadProgress(newProgress);
-      }, 2000);
-    }
+  const handleProfileSave = () => {
+    updateProfileMutation.mutate(profileForm);
   };
 
-  const handleSaveTraining = () => {
-    updateTrainingMutation.mutate(trainingForm);
-  };
-
-  const handleCreateEntry = () => {
-    if (!newEntry.title.trim() || !newEntry.content.trim()) {
-      toast({
-        title: "Error",
-        description: "Title and content are required",
-        variant: "destructive",
-      });
-      return;
-    }
-    createEntryMutation.mutate(newEntry);
-  };
-
-  const getContentTypeIcon = (contentType: string) => {
-    switch (contentType) {
-      case "transcription":
-        return <Mic className="h-4 w-4" />;
-      case "link":
-        return <Link className="h-4 w-4" />;
-      default:
-        return <FileText className="h-4 w-4" />;
-    }
-  };
-
-  const getFileTypeIcon = (fileType?: string) => {
-    if (fileType?.startsWith("audio/")) return <Mic className="h-4 w-4" />;
-    if (fileType?.startsWith("video/")) return <Video className="h-4 w-4" />;
-    return <FileText className="h-4 w-4" />;
+  const getInitials = (firstName?: string, lastName?: string) => {
+    return `${firstName?.[0] || ""}${lastName?.[0] || ""}`.toUpperCase() || "U";
   };
 
   return (
-    <div className="container mx-auto py-8 px-4">
-      <div className="flex items-center gap-2 mb-8">
-        <SettingsIcon className="h-8 w-8" />
-        <h1 className="text-3xl font-bold">Settings</h1>
-      </div>
-      <Tabs value={selectedTab} onValueChange={setSelectedTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="training">AI Training</TabsTrigger>
-          <TabsTrigger value="knowledgebase">Knowledgebase</TabsTrigger>
-        </TabsList>
+    <div className="flex h-screen bg-gray-50">
+      <Sidebar />
+      <div className="flex-1 overflow-auto">
+        <div className="max-w-6xl mx-auto p-6">
+          <div className="mb-8">
+            <h1 className="text-3xl font-bold flex items-center gap-3 mb-2">
+              <SettingsIcon className="w-8 h-8 text-blue-600" />
+              Account Settings
+            </h1>
+            <p className="text-gray-600">Manage your profile, billing, security, and preferences</p>
+          </div>
 
-        <TabsContent value="training">
-          <Card>
-            <CardHeader>
-              <CardTitle>AI Training Instructions</CardTitle>
-              <CardDescription>Customize how your AI bot analyzes content videos and generates coaching guidance to match your training philosophy and style.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {/* Template Selection */}
-              <div className="space-y-3">
-                <Label>Quick Start Templates</Label>
-                <div className="flex gap-3 items-center">
-                  <Select onValueChange={(value) => value && applyTemplate(value as keyof typeof templates)}>
-                    <SelectTrigger className="w-64">
-                      <SelectValue placeholder="Choose a coaching template..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="beginner">
-                        <div className="flex flex-col">
-                          <span className="font-medium">Beginner-Friendly Coach</span>
-                          <span className="text-xs text-gray-500">Fundamentals & safety focus</span>
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="advanced">
-                        <div className="flex flex-col">
-                          <span className="font-medium">Advanced Performance Coach</span>
-                          <span className="text-xs text-gray-500">Technical & competitive training</span>
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="wellness">
-                        <div className="flex flex-col">
-                          <span className="font-medium">Fitness & Wellness Coach</span>
-                          <span className="text-xs text-gray-500">Holistic & lifestyle integration</span>
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="youth">
-                        <div className="flex flex-col">
-                          <span className="font-medium">Youth Sports Coach</span>
-                          <span className="text-xs text-gray-500">Fun & age-appropriate</span>
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="sport">
-                        <div className="flex flex-col">
-                          <span className="font-medium">Sport-Specific Coach</span>
-                          <span className="text-xs text-gray-500">Rules & position training</span>
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="howto">
-                        <div className="flex flex-col">
-                          <span className="font-medium">How-To Skill Teacher</span>
-                          <span className="text-xs text-gray-500">Step-by-step instructions</span>
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="cooking">
-                        <div className="flex flex-col">
-                          <span className="font-medium">Cooking Instructor</span>
-                          <span className="text-xs text-gray-500">Culinary techniques & recipes</span>
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="coding">
-                        <div className="flex flex-col">
-                          <span className="font-medium">Coding Mentor</span>
-                          <span className="text-xs text-gray-500">Programming & best practices</span>
-                        </div>
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <p className="text-sm text-gray-500">Select a template to auto-fill all training fields</p>
-                </div>
-              </div>
+          <Tabs value={selectedTab} onValueChange={setSelectedTab} className="space-y-6">
+            <TabsList className="grid w-full grid-cols-6 h-12">
+              <TabsTrigger value="profile" className="flex items-center gap-2 text-sm">
+                <User className="w-4 h-4" />
+                Profile
+              </TabsTrigger>
+              <TabsTrigger value="billing" className="flex items-center gap-2 text-sm">
+                <CreditCard className="w-4 h-4" />
+                Billing
+              </TabsTrigger>
+              <TabsTrigger value="security" className="flex items-center gap-2 text-sm">
+                <Shield className="w-4 h-4" />
+                Security
+              </TabsTrigger>
+              <TabsTrigger value="notifications" className="flex items-center gap-2 text-sm">
+                <Bell className="w-4 h-4" />
+                Notifications
+              </TabsTrigger>
+              <TabsTrigger value="integrations" className="flex items-center gap-2 text-sm">
+                <Zap className="w-4 h-4" />
+                Integrations
+              </TabsTrigger>
+              <TabsTrigger value="advanced" className="flex items-center gap-2 text-sm">
+                <SettingsIcon className="w-4 h-4" />
+                Advanced
+              </TabsTrigger>
+            </TabsList>
 
-              <div className="space-y-2">
-                <Label htmlFor="customInstructions">General Instructions</Label>
-                <Textarea
-                  id="customInstructions"
-                  placeholder="Add general instructions for AI analysis (e.g., focus on specific techniques, target audience, etc.)"
-                  value={trainingForm.customInstructions || ""}
-                  onChange={(e) => setTrainingForm({ ...trainingForm, customInstructions: e.target.value })}
-                  rows={4}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="analysisPrompt">Video Analysis Prompt</Label>
-                <Textarea
-                  id="analysisPrompt"
-                  placeholder="Custom prompt for video analysis (how to identify key techniques, drills, etc.)"
-                  value={trainingForm.analysisPrompt || ""}
-                  onChange={(e) => setTrainingForm({ ...trainingForm, analysisPrompt: e.target.value })}
-                  rows={3}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="guideGenerationPrompt">Guide Generation Prompt</Label>
-                <Textarea
-                  id="guideGenerationPrompt"
-                  placeholder="Custom prompt for generating practice guides (structure, tone, style, etc.)"
-                  value={trainingForm.guideGenerationPrompt || ""}
-                  onChange={(e) => setTrainingForm({ ...trainingForm, guideGenerationPrompt: e.target.value })}
-                  rows={3}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="personalizationPrompt">Personalization Prompt</Label>
-                <Textarea
-                  id="personalizationPrompt"
-                  placeholder="Custom prompt for personalizing guides based on user data"
-                  value={trainingForm.personalizationPrompt || ""}
-                  onChange={(e) => setTrainingForm({ ...trainingForm, personalizationPrompt: e.target.value })}
-                  rows={3}
-                />
-              </div>
-
-              <Button 
-                onClick={handleSaveTraining}
-                disabled={updateTrainingMutation.isPending}
-              >
-                {updateTrainingMutation.isPending ? "Saving..." : "Save Training Settings"}
-              </Button>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="knowledgebase">
-          <div className="space-y-6">
-            <div className="flex justify-between items-center">
-              <div>
-                <h2 className="text-2xl font-bold">AI Training Knowledgebase</h2>
-                <p className="text-gray-600">
-                  Train your AI bot with your expertise - add training content, instructional materials, books, blog posts, and teaching resources to help it provide better guidance to your audience
-                </p>
-              </div>
-              <Dialog open={isAddingEntry} onOpenChange={setIsAddingEntry}>
-                <DialogTrigger asChild>
-                  <Button>
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add Entry
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
-                  <DialogHeader>
-                    <DialogTitle>Add Training Content for Your AI Bot</DialogTitle>
-                    <DialogDescription>
-                      Upload workout routines, training programs, coaching philosophy, exercise tutorials, nutrition guides, or any content that will help your AI bot provide better guidance to your viewers
-                    </DialogDescription>
-                  </DialogHeader>
-                  
-                  <div className="space-y-4">
+            {/* Profile Tab */}
+            <TabsContent value="profile" className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <User className="w-5 h-5" />
+                    Personal Information
+                  </CardTitle>
+                  <CardDescription>Update your basic profile information and preferences</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  {/* Profile Picture */}
+                  <div className="flex items-center gap-4">
+                    <Avatar className="w-16 h-16">
+                      <AvatarImage src={user?.profileImageUrl} alt="Profile" />
+                      <AvatarFallback className="text-lg font-semibold">
+                        {getInitials(user?.firstName, user?.lastName)}
+                      </AvatarFallback>
+                    </Avatar>
                     <div className="space-y-2">
-                      <Label htmlFor="entryTitle">Title</Label>
+                      <Button variant="outline" size="sm" className="flex items-center gap-2">
+                        <Camera className="w-4 h-4" />
+                        Change Photo
+                      </Button>
+                      <p className="text-sm text-gray-500">JPG, PNG or GIF. Max 5MB.</p>
+                    </div>
+                  </div>
+
+                  <Separator />
+
+                  {/* Basic Information */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="firstName">First Name</Label>
                       <Input
-                        id="entryTitle"
-                        placeholder="Enter a descriptive title"
-                        value={newEntry.title}
-                        onChange={(e) => setNewEntry({ ...newEntry, title: e.target.value })}
+                        id="firstName"
+                        value={profileForm.firstName}
+                        onChange={(e) => setProfileForm(prev => ({ ...prev, firstName: e.target.value }))}
+                        placeholder="Enter your first name"
                       />
                     </div>
-
                     <div className="space-y-2">
-                      <Label htmlFor="sourceType">Content Source</Label>
+                      <Label htmlFor="lastName">Last Name</Label>
+                      <Input
+                        id="lastName"
+                        value={profileForm.lastName}
+                        onChange={(e) => setProfileForm(prev => ({ ...prev, lastName: e.target.value }))}
+                        placeholder="Enter your last name"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="email">Email Address</Label>
+                      <Input
+                        id="email"
+                        type="email"
+                        value={profileForm.email}
+                        onChange={(e) => setProfileForm(prev => ({ ...prev, email: e.target.value }))}
+                        placeholder="Enter your email"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="phone">Phone Number</Label>
+                      <Input
+                        id="phone"
+                        type="tel"
+                        value={profileForm.phone}
+                        onChange={(e) => setProfileForm(prev => ({ ...prev, phone: e.target.value }))}
+                        placeholder="Enter your phone number"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="company">Company</Label>
+                      <Input
+                        id="company"
+                        value={profileForm.company}
+                        onChange={(e) => setProfileForm(prev => ({ ...prev, company: e.target.value }))}
+                        placeholder="Enter your company name"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="jobTitle">Job Title</Label>
+                      <Input
+                        id="jobTitle"
+                        value={profileForm.jobTitle}
+                        onChange={(e) => setProfileForm(prev => ({ ...prev, jobTitle: e.target.value }))}
+                        placeholder="Enter your job title"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="website">Website</Label>
+                    <Input
+                      id="website"
+                      type="url"
+                      value={profileForm.website}
+                      onChange={(e) => setProfileForm(prev => ({ ...prev, website: e.target.value }))}
+                      placeholder="https://yourwebsite.com"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="bio">Bio</Label>
+                    <Textarea
+                      id="bio"
+                      value={profileForm.bio}
+                      onChange={(e) => setProfileForm(prev => ({ ...prev, bio: e.target.value }))}
+                      placeholder="Tell us about yourself..."
+                      rows={4}
+                    />
+                  </div>
+
+                  <div className="flex justify-end">
+                    <Button 
+                      onClick={handleProfileSave}
+                      disabled={updateProfileMutation.isPending}
+                      className="flex items-center gap-2"
+                    >
+                      <Save className="w-4 h-4" />
+                      {updateProfileMutation.isPending ? "Saving..." : "Save Changes"}
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* Billing Tab */}
+            <TabsContent value="billing" className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <CreditCard className="w-5 h-5" />
+                    Billing & Subscription
+                  </CardTitle>
+                  <CardDescription>Manage your subscription, payment methods, and billing information</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  {/* Current Plan */}
+                  <div className="border rounded-lg p-4 bg-gradient-to-r from-blue-50 to-indigo-50">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h3 className="font-semibold text-lg">Pro Plan</h3>
+                        <p className="text-gray-600">Unlimited guides, advanced analytics, priority support</p>
+                        <div className="flex items-center gap-2 mt-2">
+                          <Badge variant="secondary">Active</Badge>
+                          <span className="text-sm text-gray-500">Next billing: Jan 15, 2025</span>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-2xl font-bold">$29/mo</div>
+                        <Button variant="outline" size="sm" className="mt-2">
+                          Change Plan
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Payment Methods */}
+                  <div className="space-y-4">
+                    <h3 className="font-semibold">Payment Methods</h3>
+                    <div className="border rounded-lg p-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-6 bg-blue-600 rounded text-white text-xs flex items-center justify-center font-bold">
+                            VISA
+                          </div>
+                          <div>
+                            <p className="font-medium">•••• •••• •••• 4242</p>
+                            <p className="text-sm text-gray-500">Expires 12/2027</p>
+                          </div>
+                          <Badge variant="default" className="ml-2">Default</Badge>
+                        </div>
+                        <div className="flex gap-2">
+                          <Button variant="ghost" size="sm">
+                            <Edit className="w-4 h-4" />
+                          </Button>
+                          <Button variant="ghost" size="sm">
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                    <Button variant="outline" className="flex items-center gap-2">
+                      <Plus className="w-4 h-4" />
+                      Add Payment Method
+                    </Button>
+                  </div>
+
+                  {/* Billing History */}
+                  <div className="space-y-4">
+                    <h3 className="font-semibold">Recent Invoices</h3>
+                    <div className="space-y-2">
+                      {[
+                        { date: "Dec 15, 2024", amount: "$29.00", status: "Paid" },
+                        { date: "Nov 15, 2024", amount: "$29.00", status: "Paid" },
+                        { date: "Oct 15, 2024", amount: "$29.00", status: "Paid" },
+                      ].map((invoice, index) => (
+                        <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
+                          <div className="flex items-center gap-3">
+                            <Calendar className="w-4 h-4 text-gray-400" />
+                            <span>{invoice.date}</span>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <span className="font-medium">{invoice.amount}</span>
+                            <Badge variant="secondary" className="bg-green-100 text-green-800">
+                              {invoice.status}
+                            </Badge>
+                            <Button variant="ghost" size="sm">
+                              <FileText className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* Security Tab */}
+            <TabsContent value="security" className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Shield className="w-5 h-5" />
+                    Security Settings
+                  </CardTitle>
+                  <CardDescription>Protect your account with strong security measures</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  {/* Password */}
+                  <div className="space-y-4">
+                    <h3 className="font-semibold">Password</h3>
+                    <div className="flex items-center justify-between p-4 border rounded-lg">
+                      <div>
+                        <p className="font-medium">Password</p>
+                        <p className="text-sm text-gray-500">Last changed on {securitySettings.passwordChanged}</p>
+                      </div>
+                      <Button variant="outline">Change Password</Button>
+                    </div>
+                  </div>
+
+                  {/* Two-Factor Authentication */}
+                  <div className="space-y-4">
+                    <h3 className="font-semibold">Two-Factor Authentication</h3>
+                    <div className="flex items-center justify-between p-4 border rounded-lg">
+                      <div className="flex items-center gap-3">
+                        <div className={`w-2 h-2 rounded-full ${securitySettings.twoFactorEnabled ? 'bg-green-500' : 'bg-red-500'}`} />
+                        <div>
+                          <p className="font-medium">
+                            {securitySettings.twoFactorEnabled ? 'Enabled' : 'Disabled'}
+                          </p>
+                          <p className="text-sm text-gray-500">
+                            {securitySettings.twoFactorEnabled 
+                              ? 'Your account is protected with 2FA' 
+                              : 'Add an extra layer of security to your account'
+                            }
+                          </p>
+                        </div>
+                      </div>
+                      <Switch
+                        checked={securitySettings.twoFactorEnabled}
+                        onCheckedChange={(checked) => 
+                          setSecuritySettings(prev => ({ ...prev, twoFactorEnabled: checked }))
+                        }
+                      />
+                    </div>
+                  </div>
+
+                  {/* Login Alerts */}
+                  <div className="space-y-4">
+                    <h3 className="font-semibold">Login Alerts</h3>
+                    <div className="flex items-center justify-between p-4 border rounded-lg">
+                      <div>
+                        <p className="font-medium">Email notifications for new logins</p>
+                        <p className="text-sm text-gray-500">Get notified when someone logs into your account</p>
+                      </div>
+                      <Switch
+                        checked={securitySettings.loginAlerts}
+                        onCheckedChange={(checked) => 
+                          setSecuritySettings(prev => ({ ...prev, loginAlerts: checked }))
+                        }
+                      />
+                    </div>
+                  </div>
+
+                  {/* Session Timeout */}
+                  <div className="space-y-4">
+                    <h3 className="font-semibold">Session Settings</h3>
+                    <div className="flex items-center justify-between p-4 border rounded-lg">
+                      <div>
+                        <p className="font-medium">Session Timeout</p>
+                        <p className="text-sm text-gray-500">Automatically log out after inactivity</p>
+                      </div>
                       <Select 
-                        value={newEntry.sourceType} 
-                        onValueChange={(value: "manual" | "url" | "file_upload") => 
-                          setNewEntry({ ...newEntry, sourceType: value })
+                        value={securitySettings.sessionTimeout}
+                        onValueChange={(value) => 
+                          setSecuritySettings(prev => ({ ...prev, sessionTimeout: value }))
                         }
                       >
-                        <SelectTrigger>
+                        <SelectTrigger className="w-32">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="manual">Manual Text Entry</SelectItem>
-                          <SelectItem value="url">Web Link</SelectItem>
-                          <SelectItem value="file_upload">File Upload</SelectItem>
+                          <SelectItem value="15">15 minutes</SelectItem>
+                          <SelectItem value="30">30 minutes</SelectItem>
+                          <SelectItem value="60">1 hour</SelectItem>
+                          <SelectItem value="240">4 hours</SelectItem>
+                          <SelectItem value="never">Never</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
+                  </div>
 
-                    {newEntry.sourceType === "url" && (
-                      <div className="space-y-2">
-                        <Label htmlFor="sourceUrl">URL</Label>
-                        <Input
-                          id="sourceUrl"
-                          placeholder="https://example.com/article"
-                          value={newEntry.sourceUrl}
-                          onChange={(e) => setNewEntry({ ...newEntry, sourceUrl: e.target.value })}
-                        />
-                      </div>
-                    )}
-
-                    {newEntry.sourceType === "file_upload" && (
-                      <div className="space-y-2">
-                        <Label>File Upload</Label>
-                        <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-                          <Upload className="h-8 w-8 mx-auto mb-2 text-gray-400" />
-                          <p className="text-sm text-gray-600 mb-2">
-                            Upload workout videos, training audio, PDFs of programs, or any fitness content
-                          </p>
-                          <input
-                            type="file"
-                            accept=".txt,.md,.pdf,audio/*,video/*"
-                            onChange={(e) => {
-                              const file = e.target.files?.[0];
-                              if (file) handleFileUpload(file);
-                            }}
-                            className="hidden"
-                            id="fileUpload"
-                          />
-                          <Button asChild variant="outline">
-                            <label htmlFor="fileUpload" className="cursor-pointer">
-                              Choose File
-                            </label>
-                          </Button>
-                        </div>
-                      </div>
-                    )}
-
+                  {/* Active Sessions */}
+                  <div className="space-y-4">
+                    <h3 className="font-semibold">Active Sessions</h3>
                     <div className="space-y-2">
-                      <Label htmlFor="entryContent">Content</Label>
-                      <Textarea
-                        id="entryContent"
-                        placeholder="Add your training content, workout descriptions, coaching tips, or any expertise that will help the AI understand your coaching style..."
-                        value={newEntry.content}
-                        onChange={(e) => setNewEntry({ ...newEntry, content: e.target.value })}
-                        rows={8}
-                      />
-                    </div>
-
-                    <div className="flex gap-2">
-                      <Button 
-                        onClick={handleCreateEntry}
-                        disabled={createEntryMutation.isPending}
-                      >
-                        {createEntryMutation.isPending ? "Creating..." : "Create Entry"}
-                      </Button>
-                      <Button 
-                        variant="outline" 
-                        onClick={() => setIsAddingEntry(false)}
-                      >
-                        Cancel
-                      </Button>
+                      {[
+                        { device: "Chrome on MacBook Pro", location: "San Francisco, CA", current: true },
+                        { device: "Safari on iPhone", location: "San Francisco, CA", current: false },
+                      ].map((session, index) => (
+                        <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
+                          <div className="flex items-center gap-3">
+                            <Globe className="w-4 h-4 text-gray-400" />
+                            <div>
+                              <p className="font-medium">{session.device}</p>
+                              <p className="text-sm text-gray-500">{session.location}</p>
+                            </div>
+                            {session.current && <Badge variant="secondary">Current</Badge>}
+                          </div>
+                          {!session.current && (
+                            <Button variant="ghost" size="sm" className="text-red-600">
+                              Revoke
+                            </Button>
+                          )}
+                        </div>
+                      ))}
                     </div>
                   </div>
-                </DialogContent>
-              </Dialog>
-            </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
 
-            <div className="grid gap-4">
-              {entriesLoading ? (
-                <div className="text-center py-8">Loading knowledgebase entries...</div>
-              ) : knowledgebaseEntries.length === 0 ? (
-                <Card>
-                  <CardContent className="py-8 text-center">
-                    <Book className="h-12 w-12 mx-auto mb-4 text-gray-400" />
-                    <h3 className="text-lg font-medium mb-2">No training content yet</h3>
-                    <p className="text-gray-600 mb-4">
-                      Add your workouts, training programs, coaching philosophy, and expertise to train your AI bot to provide better guidance to your viewers
-                    </p>
-                    <Button onClick={() => setIsAddingEntry(true)}>
-                      <Plus className="h-4 w-4 mr-2" />
-                      Add Your First Entry
-                    </Button>
-                  </CardContent>
-                </Card>
-              ) : (
-                knowledgebaseEntries.map((entry: KnowledgebaseEntry) => (
-                  <Card key={entry.id}>
-                    <CardContent className="py-4">
-                      <div className="flex justify-between items-start">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-2">
-                            {getContentTypeIcon(entry.contentType)}
-                            <h3 className="font-medium">{entry.title}</h3>
-                            {entry.fileType && (
-                              <Badge variant="outline" className="text-xs">
-                                {getFileTypeIcon(entry.fileType)}
-                                <span className="ml-1">{entry.fileType}</span>
-                              </Badge>
-                            )}
-                          </div>
-                          <p className="text-sm text-gray-600 mb-2 line-clamp-2">
-                            {entry.content.substring(0, 150)}...
-                          </p>
-                          <div className="flex gap-1">
-                            {entry.tags.map((tag, index) => (
-                              <Badge key={index} variant="secondary" className="text-xs">
-                                {tag}
-                              </Badge>
-                            ))}
-                          </div>
+            {/* Notifications Tab */}
+            <TabsContent value="notifications" className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Bell className="w-5 h-5" />
+                    Notification Preferences
+                  </CardTitle>
+                  <CardDescription>Choose how you want to be notified about account activity</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  {/* Email Notifications */}
+                  <div className="space-y-4">
+                    <h3 className="font-semibold flex items-center gap-2">
+                      <Mail className="w-4 h-4" />
+                      Email Notifications
+                    </h3>
+                    
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="font-medium">New Leads</p>
+                          <p className="text-sm text-gray-500">Get notified when someone downloads your guides</p>
                         </div>
-                        <div className="flex gap-2 ml-4">
+                        <Switch
+                          checked={notifications.emailNewLeads}
+                          onCheckedChange={(checked) => 
+                            setNotifications(prev => ({ ...prev, emailNewLeads: checked }))
+                          }
+                        />
+                      </div>
+
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="font-medium">Guide Updates</p>
+                          <p className="text-sm text-gray-500">Updates about your published guides</p>
+                        </div>
+                        <Switch
+                          checked={notifications.emailGuideUpdates}
+                          onCheckedChange={(checked) => 
+                            setNotifications(prev => ({ ...prev, emailGuideUpdates: checked }))
+                          }
+                        />
+                      </div>
+
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="font-medium">Weekly Reports</p>
+                          <p className="text-sm text-gray-500">Weekly analytics and performance summaries</p>
+                        </div>
+                        <Switch
+                          checked={notifications.weeklyReports}
+                          onCheckedChange={(checked) => 
+                            setNotifications(prev => ({ ...prev, weeklyReports: checked }))
+                          }
+                        />
+                      </div>
+
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="font-medium">Marketing Emails</p>
+                          <p className="text-sm text-gray-500">Tips, updates, and promotional content</p>
+                        </div>
+                        <Switch
+                          checked={notifications.emailMarketing}
+                          onCheckedChange={(checked) => 
+                            setNotifications(prev => ({ ...prev, emailMarketing: checked }))
+                          }
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <Separator />
+
+                  {/* SMS Notifications */}
+                  <div className="space-y-4">
+                    <h3 className="font-semibold flex items-center gap-2">
+                      <Phone className="w-4 h-4" />
+                      SMS Notifications
+                    </h3>
+                    
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="font-medium">New Leads (SMS)</p>
+                          <p className="text-sm text-gray-500">Instant SMS alerts for new lead captures</p>
+                        </div>
+                        <Switch
+                          checked={notifications.smsNewLeads}
+                          onCheckedChange={(checked) => 
+                            setNotifications(prev => ({ ...prev, smsNewLeads: checked }))
+                          }
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <Separator />
+
+                  {/* Push Notifications */}
+                  <div className="space-y-4">
+                    <h3 className="font-semibold">Push Notifications</h3>
+                    
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="font-medium">Browser Notifications</p>
+                          <p className="text-sm text-gray-500">Real-time notifications in your browser</p>
+                        </div>
+                        <Switch
+                          checked={notifications.pushNotifications}
+                          onCheckedChange={(checked) => 
+                            setNotifications(prev => ({ ...prev, pushNotifications: checked }))
+                          }
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end">
+                    <Button className="flex items-center gap-2">
+                      <Save className="w-4 h-4" />
+                      Save Preferences
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* Integrations Tab */}
+            <TabsContent value="integrations" className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Zap className="w-5 h-5" />
+                    Integrations & API
+                  </CardTitle>
+                  <CardDescription>Connect with external services and manage API access</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  {/* Connected Services */}
+                  <div className="space-y-4">
+                    <h3 className="font-semibold">Connected Services</h3>
+                    
+                    <div className="grid grid-cols-2 gap-4">
+                      {[
+                        { name: "YouTube", description: "Video data and transcription", connected: true, status: "Active" },
+                        { name: "OpenAI", description: "AI content generation", connected: true, status: "Active" },
+                        { name: "Mailchimp", description: "Email marketing automation", connected: false, status: "Not Connected" },
+                        { name: "Zapier", description: "Workflow automation", connected: false, status: "Not Connected" },
+                        { name: "Stripe", description: "Payment processing", connected: true, status: "Active" },
+                        { name: "Google Analytics", description: "Website analytics", connected: false, status: "Not Connected" },
+                      ].map((service, index) => (
+                        <div key={index} className="border rounded-lg p-4">
+                          <div className="flex items-center justify-between mb-2">
+                            <h4 className="font-medium">{service.name}</h4>
+                            <Badge variant={service.connected ? "default" : "secondary"}>
+                              {service.status}
+                            </Badge>
+                          </div>
+                          <p className="text-sm text-gray-500 mb-3">{service.description}</p>
                           <Button 
-                            variant="outline" 
+                            variant={service.connected ? "outline" : "default"} 
                             size="sm"
-                            onClick={() => setEditingEntry(entry)}
+                            className="w-full"
                           >
-                            <Edit3 className="h-4 w-4" />
+                            {service.connected ? "Configure" : "Connect"}
                           </Button>
-                          <Button 
-                            variant="outline" 
-                            size="sm"
-                            onClick={() => deleteEntryMutation.mutate(entry.id)}
-                            disabled={deleteEntryMutation.isPending}
-                          >
-                            <Trash2 className="h-4 w-4" />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <Separator />
+
+                  {/* API Keys */}
+                  <div className="space-y-4">
+                    <h3 className="font-semibold">API Keys</h3>
+                    <p className="text-sm text-gray-500">Use these keys to integrate VidMagnet with your own applications</p>
+                    
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between p-3 border rounded-lg">
+                        <div>
+                          <p className="font-medium">Production API Key</p>
+                          <p className="text-sm text-gray-500 font-mono">vm_pk_••••••••••••••••••••••••••••••••</p>
+                        </div>
+                        <div className="flex gap-2">
+                          <Button variant="ghost" size="sm">
+                            <Key className="w-4 h-4" />
+                          </Button>
+                          <Button variant="ghost" size="sm">
+                            <Trash2 className="w-4 h-4" />
                           </Button>
                         </div>
                       </div>
-                    </CardContent>
-                  </Card>
-                ))
-              )}
-            </div>
-          </div>
-        </TabsContent>
-      </Tabs>
+
+                      <div className="flex items-center justify-between p-3 border rounded-lg">
+                        <div>
+                          <p className="font-medium">Test API Key</p>
+                          <p className="text-sm text-gray-500 font-mono">vm_test_••••••••••••••••••••••••••••••••</p>
+                        </div>
+                        <div className="flex gap-2">
+                          <Button variant="ghost" size="sm">
+                            <Key className="w-4 h-4" />
+                          </Button>
+                          <Button variant="ghost" size="sm">
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+
+                    <Button variant="outline" className="flex items-center gap-2">
+                      <Plus className="w-4 h-4" />
+                      Generate New API Key
+                    </Button>
+                  </div>
+
+                  {/* Webhooks */}
+                  <div className="space-y-4">
+                    <h3 className="font-semibold">Webhooks</h3>
+                    <p className="text-sm text-gray-500">Get notified when events happen in your account</p>
+                    
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between p-3 border rounded-lg">
+                        <div>
+                          <p className="font-medium">Lead Captured</p>
+                          <p className="text-sm text-gray-500">https://yourapp.com/webhooks/leads</p>
+                        </div>
+                        <div className="flex gap-2">
+                          <Badge variant="secondary" className="bg-green-100 text-green-800">Active</Badge>
+                          <Button variant="ghost" size="sm">
+                            <Edit className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+
+                    <Button variant="outline" className="flex items-center gap-2">
+                      <Plus className="w-4 h-4" />
+                      Add Webhook
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* Advanced Tab */}
+            <TabsContent value="advanced" className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <SettingsIcon className="w-5 h-5" />
+                    Advanced Settings
+                  </CardTitle>
+                  <CardDescription>Advanced configuration and account management options</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  {/* Data Export */}
+                  <div className="space-y-4">
+                    <h3 className="font-semibold">Data Export</h3>
+                    <div className="border rounded-lg p-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="font-medium">Export Account Data</p>
+                          <p className="text-sm text-gray-500">Download a copy of all your data including guides, leads, and analytics</p>
+                        </div>
+                        <Button variant="outline">
+                          <FileText className="w-4 h-4 mr-2" />
+                          Export Data
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Account Deletion */}
+                  <div className="space-y-4">
+                    <h3 className="font-semibold text-red-600">Danger Zone</h3>
+                    <div className="border border-red-200 rounded-lg p-4 bg-red-50">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="font-medium text-red-800">Delete Account</p>
+                          <p className="text-sm text-red-600">Permanently delete your account and all associated data. This action cannot be undone.</p>
+                        </div>
+                        <Button variant="destructive">
+                          <Trash2 className="w-4 h-4 mr-2" />
+                          Delete Account
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
+        </div>
+      </div>
     </div>
   );
 }
