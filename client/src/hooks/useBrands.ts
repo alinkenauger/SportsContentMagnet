@@ -71,6 +71,25 @@ export function useSetCurrentBrand() {
   });
 }
 
+export function useClearCurrentBrand() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async () => {
+      return await apiRequest("/api/brands/clear-current", "POST");
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/brands"] });
+      // Invalidate all brand-specific data
+      queryClient.invalidateQueries({ queryKey: ["/api/guides"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/branding"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/training-settings"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/knowledgebase"] });
+    },
+  });
+}
+
 export function useDeleteBrand() {
   const queryClient = useQueryClient();
   

@@ -125,6 +125,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post('/api/brands/clear-current', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims?.sub || req.user.id;
+      await storage.setCurrentBrand(userId, null);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error clearing current brand:", error);
+      res.status(500).json({ message: "Failed to clear current brand" });
+    }
+  });
+
   app.delete('/api/brands/:id', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims?.sub || req.user.id;
