@@ -260,6 +260,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         // Step 4.5: Extract screenshots for YouTube videos if URL provided
         console.log(`Debug screenshot check: youtubeUrl=${youtubeUrl}, sections=${guideContent.sections?.length || 0}`);
+        console.log('Guide content sections:', guideContent.sections?.map(s => ({ title: s.title, timestamp: s.timestamp, type: s.type })));
+        
         if (youtubeUrl && guideContent.sections && guideContent.sections.length > 0) {
           try {
             console.log('Extracting screenshots for timestamped sections...');
@@ -267,10 +269,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
             
             // Map guide sections to screenshot timestamps
             const timestampData = guideContent.sections.map((section: any) => ({
-              timestamp: section.timestampSeconds || 0,
+              timestamp: section.timestampSeconds || 0, // Use numeric timestampSeconds for FFmpeg
               duration: section.duration || 30,
               title: section.title || 'Section'
             }));
+            
+            console.log(`Timestamp data for screenshots:`, timestampData.map(t => ({ title: t.title, timestamp: t.timestamp })));
             
             const screenshotResult = await videoScreenshotService.extractScreenshots(youtubeUrl, timestampData);
             
@@ -376,6 +380,67 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching guides:", error);
       res.status(500).json({ message: "Failed to fetch guides" });
+    }
+  });
+
+  // Endpoint to regenerate screenshots for an existing guide
+  app.post('/api/guides/:id/regenerate-screenshots', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const guideId = parseInt(req.params.id);
+      
+      const guide = await storage.getGuide(guideId);
+      if (!guide || guide.userId !== userId) {
+        return res.status(404).json({ message: "Guide not found" });
+      }
+
+      if (!guide.youtubeUrl || !guide.content?.sections) {
+        return res.status(400).json({ message: "Guide must have YouTube URL and sections for screenshot extraction" });
+      }
+
+      console.log(`Regenerating screenshots for guide ${guideId}...`);
+      
+      const { videoScreenshotService } = await import('./services/videoScreenshotService');
+      
+      // Map guide sections to screenshot timestamps
+      const timestampData = guide.content.sections.map((section: any) => ({
+        timestamp: section.timestampSeconds || 0,
+        duration: section.duration || 30,
+        title: section.title || 'Section'
+      }));
+      
+      console.log(`Processing ${timestampData.length} timestamps:`, timestampData.map(t => ({ title: t.title, timestamp: t.timestamp })));
+      
+      const screenshotResult = await videoScreenshotService.extractScreenshots(guide.youtubeUrl, timestampData);
+      
+      if (screenshotResult.success && screenshotResult.screenshots) {
+        // Update guide with new screenshots
+        await storage.updateGuide(guideId, {
+          screenshots: screenshotResult.screenshots
+        });
+        
+        console.log(`Successfully extracted ${screenshotResult.screenshots.length} screenshots for guide ${guideId}`);
+        
+        // Clean up video file after processing
+        if (screenshotResult.cleanup) {
+          setTimeout(() => screenshotResult.cleanup!(), 5000);
+        }
+        
+        res.json({
+          success: true,
+          screenshots: screenshotResult.screenshots,
+          message: `Generated ${screenshotResult.screenshots.length} screenshots`
+        });
+      } else {
+        res.status(500).json({ 
+          success: false, 
+          error: screenshotResult.error || "Unknown error during screenshot extraction" 
+        });
+      }
+
+    } catch (error) {
+      console.error("Error regenerating screenshots:", error);
+      res.status(500).json({ message: "Failed to regenerate screenshots: " + (error as Error).message });
     }
   });
 
