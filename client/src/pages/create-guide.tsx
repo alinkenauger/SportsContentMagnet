@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
+import { useBrands } from "@/hooks/useBrands";
 import { useToast } from "@/hooks/use-toast";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import Sidebar from "@/components/sidebar";
@@ -15,6 +16,11 @@ import { apiRequest } from "@/lib/queryClient";
 
 export default function CreateGuide() {
   const { toast } = useToast();
+  const { user } = useAuth();
+  const { brands } = useBrands();
+  
+  // Check if user has a current brand set (not using default account)
+  const currentBrand = brands.find(brand => brand.isDefault) || null;
   const [youtubeUrl, setYoutubeUrl] = useState("");
   const [inputMethod, setInputMethod] = useState<"youtube" | "manual">("youtube");
   const [manualTranscript, setManualTranscript] = useState("");
@@ -370,31 +376,33 @@ export default function CreateGuide() {
                   </div>
                 </div>
 
-                {/* Knowledge Base Settings */}
-                <div className="border-t pt-6">
-                  <h4 className="font-semibold mb-4 flex items-center space-x-2">
-                    <FileText className="w-4 h-4" />
-                    <span>Knowledge Base Training</span>
-                  </h4>
-                  
-                  <div className="space-y-4">
-                    <div className="flex items-center space-x-2">
-                      <input
-                        type="checkbox"
-                        id="addToKnowledgeBase"
-                        checked={customSettings.addToKnowledgeBase}
-                        onChange={(e) => setCustomSettings(prev => ({ ...prev, addToKnowledgeBase: e.target.checked }))}
-                        className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                      />
-                      <Label htmlFor="addToKnowledgeBase" className="text-sm font-medium">
-                        Add transcription to brand knowledge base
-                      </Label>
+                {/* Knowledge Base Settings - Only show for brand accounts */}
+                {currentBrand && (
+                  <div className="border-t pt-6">
+                    <h4 className="font-semibold mb-4 flex items-center space-x-2">
+                      <FileText className="w-4 h-4" />
+                      <span>Brand Knowledge Base Training</span>
+                    </h4>
+                    
+                    <div className="space-y-4">
+                      <div className="flex items-center space-x-2">
+                        <input
+                          type="checkbox"
+                          id="addToKnowledgeBase"
+                          checked={customSettings.addToKnowledgeBase}
+                          onChange={(e) => setCustomSettings(prev => ({ ...prev, addToKnowledgeBase: e.target.checked }))}
+                          className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                        />
+                        <Label htmlFor="addToKnowledgeBase" className="text-sm font-medium">
+                          Add transcription to {currentBrand.name} knowledge base
+                        </Label>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        When enabled, the content transcription will be automatically added to your brand's knowledge base to improve future AI responses. Uncheck for one-off guides you don't want stored long-term.
+                      </p>
                     </div>
-                    <p className="text-xs text-muted-foreground">
-                      When enabled, the content transcription will be automatically added to your brand's knowledge base to improve future AI responses. Uncheck for one-off guides you don't want stored long-term.
-                    </p>
                   </div>
-                </div>
+                )}
               </CardContent>
             </Card>
 

@@ -193,11 +193,11 @@ export const trainingSettings = pgTable("training_settings", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-// Knowledgebase entries for training content per brand
+// Knowledgebase entries - global at user level, brands inherit unless they create their own
 export const knowledgebaseEntries = pgTable("knowledgebase_entries", {
   id: serial("id").primaryKey(),
   userId: varchar("user_id").references(() => users.id).notNull(),
-  brandId: integer("brand_id").references(() => brands.id), // nullable for migration
+  brandId: integer("brand_id").references(() => brands.id), // null = global user-level, non-null = brand-specific
   title: varchar("title").notNull(),
   content: text("content").notNull(),
   contentType: varchar("content_type").notNull(), // 'text', 'link', 'transcription'

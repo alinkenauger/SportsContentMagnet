@@ -284,6 +284,13 @@ Changelog:
   * **BRAND-SPECIFIC ISOLATION**: Knowledge base entries are isolated per brand workspace for proper multi-brand support
   * **GRACEFUL ERROR HANDLING**: Knowledge base addition failure doesn't prevent guide creation, ensuring reliable operation
   * **COMPREHENSIVE BRAND MANAGEMENT**: Added complete brand management interface in settings with creation, switching, and deletion capabilities
+- July 02, 2025. Restructured knowledge base architecture with global inheritance system:
+  * **GLOBAL INHERITANCE PATTERN**: Default user account maintains global knowledge base and AI prompts that brands inherit unless they create their own
+  * **BRAND-LEVEL OVERRIDES**: Brands can create their own knowledge base entries to override global defaults for specialized content
+  * **CLEAN SEPARATION**: Removed knowledge base addition from default account level to prevent messy, contradictory knowledge bases
+  * **CONTEXTUAL UI**: Knowledge base training toggle only appears when creating guides within brand workspaces
+  * **TIERED ARCHITECTURE**: Sets foundation for pricing tiers where basic users have global knowledge while premium users get brand-specific customization
+  * **FALLBACK SYSTEM**: If brands have no custom entries, system automatically falls back to user's global knowledge base for consistency
 ```
 
 ## User Preferences

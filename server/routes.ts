@@ -454,11 +454,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         isActive: true
       });
 
-      // Add to knowledge base if enabled
-      if (req.body.addToKnowledgeBase === true || req.body.addToKnowledgeBase === "true") {
+      // Add to knowledge base if enabled (brand-level only)
+      if ((req.body.addToKnowledgeBase === true || req.body.addToKnowledgeBase === "true") && guide.brandId) {
         try {
           await storage.createKnowledgebaseEntry({
             userId,
+            brandId: guide.brandId,
             title: `${guide.title} - Transcription`,
             content: transcript,
             contentType: "transcription",
@@ -467,9 +468,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
             tags: ["transcription", "auto-generated", ...(req.body.leadTags ? req.body.leadTags.split(',').map((tag: string) => tag.trim()) : [])],
             isActive: true
           });
-          console.log(`Added transcription to knowledge base for guide: ${guide.title}`);
+          console.log(`Added transcription to brand knowledge base for guide: ${guide.title}`);
         } catch (kbError) {
-          console.warn("Failed to add to knowledge base, but guide was created successfully:", kbError);
+          console.warn("Failed to add to brand knowledge base, but guide was created successfully:", kbError);
           // Don't fail the whole request if knowledge base addition fails
         }
       }

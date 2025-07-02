@@ -34,7 +34,7 @@ import {
   type InsertGoogleConnection,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, and, sql, count, avg } from "drizzle-orm";
+import { eq, desc, and, sql, count, avg, isNull } from "drizzle-orm";
 
 export interface IStorage {
   // User operations (required for Replit Auth)
@@ -115,12 +115,12 @@ export interface IStorage {
   getTrainingSettings(userId: string): Promise<TrainingSettings | undefined>;
   upsertTrainingSettings(settings: InsertTrainingSettings): Promise<TrainingSettings>;
 
-  // Knowledgebase operations
+  // Knowledgebase operations with global inheritance
   createKnowledgebaseEntry(entry: InsertKnowledgebaseEntry): Promise<KnowledgebaseEntry>;
-  getKnowledgebaseEntries(userId: string): Promise<KnowledgebaseEntry[]>;
+  getKnowledgebaseEntries(userId: string, brandId?: number | null): Promise<KnowledgebaseEntry[]>;
   updateKnowledgebaseEntry(id: number, entry: Partial<InsertKnowledgebaseEntry>): Promise<KnowledgebaseEntry>;
   deleteKnowledgebaseEntry(id: number): Promise<void>;
-  searchKnowledgebaseEntries(userId: string, query?: string): Promise<KnowledgebaseEntry[]>;
+  searchKnowledgebaseEntries(userId: string, query?: string, brandId?: number | null): Promise<KnowledgebaseEntry[]>;
 
   // Google connection operations
   getUserGoogleConnection(userId: string): Promise<GoogleConnection | undefined>;
@@ -518,12 +518,43 @@ export class DatabaseStorage implements IStorage {
     return result;
   }
 
-  async getKnowledgebaseEntries(userId: string): Promise<KnowledgebaseEntry[]> {
+  async getKnowledgebaseEntries(userId: string, brandId?: number | null): Promise<KnowledgebaseEntry[]> {
+    if (brandId === null || brandId === undefined) {
+      // Get global user-level entries (brandId is null)
+      return await db
+        .select()
+        .from(knowledgebaseEntries)
+        .where(and(
+          eq(knowledgebaseEntries.userId, userId),
+          sql`${knowledgebaseEntries.brandId} IS NULL`,
+          eq(knowledgebaseEntries.isActive, true)
+        ))
+        .orderBy(desc(knowledgebaseEntries.createdAt));
+    }
+
+    // Get brand-specific entries first
+    const brandEntries = await db
+      .select()
+      .from(knowledgebaseEntries)
+      .where(and(
+        eq(knowledgebaseEntries.userId, userId),
+        eq(knowledgebaseEntries.brandId, brandId),
+        eq(knowledgebaseEntries.isActive, true)
+      ))
+      .orderBy(desc(knowledgebaseEntries.createdAt));
+
+    // If brand has its own entries, return only those
+    if (brandEntries.length > 0) {
+      return brandEntries;
+    }
+
+    // Otherwise, fall back to global user entries
     return await db
       .select()
       .from(knowledgebaseEntries)
       .where(and(
         eq(knowledgebaseEntries.userId, userId),
+        sql`${knowledgebaseEntries.brandId} IS NULL`,
         eq(knowledgebaseEntries.isActive, true)
       ))
       .orderBy(desc(knowledgebaseEntries.createdAt));
@@ -548,26 +579,70 @@ export class DatabaseStorage implements IStorage {
       .where(eq(knowledgebaseEntries.id, id));
   }
 
-  async searchKnowledgebaseEntries(userId: string, query?: string): Promise<KnowledgebaseEntry[]> {
-    let queryBuilder = db
-      .select()
-      .from(knowledgebaseEntries)
-      .where(and(
+  async searchKnowledgebaseEntries(userId: string, query?: string, brandId?: number | null): Promise<KnowledgebaseEntry[]> {
+    if (brandId === null || brandId === undefined) {
+      // Search global user-level entries only
+      const baseConditions = [
         eq(knowledgebaseEntries.userId, userId),
+        sql`${knowledgebaseEntries.brandId} IS NULL`,
         eq(knowledgebaseEntries.isActive, true)
-      ));
+      ];
+
+      if (query) {
+        baseConditions.push(
+          sql`(${knowledgebaseEntries.title} ILIKE ${`%${query}%`} OR ${knowledgebaseEntries.content} ILIKE ${`%${query}%`})`
+        );
+      }
+
+      return await db
+        .select()
+        .from(knowledgebaseEntries)
+        .where(and(...baseConditions))
+        .orderBy(desc(knowledgebaseEntries.createdAt));
+    }
+
+    // Search brand-specific entries first
+    const brandBaseConditions = [
+      eq(knowledgebaseEntries.userId, userId),
+      eq(knowledgebaseEntries.brandId, brandId),
+      eq(knowledgebaseEntries.isActive, true)
+    ];
 
     if (query) {
-      queryBuilder = queryBuilder.where(
-        and(
-          eq(knowledgebaseEntries.userId, userId),
-          eq(knowledgebaseEntries.isActive, true),
-          sql`(${knowledgebaseEntries.title} ILIKE ${`%${query}%`} OR ${knowledgebaseEntries.content} ILIKE ${`%${query}%`})`
-        )
+      brandBaseConditions.push(
+        sql`(${knowledgebaseEntries.title} ILIKE ${`%${query}%`} OR ${knowledgebaseEntries.content} ILIKE ${`%${query}%`})`
       );
     }
 
-    return await queryBuilder.orderBy(desc(knowledgebaseEntries.createdAt));
+    const brandEntries = await db
+      .select()
+      .from(knowledgebaseEntries)
+      .where(and(...brandBaseConditions))
+      .orderBy(desc(knowledgebaseEntries.createdAt));
+
+    // If brand has its own entries, return only those
+    if (brandEntries.length > 0) {
+      return brandEntries;
+    }
+
+    // Otherwise, fall back to global user entries
+    const globalBaseConditions = [
+      eq(knowledgebaseEntries.userId, userId),
+      sql`${knowledgebaseEntries.brandId} IS NULL`,
+      eq(knowledgebaseEntries.isActive, true)
+    ];
+
+    if (query) {
+      globalBaseConditions.push(
+        sql`(${knowledgebaseEntries.title} ILIKE ${`%${query}%`} OR ${knowledgebaseEntries.content} ILIKE ${`%${query}%`})`
+      );
+    }
+
+    return await db
+      .select()
+      .from(knowledgebaseEntries)
+      .where(and(...globalBaseConditions))
+      .orderBy(desc(knowledgebaseEntries.createdAt));
   }
 
   async getUserGoogleConnection(userId: string): Promise<GoogleConnection | undefined> {
