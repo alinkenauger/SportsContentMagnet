@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Search, Filter, Plus, Book, Grid, List, Eye, Users, ExternalLink, Edit, BarChart3 } from "lucide-react";
+import { Search, Filter, Plus, Book, Grid, List, Eye, Users, ExternalLink, Edit, BarChart3, Download } from "lucide-react";
 import { Guide } from "@shared/schema";
 
 const categories = [
@@ -125,6 +125,62 @@ export default function ContentLibrary() {
       title: "Analytics",
       description: `Detailed analytics for "${guide.title}" will be available soon`,
     });
+  };
+
+  const handleDownloadPDF = async (guide: Guide) => {
+    try {
+      toast({
+        title: "Generating PDF",
+        description: "Creating your branded guide PDF...",
+      });
+
+      const response = await fetch(`/api/guides/${guide.id}/download-pdf`, {
+        method: 'GET',
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          toast({
+            title: "Unauthorized",
+            description: "You are logged out. Logging in again...",
+            variant: "destructive",
+          });
+          setTimeout(() => {
+            window.location.href = "/api/login";
+          }, 500);
+          return;
+        }
+        throw new Error(`Failed to download PDF: ${response.statusText}`);
+      }
+
+      // Get the PDF blob
+      const blob = await response.blob();
+      
+      // Create download link
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${guide.title.replace(/[^a-z0-9]/gi, '-').toLowerCase()}-guide.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      
+      // Cleanup
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+
+      toast({
+        title: "PDF Downloaded",
+        description: `Your branded guide "${guide.title}" has been downloaded successfully.`,
+      });
+    } catch (error) {
+      console.error('Error downloading PDF:', error);
+      toast({
+        title: "Download Failed",
+        description: "Failed to generate PDF. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   return (
@@ -396,8 +452,18 @@ export default function ContentLibrary() {
                               <Button
                                 variant="ghost"
                                 size="sm"
+                                onClick={() => handleDownloadPDF(guide)}
+                                className="text-orange-600 hover:text-orange-700 hover:bg-orange-50"
+                                title="Download PDF"
+                              >
+                                <Download className="w-4 h-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
                                 onClick={() => handleEditGuide(guide)}
                                 className="text-gray-600 hover:text-gray-700 hover:bg-gray-50"
+                                title="Edit Guide"
                               >
                                 <Edit className="w-4 h-4" />
                               </Button>
@@ -406,6 +472,7 @@ export default function ContentLibrary() {
                                 size="sm"
                                 onClick={() => handleViewAnalytics(guide)}
                                 className="text-purple-600 hover:text-purple-700 hover:bg-purple-50"
+                                title="View Analytics"
                               >
                                 <BarChart3 className="w-4 h-4" />
                               </Button>

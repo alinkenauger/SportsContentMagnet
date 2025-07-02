@@ -19,18 +19,18 @@ export async function generateGuidePDF(options: PDFOptions): Promise<Buffer> {
   const template = handlebars.compile(templateSource);
 
   // Prepare template data
+  const content = guide.content as any;
   const templateData = {
     title: guide.title,
     description: guide.description,
     channelTitle: channelTitle,
     companyName: branding?.companyName || 'VidMagnet',
     logoUrl: branding?.logoUrl,
-    website: branding?.website,
     primaryColor: branding?.primaryColor || '#2563eb',
     secondaryColor: branding?.secondaryColor || '#1d4ed8',
     firstLetter: branding?.companyName?.charAt(0).toUpperCase() || 'V',
-    sections: guide.content?.sections || [],
-    nextSteps: guide.content?.nextSteps
+    sections: content?.sections || [],
+    nextSteps: content?.nextSteps
   };
 
   // Generate HTML from template
@@ -68,7 +68,7 @@ export async function generateGuidePDF(options: PDFOptions): Promise<Buffer> {
       displayHeaderFooter: false
     });
 
-    return pdfBuffer;
+    return Buffer.from(pdfBuffer);
   } finally {
     await browser.close();
   }
