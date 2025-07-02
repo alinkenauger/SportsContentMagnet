@@ -1,5 +1,6 @@
 import {
   users,
+  brands,
   guides,
   landingPages,
   leads,
@@ -10,6 +11,8 @@ import {
   knowledgebaseEntries,
   type User,
   type UpsertUser,
+  type Brand,
+  type InsertBrand,
   type Guide,
   type InsertGuide,
   type LandingPage,
@@ -39,6 +42,14 @@ export interface IStorage {
   getUserByEmail(email: string): Promise<User | undefined>;
   getUserByGoogleId(googleId: string): Promise<User | undefined>;
   upsertUser(user: UpsertUser): Promise<User>;
+
+  // Brand operations
+  createBrand(brand: InsertBrand): Promise<Brand>;
+  getBrandsByUser(userId: string): Promise<Brand[]>;
+  getBrand(id: number): Promise<Brand | undefined>;
+  updateBrand(id: number, brand: Partial<InsertBrand>): Promise<Brand>;
+  deleteBrand(id: number): Promise<void>;
+  setCurrentBrand(userId: string, brandId: number): Promise<void>;
 
   // Guide operations
   createGuide(guide: InsertGuide): Promise<Guide>;
@@ -149,7 +160,64 @@ export class DatabaseStorage implements IStorage {
         },
       })
       .returning();
+
+    // Check if user has any brands, if not create a default brand
+    const existingBrands = await this.getBrandsByUser(user.id);
+    if (existingBrands.length === 0) {
+      const defaultBrand = await this.createBrand({
+        userId: user.id,
+        name: "My Brand",
+        description: "Your default workspace",
+        isDefault: true,
+      });
+      
+      // Set as current brand
+      await this.setCurrentBrand(user.id, defaultBrand.id);
+    }
+
     return user;
+  }
+
+  // Brand operations
+  async createBrand(brand: InsertBrand): Promise<Brand> {
+    const [newBrand] = await db.insert(brands).values(brand).returning();
+    return newBrand;
+  }
+
+  async getBrandsByUser(userId: string): Promise<Brand[]> {
+    return await db
+      .select()
+      .from(brands)
+      .where(eq(brands.userId, userId))
+      .orderBy(desc(brands.createdAt));
+  }
+
+  async getBrand(id: number): Promise<Brand | undefined> {
+    const [brand] = await db.select().from(brands).where(eq(brands.id, id));
+    return brand;
+  }
+
+  async updateBrand(id: number, brand: Partial<InsertBrand>): Promise<Brand> {
+    const [updatedBrand] = await db
+      .update(brands)
+      .set({
+        ...brand,
+        updatedAt: new Date(),
+      })
+      .where(eq(brands.id, id))
+      .returning();
+    return updatedBrand;
+  }
+
+  async deleteBrand(id: number): Promise<void> {
+    await db.delete(brands).where(eq(brands.id, id));
+  }
+
+  async setCurrentBrand(userId: string, brandId: number): Promise<void> {
+    await db
+      .update(users)
+      .set({ currentBrandId: brandId })
+      .where(eq(users.id, userId));
   }
 
   // Guide operations

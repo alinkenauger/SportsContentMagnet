@@ -54,6 +54,101 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Brand routes
+  app.get('/api/brands', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims?.sub || req.user.id;
+      const brands = await storage.getBrandsByUser(userId);
+      res.json(brands);
+    } catch (error) {
+      console.error("Error fetching brands:", error);
+      res.status(500).json({ message: "Failed to fetch brands" });
+    }
+  });
+
+  app.post('/api/brands', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims?.sub || req.user.id;
+      const brandData = { ...req.body, userId };
+      
+      const brand = await storage.createBrand(brandData);
+      
+      // If this is the user's first brand, set it as current
+      const userBrands = await storage.getBrandsByUser(userId);
+      if (userBrands.length === 1) {
+        await storage.setCurrentBrand(userId, brand.id);
+      }
+      
+      res.json(brand);
+    } catch (error) {
+      console.error("Error creating brand:", error);
+      res.status(500).json({ message: "Failed to create brand" });
+    }
+  });
+
+  app.put('/api/brands/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims?.sub || req.user.id;
+      const brandId = parseInt(req.params.id);
+      
+      // Verify brand ownership
+      const brand = await storage.getBrand(brandId);
+      if (!brand || brand.userId !== userId) {
+        return res.status(404).json({ message: "Brand not found" });
+      }
+      
+      const updatedBrand = await storage.updateBrand(brandId, req.body);
+      res.json(updatedBrand);
+    } catch (error) {
+      console.error("Error updating brand:", error);
+      res.status(500).json({ message: "Failed to update brand" });
+    }
+  });
+
+  app.post('/api/brands/:id/set-current', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims?.sub || req.user.id;
+      const brandId = parseInt(req.params.id);
+      
+      // Verify brand ownership
+      const brand = await storage.getBrand(brandId);
+      if (!brand || brand.userId !== userId) {
+        return res.status(404).json({ message: "Brand not found" });
+      }
+      
+      await storage.setCurrentBrand(userId, brandId);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error setting current brand:", error);
+      res.status(500).json({ message: "Failed to set current brand" });
+    }
+  });
+
+  app.delete('/api/brands/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims?.sub || req.user.id;
+      const brandId = parseInt(req.params.id);
+      
+      // Verify brand ownership
+      const brand = await storage.getBrand(brandId);
+      if (!brand || brand.userId !== userId) {
+        return res.status(404).json({ message: "Brand not found" });
+      }
+      
+      // Don't allow deletion if it's the only brand
+      const userBrands = await storage.getBrandsByUser(userId);
+      if (userBrands.length === 1) {
+        return res.status(400).json({ message: "Cannot delete your only brand" });
+      }
+      
+      await storage.deleteBrand(brandId);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting brand:", error);
+      res.status(500).json({ message: "Failed to delete brand" });
+    }
+  });
+
   // Google auth status (works with both Replit Auth and Google OAuth)
   app.get('/api/auth/google-status', async (req: any, res) => {
     try {

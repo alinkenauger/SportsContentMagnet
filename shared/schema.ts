@@ -10,6 +10,7 @@ import {
   boolean,
   decimal,
   uuid,
+  unique,
 } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -33,6 +34,19 @@ export const users = pgTable("users", {
   firstName: varchar("first_name"),
   lastName: varchar("last_name"),
   profileImageUrl: varchar("profile_image_url"),
+  currentBrandId: integer("current_brand_id"), // Reference to active brand
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Brand workspace table - each user can have multiple brands
+export const brands = pgTable("brands", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").notNull(),
+  name: varchar("name").notNull(),
+  description: text("description"),
+  logoUrl: varchar("logo_url"),
+  isDefault: boolean("is_default").default(false),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -50,10 +64,11 @@ export const googleConnections = pgTable("google_connections", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-// Branding settings for each user
+// Branding settings for each brand
 export const brandingSettings = pgTable("branding_settings", {
   id: serial("id").primaryKey(),
   userId: varchar("user_id").references(() => users.id).notNull(),
+  brandId: integer("brand_id").references(() => brands.id), // nullable for migration
   logoUrl: varchar("logo_url"),
   primaryColor: varchar("primary_color").default("#2563EB"),
   secondaryColor: varchar("secondary_color").default("#10B981"),
@@ -69,6 +84,7 @@ export const brandingSettings = pgTable("branding_settings", {
 export const guides = pgTable("guides", {
   id: serial("id").primaryKey(),
   userId: varchar("user_id").references(() => users.id).notNull(),
+  brandId: integer("brand_id").references(() => brands.id), // Link guides to specific brands (nullable for migration)
   title: varchar("title").notNull(),
   description: text("description"),
   youtubeUrl: varchar("youtube_url").notNull(),
@@ -164,10 +180,11 @@ export const analyticsEvents = pgTable("analytics_events", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
-// Training settings for customizing AI prompts
+// Training settings for customizing AI prompts per brand
 export const trainingSettings = pgTable("training_settings", {
   id: serial("id").primaryKey(),
-  userId: varchar("user_id").references(() => users.id).notNull().unique(),
+  userId: varchar("user_id").references(() => users.id).notNull(),
+  brandId: integer("brand_id").references(() => brands.id), // nullable for migration
   customInstructions: text("custom_instructions"),
   analysisPrompt: text("analysis_prompt"),
   guideGenerationPrompt: text("guide_generation_prompt"),
@@ -176,10 +193,11 @@ export const trainingSettings = pgTable("training_settings", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-// Knowledgebase entries for training content
+// Knowledgebase entries for training content per brand
 export const knowledgebaseEntries = pgTable("knowledgebase_entries", {
   id: serial("id").primaryKey(),
   userId: varchar("user_id").references(() => users.id).notNull(),
+  brandId: integer("brand_id").references(() => brands.id), // nullable for migration
   title: varchar("title").notNull(),
   content: text("content").notNull(),
   contentType: varchar("content_type").notNull(), // 'text', 'link', 'transcription'
@@ -234,21 +252,32 @@ export const contentVariants = pgTable("content_variants", {
 
 // Relations
 export const usersRelations = relations(users, ({ many, one }) => ({
+  brands: many(brands),
+  currentBrand: one(brands, { fields: [users.currentBrandId], references: [brands.id] }),
   guides: many(guides),
   landingPages: many(landingPages),
   leads: many(leads),
   qrCodes: many(qrCodes),
   analyticsEvents: many(analyticsEvents),
-  brandingSettings: one(brandingSettings),
-  trainingSettings: one(trainingSettings),
+  brandingSettings: many(brandingSettings),
+  trainingSettings: many(trainingSettings),
   knowledgebaseEntries: many(knowledgebaseEntries),
   personalizationProfiles: many(personalizationProfiles),
   personalizationRules: many(personalizationRules),
   googleConnection: one(googleConnections),
 }));
 
+export const brandsRelations = relations(brands, ({ one, many }) => ({
+  user: one(users, { fields: [brands.userId], references: [users.id] }),
+  guides: many(guides),
+  brandingSettings: one(brandingSettings),
+  trainingSettings: one(trainingSettings),
+  knowledgebaseEntries: many(knowledgebaseEntries),
+}));
+
 export const guidesRelations = relations(guides, ({ one, many }) => ({
   user: one(users, { fields: [guides.userId], references: [users.id] }),
+  brand: one(brands, { fields: [guides.brandId], references: [brands.id] }),
   landingPages: many(landingPages),
   leads: many(leads),
   qrCodes: many(qrCodes),
@@ -383,6 +412,12 @@ export const insertGoogleConnectionSchema = createInsertSchema(googleConnections
   updatedAt: true,
 });
 
+export const insertBrandSchema = createInsertSchema(brands).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 // Types
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
@@ -410,3 +445,5 @@ export type ContentVariant = typeof contentVariants.$inferSelect;
 export type InsertContentVariant = z.infer<typeof insertContentVariantSchema>;
 export type GoogleConnection = typeof googleConnections.$inferSelect;
 export type InsertGoogleConnection = z.infer<typeof insertGoogleConnectionSchema>;
+export type Brand = typeof brands.$inferSelect;
+export type InsertBrand = z.infer<typeof insertBrandSchema>;
