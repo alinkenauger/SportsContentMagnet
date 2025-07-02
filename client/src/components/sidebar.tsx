@@ -35,7 +35,14 @@ export default function Sidebar() {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isSpacePickerOpen, setIsSpacePickerOpen] = useState(false);
   const { brands } = useBrands();
-  const currentBrand = brands.find(brand => brand.id === user?.currentBrandId);
+  const currentBrandId = (user as any)?.currentBrandId;
+  const currentBrand = currentBrandId ? brands?.find(brand => brand.id === currentBrandId) : null;
+
+  // Debug logging
+  console.log('Debug - user:', user);
+  console.log('Debug - currentBrandId:', currentBrandId);
+  console.log('Debug - brands:', brands);
+  console.log('Debug - currentBrand:', currentBrand);
 
   const handleLogout = () => {
     window.location.href = "/api/logout";
