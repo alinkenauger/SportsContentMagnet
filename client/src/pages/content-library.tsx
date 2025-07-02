@@ -33,6 +33,7 @@ const statusOptions = [
 
 export default function ContentLibrary() {
   const { toast } = useToast();
+  const { user } = useAuth();
   const [location, navigate] = useLocation();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
@@ -40,7 +41,7 @@ export default function ContentLibrary() {
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
 
   const { data: guides, isLoading, error } = useQuery<Guide[]>({
-    queryKey: ["/api/guides", searchQuery, selectedCategory],
+    queryKey: ["/api/guides", user?.currentBrandId, searchQuery, selectedCategory],
     queryFn: async () => {
       const params = new URLSearchParams();
       if (searchQuery) params.append("search", searchQuery);

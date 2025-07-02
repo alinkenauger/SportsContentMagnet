@@ -504,7 +504,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = req.user.claims.sub;
       const { search, category } = req.query;
-      const guides = await storage.searchGuides(userId, search as string, category as string);
+      
+      // Get current user to check their current brand
+      const user = await storage.getUser(userId);
+      const currentBrandId = user?.currentBrandId || null;
+      
+      const guides = await storage.getGuidesByUserAndBrand(userId, currentBrandId, search as string, category as string);
       res.json(guides);
     } catch (error) {
       console.error("Error fetching guides:", error);

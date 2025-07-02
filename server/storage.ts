@@ -55,6 +55,7 @@ export interface IStorage {
   createGuide(guide: InsertGuide): Promise<Guide>;
   getGuide(id: number): Promise<Guide | undefined>;
   getGuidesByUser(userId: string): Promise<Guide[]>;
+  getGuidesByUserAndBrand(userId: string, brandId: number | null, query?: string, category?: string): Promise<Guide[]>;
   updateGuide(id: number, guide: Partial<InsertGuide>): Promise<Guide>;
   deleteGuide(id: number): Promise<void>;
   searchGuides(userId: string, query?: string, category?: string): Promise<Guide[]>;
@@ -236,6 +237,30 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(guides)
       .where(eq(guides.userId, userId))
+      .orderBy(desc(guides.createdAt));
+  }
+
+  async getGuidesByUserAndBrand(userId: string, brandId: number | null, query?: string, category?: string): Promise<Guide[]> {
+    let whereConditions = [
+      eq(guides.userId, userId),
+      brandId ? eq(guides.brandId, brandId) : isNull(guides.brandId)
+    ];
+
+    // Add search conditions if provided
+    if (query) {
+      whereConditions.push(
+        sql`${guides.title} ILIKE ${`%${query}%`} OR ${guides.description} ILIKE ${`%${query}%`}`
+      );
+    }
+
+    if (category) {
+      whereConditions.push(eq(guides.category, category));
+    }
+
+    return await db
+      .select()
+      .from(guides)
+      .where(and(...whereConditions))
       .orderBy(desc(guides.createdAt));
   }
 

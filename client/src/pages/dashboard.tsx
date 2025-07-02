@@ -125,7 +125,7 @@ export default function Dashboard() {
   });
 
   const { data: guides, isLoading: guidesLoading, refetch: refetchGuides } = useQuery({
-    queryKey: ["/api/guides"],
+    queryKey: ["/api/guides", user?.currentBrandId],
     enabled: isAuthenticated,
   });
 
