@@ -454,6 +454,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
         isActive: true
       });
 
+      // Add to knowledge base if enabled
+      if (req.body.addToKnowledgeBase === true || req.body.addToKnowledgeBase === "true") {
+        try {
+          await storage.createKnowledgebaseEntry({
+            userId,
+            title: `${guide.title} - Transcription`,
+            content: transcript,
+            contentType: "transcription",
+            sourceUrl: inputMethod === "youtube" ? youtubeUrl : undefined,
+            sourceType: inputMethod === "youtube" ? "url" : "manual",
+            tags: ["transcription", "auto-generated", ...(req.body.leadTags ? req.body.leadTags.split(',').map((tag: string) => tag.trim()) : [])],
+            isActive: true
+          });
+          console.log(`Added transcription to knowledge base for guide: ${guide.title}`);
+        } catch (kbError) {
+          console.warn("Failed to add to knowledge base, but guide was created successfully:", kbError);
+          // Don't fail the whole request if knowledge base addition fails
+        }
+      }
+
       res.json({
         guide,
         landingPage,

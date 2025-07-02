@@ -277,6 +277,13 @@ Changelog:
   * **FRONTEND INTEGRATION**: Added download buttons to content library with progress feedback and error handling
   * **BRANDED CUSTOMIZATION**: PDFs automatically include brand colors, logos, company names, and professional disclaimers
   * **ANALYTICS TRACKING**: PDF downloads tracked in analytics system for user engagement metrics
+- July 02, 2025. Added automatic knowledge base training feature with user control:
+  * **AUTOMATIC TRANSCRIPTION STORAGE**: Guide creation now automatically adds content transcriptions to brand knowledge base by default
+  * **USER CONTROL TOGGLE**: Added checkbox in guide creation form to opt-out for one-off guides that shouldn't be stored long-term
+  * **INTELLIGENT CATEGORIZATION**: Transcriptions automatically tagged with relevant categories and source information
+  * **BRAND-SPECIFIC ISOLATION**: Knowledge base entries are isolated per brand workspace for proper multi-brand support
+  * **GRACEFUL ERROR HANDLING**: Knowledge base addition failure doesn't prevent guide creation, ensuring reliable operation
+  * **COMPREHENSIVE BRAND MANAGEMENT**: Added complete brand management interface in settings with creation, switching, and deletion capabilities
 ```
 
 ## User Preferences

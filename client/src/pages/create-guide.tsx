@@ -27,6 +27,7 @@ export default function CreateGuide() {
     collectSms: false,
     smsConsentText: "I consent to receive text messages from this business. Message and data rates may apply. Reply STOP to opt out.",
     leadTags: "",
+    addToKnowledgeBase: true, // Default to true - automatically include in knowledge base
   });
   const [isProcessing, setIsProcessing] = useState(false);
   const [processingSteps, setProcessingSteps] = useState([
@@ -120,6 +121,7 @@ export default function CreateGuide() {
         collectSms: false,
         smsConsentText: "I consent to receive text messages from this business. Message and data rates may apply. Reply STOP to opt out.",
         leadTags: "",
+        addToKnowledgeBase: true,
       });
       
     } catch (error) {
@@ -364,6 +366,32 @@ export default function CreateGuide() {
                     />
                     <p className="text-xs text-muted-foreground mt-1">
                       Add comma-separated tags that will be applied to all leads captured from this guide. Perfect for email platform integrations and Zapier automation.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Knowledge Base Settings */}
+                <div className="border-t pt-6">
+                  <h4 className="font-semibold mb-4 flex items-center space-x-2">
+                    <FileText className="w-4 h-4" />
+                    <span>Knowledge Base Training</span>
+                  </h4>
+                  
+                  <div className="space-y-4">
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        id="addToKnowledgeBase"
+                        checked={customSettings.addToKnowledgeBase}
+                        onChange={(e) => setCustomSettings(prev => ({ ...prev, addToKnowledgeBase: e.target.checked }))}
+                        className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                      />
+                      <Label htmlFor="addToKnowledgeBase" className="text-sm font-medium">
+                        Add transcription to brand knowledge base
+                      </Label>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      When enabled, the content transcription will be automatically added to your brand's knowledge base to improve future AI responses. Uncheck for one-off guides you don't want stored long-term.
                     </p>
                   </div>
                 </div>

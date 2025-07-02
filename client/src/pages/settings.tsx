@@ -28,7 +28,10 @@ import {
   DollarSign,
   FileText,
   Globe,
-  Lock
+  Lock,
+  Building2,
+  Brain,
+  BookOpen
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -42,6 +45,7 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { useBrands, useCreateBrand, useSetCurrentBrand, useDeleteBrand } from "@/hooks/useBrands";
 
 const fontOptions = [
   { value: "Inter", label: "Inter" },
@@ -68,15 +72,26 @@ export default function Settings() {
 
   // Profile form states
   const [profileForm, setProfileForm] = useState({
-    firstName: user?.firstName || "",
-    lastName: user?.lastName || "",
-    email: user?.email || "",
+    firstName: (user as any)?.firstName || "",
+    lastName: (user as any)?.lastName || "",
+    email: (user as any)?.email || "",
     phone: "",
     bio: "",
     website: "",
     company: "",
     jobTitle: ""
   });
+
+  // Brand management state
+  const [newBrandName, setNewBrandName] = useState("");
+  const [newBrandDescription, setNewBrandDescription] = useState("");
+  const [isCreateBrandOpen, setIsCreateBrandOpen] = useState(false);
+
+  // Brand management hooks
+  const { brands, hasMultipleBrands, isLoading: brandsLoading } = useBrands();
+  const createBrandMutation = useCreateBrand();
+  const setCurrentBrandMutation = useSetCurrentBrand();
+  const deleteBrandMutation = useDeleteBrand();
 
   // Notification preferences
   const [notifications, setNotifications] = useState({
@@ -189,6 +204,68 @@ export default function Settings() {
     return `${firstName?.[0] || ""}${lastName?.[0] || ""}`.toUpperCase() || "U";
   };
 
+  // Brand management handlers
+  const handleCreateBrand = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newBrandName.trim()) return;
+
+    try {
+      await createBrandMutation.mutateAsync({
+        name: newBrandName.trim(),
+        description: newBrandDescription.trim() || undefined,
+      });
+      
+      toast({
+        title: "Brand created",
+        description: `${newBrandName} has been created successfully.`,
+      });
+      
+      setNewBrandName("");
+      setNewBrandDescription("");
+      setIsCreateBrandOpen(false);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to create brand. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleSetCurrentBrand = async (brandId: number) => {
+    try {
+      await setCurrentBrandMutation.mutateAsync(brandId);
+      toast({
+        title: "Brand switched",
+        description: "Successfully switched to the selected brand.",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to switch brand. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDeleteBrand = async (brandId: number, brandName: string) => {
+    if (confirm(`Are you sure you want to delete "${brandName}"? This action cannot be undone.`)) {
+      try {
+        await deleteBrandMutation.mutateAsync(brandId);
+        toast({
+          title: "Brand deleted",
+          description: `${brandName} has been deleted successfully.`,
+        });
+      } catch (error) {
+        toast({
+          title: "Error",
+          description: "Failed to delete brand. Please try again.",
+          variant: "destructive",
+        });
+      }
+    }
+  };
+
   return (
     <div className="flex h-screen bg-gray-50">
       <Sidebar />
@@ -203,10 +280,14 @@ export default function Settings() {
           </div>
 
           <Tabs value={selectedTab} onValueChange={setSelectedTab} className="space-y-6">
-            <TabsList className="grid w-full grid-cols-6 h-12">
+            <TabsList className="grid w-full grid-cols-7 h-12">
               <TabsTrigger value="profile" className="flex items-center gap-2 text-sm">
                 <User className="w-4 h-4" />
                 Profile
+              </TabsTrigger>
+              <TabsTrigger value="brands" className="flex items-center gap-2 text-sm">
+                <Building2 className="w-4 h-4" />
+                Brands
               </TabsTrigger>
               <TabsTrigger value="billing" className="flex items-center gap-2 text-sm">
                 <CreditCard className="w-4 h-4" />
@@ -357,6 +438,211 @@ export default function Settings() {
                       <Save className="w-4 h-4" />
                       {updateProfileMutation.isPending ? "Saving..." : "Save Changes"}
                     </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* Brand Management Tab */}
+            <TabsContent value="brands" className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Building2 className="w-5 h-5" />
+                    Brand Management
+                  </CardTitle>
+                  <CardDescription>Manage your brands and workspaces. Each brand has separate guides, AI training, and settings.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  {/* Current Brands */}
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-lg font-medium">Your Brands</h3>
+                      <Dialog open={isCreateBrandOpen} onOpenChange={setIsCreateBrandOpen}>
+                        <DialogTrigger asChild>
+                          <Button className="flex items-center gap-2">
+                            <Plus className="w-4 h-4" />
+                            Create Brand
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent>
+                          <DialogHeader>
+                            <DialogTitle>Create New Brand</DialogTitle>
+                            <DialogDescription>
+                              Create a new brand workspace with separate guides, AI training, and settings.
+                            </DialogDescription>
+                          </DialogHeader>
+                          <form onSubmit={handleCreateBrand} className="space-y-4">
+                            <div>
+                              <Label htmlFor="brandName">Brand Name</Label>
+                              <Input
+                                id="brandName"
+                                value={newBrandName}
+                                onChange={(e) => setNewBrandName(e.target.value)}
+                                placeholder="Enter brand name"
+                                required
+                              />
+                            </div>
+                            <div>
+                              <Label htmlFor="brandDescription">Description (Optional)</Label>
+                              <Textarea
+                                id="brandDescription"
+                                value={newBrandDescription}
+                                onChange={(e) => setNewBrandDescription(e.target.value)}
+                                placeholder="Describe this brand workspace..."
+                                rows={3}
+                              />
+                            </div>
+                            <div className="flex justify-end gap-2">
+                              <Button type="button" variant="outline" onClick={() => setIsCreateBrandOpen(false)}>
+                                Cancel
+                              </Button>
+                              <Button 
+                                type="submit" 
+                                disabled={createBrandMutation.isPending || !newBrandName.trim()}
+                              >
+                                {createBrandMutation.isPending ? "Creating..." : "Create Brand"}
+                              </Button>
+                            </div>
+                          </form>
+                        </DialogContent>
+                      </Dialog>
+                    </div>
+
+                    {brandsLoading ? (
+                      <div className="space-y-3">
+                        {[...Array(2)].map((_, i) => (
+                          <div key={i} className="animate-pulse">
+                            <div className="h-20 bg-muted rounded-lg"></div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : brands.length === 0 ? (
+                      <div className="text-center py-8 border-2 border-dashed border-muted rounded-lg">
+                        <Building2 className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
+                        <h3 className="font-medium mb-2">No brands yet</h3>
+                        <p className="text-sm text-muted-foreground mb-4">
+                          Create your first brand to organize your guides and settings.
+                        </p>
+                        <Button onClick={() => setIsCreateBrandOpen(true)}>
+                          <Plus className="w-4 h-4 mr-2" />
+                          Create Your First Brand
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        {brands.map((brand) => {
+                          const isCurrent = brand.id === (user as any)?.currentBrandId;
+                          return (
+                            <div
+                              key={brand.id}
+                              className={`p-4 border rounded-lg transition-colors ${
+                                isCurrent ? 'border-blue-500 bg-blue-50' : 'border-border hover:border-blue-300'
+                              }`}
+                            >
+                              <div className="flex items-center justify-between">
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-3">
+                                    <h4 className="font-medium">{brand.name}</h4>
+                                    {isCurrent && (
+                                      <Badge variant="secondary" className="text-xs">
+                                        Current
+                                      </Badge>
+                                    )}
+                                    {brand.isDefault && (
+                                      <Badge variant="outline" className="text-xs">
+                                        Default
+                                      </Badge>
+                                    )}
+                                  </div>
+                                  {brand.description && (
+                                    <p className="text-sm text-muted-foreground mt-1">
+                                      {brand.description}
+                                    </p>
+                                  )}
+                                  <p className="text-xs text-muted-foreground mt-1">
+                                    Created {new Date(brand.createdAt).toLocaleDateString()}
+                                  </p>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  {!isCurrent && (
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => handleSetCurrentBrand(brand.id)}
+                                      disabled={setCurrentBrandMutation.isPending}
+                                    >
+                                      Switch
+                                    </Button>
+                                  )}
+                                  {!brand.isDefault && (
+                                    <Button
+                                      size="sm"
+                                      variant="ghost"
+                                      onClick={() => handleDeleteBrand(brand.id, brand.name)}
+                                      disabled={deleteBrandMutation.isPending}
+                                    >
+                                      <Trash2 className="w-4 h-4 text-red-500" />
+                                    </Button>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+
+                  <Separator />
+
+                  {/* AI Training & Knowledge Base */}
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-medium flex items-center gap-2">
+                      <Brain className="w-5 h-5" />
+                      AI Training & Knowledge Base
+                    </h3>
+                    <p className="text-sm text-muted-foreground">
+                      Train your AI with custom prompts and knowledge base entries specific to your current brand.
+                    </p>
+                    
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <Card>
+                        <CardHeader className="pb-3">
+                          <CardTitle className="text-base flex items-center gap-2">
+                            <Brain className="w-4 h-4" />
+                            System Prompts
+                          </CardTitle>
+                          <CardDescription className="text-sm">
+                            Customize how AI analyzes content for this brand
+                          </CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                          <Button variant="outline" className="w-full" onClick={() => window.open('/training-settings', '_blank')}>
+                            <Edit className="w-4 h-4 mr-2" />
+                            Configure AI Training
+                          </Button>
+                        </CardContent>
+                      </Card>
+
+                      <Card>
+                        <CardHeader className="pb-3">
+                          <CardTitle className="text-base flex items-center gap-2">
+                            <BookOpen className="w-4 h-4" />
+                            Knowledge Base
+                          </CardTitle>
+                          <CardDescription className="text-sm">
+                            Add custom knowledge for better AI responses
+                          </CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                          <Button variant="outline" className="w-full" onClick={() => window.open('/knowledge-base', '_blank')}>
+                            <Plus className="w-4 h-4 mr-2" />
+                            Manage Knowledge Base
+                          </Button>
+                        </CardContent>
+                      </Card>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
