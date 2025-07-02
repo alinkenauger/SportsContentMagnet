@@ -1,5 +1,6 @@
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
+import { useBrands } from "@/hooks/useBrands";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { 
@@ -12,9 +13,11 @@ import {
   LogOut,
   Video,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Building2
 } from "lucide-react";
 import { useState } from "react";
+import { SpacePicker } from "./space-picker";
 
 
 const navigation = [
@@ -30,6 +33,9 @@ export default function Sidebar() {
   const { user } = useAuth();
   const [location] = useLocation();
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isSpacePickerOpen, setIsSpacePickerOpen] = useState(false);
+  const { brands } = useBrands();
+  const currentBrand = brands.find(brand => brand.id === user?.currentBrandId);
 
   const handleLogout = () => {
     window.location.href = "/api/logout";
@@ -37,13 +43,27 @@ export default function Sidebar() {
 
   return (
     <div className={`${isCollapsed ? 'w-16' : 'w-64'} bg-sidebar-background shadow-lg border-r border-sidebar-border flex flex-col h-screen transition-all duration-300`}>
-      {/* Logo */}
+      {/* Logo / Brand Emblem */}
       <div className="p-6 relative">
         <div className="flex items-center space-x-3">
-          <div className="w-8 h-8 gradient-primary rounded-lg flex items-center justify-center flex-shrink-0">
-            <Video className="w-4 h-4 text-white" />
-          </div>
-          {!isCollapsed && <h1 className="text-xl font-bold text-sidebar-foreground">VidMagnet</h1>}
+          {currentBrand ? (
+            <button
+              onClick={() => setIsSpacePickerOpen(true)}
+              className="w-8 h-8 bg-blue-600 text-white rounded-lg flex items-center justify-center flex-shrink-0 hover:bg-blue-700 transition-colors"
+              title={isCollapsed ? `${currentBrand.name} - Click to switch brands` : undefined}
+            >
+              <Building2 className="w-4 h-4" />
+            </button>
+          ) : (
+            <div className="w-8 h-8 gradient-primary rounded-lg flex items-center justify-center flex-shrink-0">
+              <Video className="w-4 h-4 text-white" />
+            </div>
+          )}
+          {!isCollapsed && (
+            <h1 className="text-xl font-bold text-sidebar-foreground">
+              {currentBrand ? currentBrand.name : "VidMagnet"}
+            </h1>
+          )}
         </div>
 
         
@@ -133,6 +153,19 @@ export default function Sidebar() {
           </div>
         )}
       </div>
+
+      {/* Space Picker Overlay */}
+      {isSpacePickerOpen && (
+        <div className="fixed inset-0 z-50">
+          <div 
+            className="absolute inset-0 bg-black/20" 
+            onClick={() => setIsSpacePickerOpen(false)}
+          />
+          <div className="absolute left-0 top-0 h-full">
+            <SpacePicker onClose={() => setIsSpacePickerOpen(false)} />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

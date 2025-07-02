@@ -6,7 +6,11 @@ import { useToast } from "@/hooks/use-toast";
 import { useBrands, useSetCurrentBrand, useClearCurrentBrand, type Brand } from "@/hooks/useBrands";
 import { useAuth } from "@/hooks/useAuth";
 
-export function SpacePicker() {
+interface SpacePickerProps {
+  onClose?: () => void;
+}
+
+export function SpacePicker({ onClose }: SpacePickerProps = {}) {
   const { brands, isLoading } = useBrands();
   const { user } = useAuth();
   const { toast } = useToast();
@@ -26,6 +30,7 @@ export function SpacePicker() {
     
     // Optimistic UI - the mutation will handle the optimistic update
     setCurrentBrandMutation.mutate(brand.id);
+    onClose?.();
   };
 
   const handleSwitchToDefault = async () => {
@@ -33,6 +38,7 @@ export function SpacePicker() {
     
     // Optimistic UI - the mutation will handle the optimistic update
     clearCurrentBrandMutation.mutate();
+    onClose?.();
   };
 
   // Only show if user has brands
