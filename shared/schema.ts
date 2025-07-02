@@ -101,7 +101,13 @@ export const landingPages = pgTable("landing_pages", {
   userId: varchar("user_id").references(() => users.id).notNull(),
   title: varchar("title").notNull(),
   headline: varchar("headline"),
+  subheadline: varchar("subheadline", { length: 200 }),
   description: text("description"),
+  bulletPoints: text("bullet_points").array(), // Array of benefit bullets
+  socialProof: text("social_proof"), // Credibility statement
+  urgencyText: text("urgency_text"), // Scarcity/urgency copy
+  buttonText: varchar("button_text", { length: 50 }).default("Get Free Guide"),
+  disclaimer: text("disclaimer"), // Legal disclaimer
   customFields: jsonb("custom_fields"), // Dynamic form fields
   customUrl: varchar("custom_url").unique(),
   trackingPixel: text("tracking_pixel"),

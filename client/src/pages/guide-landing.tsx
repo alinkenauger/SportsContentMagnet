@@ -187,12 +187,24 @@ export default function GuideLanding() {
       <main className="container mx-auto px-4 py-16 max-w-6xl">
         {/* Main Headline */}
         <div className="text-center mb-16">
-          <h1 className="text-4xl md:text-5xl font-bold text-gray-800 mb-6 leading-tight max-w-4xl mx-auto">
+          <h1 className="text-4xl md:text-5xl font-bold text-gray-800 mb-4 leading-tight max-w-4xl mx-auto">
             {(landingPage as any).headline || `Master sports performance and agility training with This Free Practice Guide`}
           </h1>
+          {(landingPage as any).subheadline && (
+            <p className="text-2xl text-gray-700 font-semibold mb-6 max-w-3xl mx-auto">
+              {(landingPage as any).subheadline}
+            </p>
+          )}
           <p className="text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
             {(landingPage as any).description || `Download our comprehensive practice guide based on "${guide.title}" and start improving your skills today.`}
           </p>
+          {(landingPage as any).urgencyText && (
+            <div className="mt-6 bg-red-100 border border-red-300 rounded-lg p-4 max-w-lg mx-auto">
+              <p className="text-red-800 font-semibold text-lg">
+                ⏰ {(landingPage as any).urgencyText}
+              </p>
+            </div>
+          )}
         </div>
 
         {/* Thumbnail and Form Section */}
@@ -218,30 +230,23 @@ export default function GuideLanding() {
               </div>
               
               {/* Social Proof */}
-              <div className="mt-6 flex items-center justify-center space-x-6 text-sm text-gray-600">
-                <div className="flex items-center">
-                  <Users className="w-4 h-4 mr-2 text-green-600" />
-                  <span>1,847+ Downloads</span>
+              {(landingPage as any).socialProof && (
+                <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4 text-center">
+                  <p className="text-blue-800 font-semibold">
+                    📺 {(landingPage as any).socialProof}
+                  </p>
                 </div>
-                <div className="flex items-center">
-                  <Star className="w-4 h-4 mr-2 text-yellow-500" />
-                  <span>4.9/5 Rating</span>
-                </div>
-                <div className="flex items-center">
-                  <Clock className="w-4 h-4 mr-2 text-blue-600" />
-                  <span>5-Min Setup</span>
-                </div>
-              </div>
+              )}
             </div>
 
-            {/* 4 Benefits Below Video */}
+            {/* Professional Benefits */}
             <div className="space-y-3">
-              {[
+              {((landingPage as any).bulletPoints || [
                 "Master proven techniques that work for all skill levels",
                 "Follow step-by-step practice drills designed by professionals", 
                 "Get exclusive coaching insights from industry experts",
                 "Avoid the most common mistakes that hold players back"
-              ].map((benefit, index) => (
+              ]).map((benefit: string, index: number) => (
                 <div key={index} className="flex items-start text-left">
                   <CheckCircle className="w-5 h-5 text-green-600 mr-3 flex-shrink-0 mt-0.5" />
                   <span className="text-gray-700 font-medium">{benefit}</span>
@@ -350,7 +355,7 @@ export default function GuideLanding() {
                 ) : (
                   <>
                     <Download className="w-5 h-5 mr-2" />
-                    GET MY FREE GUIDE NOW
+                    {(landingPage as any).buttonText || "GET MY FREE GUIDE NOW"}
                   </>
                 )}
               </Button>

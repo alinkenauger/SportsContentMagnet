@@ -321,13 +321,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
         status: 'published'
       });
 
-      // Step 7: Create default landing page
+      // Step 7: Generate professional landing page copy
+      console.log('Generating professional landing page copy...');
+      const { landingPageCopywriter } = await import('./services/landingPageCopywriter');
+      const professionalCopy = await landingPageCopywriter.generateLandingPageCopy(
+        guideContent,
+        videoData,
+        analysis
+      );
+
+      // Step 8: Create landing page with professional copy
       const landingPage = await storage.createLandingPage({
         guideId: guide.id,
         userId,
         title: `Get Your ${guideContent.title}`,
-        headline: `Master ${analysis.category} with This Free Practice Guide`,
-        description: `Download our comprehensive practice guide based on "${videoData.title}" and start improving your skills today.`,
+        headline: professionalCopy.headline,
+        subheadline: professionalCopy.subheadline,
+        description: professionalCopy.description,
+        bulletPoints: professionalCopy.bulletPoints,
+        socialProof: professionalCopy.socialProof,
+        urgencyText: professionalCopy.urgencyText,
+        buttonText: professionalCopy.buttonText,
+        disclaimer: professionalCopy.disclaimer,
         customFields: [
           { name: 'firstName', label: 'First Name', type: 'text', required: true },
           { name: 'email', label: 'Email', type: 'email', required: true },
