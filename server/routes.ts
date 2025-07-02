@@ -244,15 +244,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const trainingSettings = await storage.getTrainingSettings(userId);
       const brandingSettings = await storage.getBrandingSettings(userId);
       
-      // Step 4: Generate practice guide with accurate timestamps
+      // Step 4: Analyze content and generate practice guide
       let guideContent;
+      let analysis;
+      
       if (videoData.segments && videoData.segments.length > 0) {
         // Use timestamped content generation for YouTube videos with timing data
         const { generateTimestampedContent } = await import('./services/aiContentWithTimestamps');
         guideContent = await generateTimestampedContent(transcript, videoData.segments, videoData, trainingSettings);
+        
+        // Still need analysis for guide metadata
+        analysis = await analyzeVideoContent(transcript, videoData.title, videoData.description);
       } else {
         // Fallback to regular content generation for manual/audio uploads
-        const analysis = await analyzeVideoContent(transcript, videoData.title, videoData.description);
+        analysis = await analyzeVideoContent(transcript, videoData.title, videoData.description);
         guideContent = await generatePracticeGuide(analysis, videoData.title, videoData.channelTitle, brandingSettings);
       }
       

@@ -31,7 +31,7 @@ function Router() {
         <>
           <Route path="/" component={Dashboard} />
           <Route path="/create" component={CreateGuide} />
-          <Route path="/library" component={ContentLibrary} />
+          <Route path="/content-library" component={ContentLibrary} />
           <Route path="/guide-editor/:guideId" component={GuideEditorEnhanced} />
           <Route path="/analytics" component={Analytics} />
           <Route path="/leads" component={Leads} />
