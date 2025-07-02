@@ -131,6 +131,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Extract common parameters
       const { youtubeUrl, leadTags, collectSms, smsConsentText } = req.body;
+      console.log(`Guide creation: inputMethod=${inputMethod}, youtubeUrl=${youtubeUrl}`);
       
       // Handle different input methods
       if (inputMethod === "youtube") {
@@ -258,6 +259,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         analysis = await analyzeVideoContent(transcript, videoData.title, videoData.description);
         
         // Step 4.5: Extract screenshots for YouTube videos if URL provided
+        console.log(`Debug screenshot check: youtubeUrl=${youtubeUrl}, sections=${guideContent.sections?.length || 0}`);
         if (youtubeUrl && guideContent.sections && guideContent.sections.length > 0) {
           try {
             console.log('Extracting screenshots for timestamped sections...');
@@ -265,7 +267,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             
             // Map guide sections to screenshot timestamps
             const timestampData = guideContent.sections.map((section: any) => ({
-              timestamp: section.timestamp || 0,
+              timestamp: section.timestampSeconds || 0,
               duration: section.duration || 30,
               title: section.title || 'Section'
             }));

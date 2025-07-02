@@ -39,6 +39,13 @@ interface GuideViewData {
     youtubeVideoId: string;
     channelTitle: string;
     views: number;
+    screenshots?: Array<{
+      timestamp: number;
+      filename: string;
+      path: string;
+      type: 'start' | 'middle' | 'key_moment';
+      size: number;
+    }>;
     content: {
       title: string;
       introduction: string;
