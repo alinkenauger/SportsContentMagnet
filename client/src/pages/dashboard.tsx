@@ -408,7 +408,6 @@ export default function Dashboard() {
   return (
     <div className="flex h-screen bg-background">
       <Sidebar />
-      
       <div className="flex-1 flex flex-col">
         {/* Header */}
         <header className="bg-card border-b border-border px-6 py-4">
@@ -571,7 +570,7 @@ export default function Dashboard() {
           <Card className="gradient-primary text-white mb-8">
             <CardContent className="p-8">
               <div className="max-w-4xl">
-                <h3 className="text-2xl font-bold mb-3">Transform Any Content into Lead Magnets</h3>
+                <h3 className="text-2xl font-bold mb-3">Transform Any Content into Converting Lead Magnets</h3>
                 <p className="text-blue-100 mb-6">
                   {inputMethod === "youtube" && "Paste a YouTube URL and let our AI extract valuable coaching insights to create your next lead magnet in minutes."}
                   {inputMethod === "manual" && "Manually upload your video transcript or drag and drop a text file to bypass YouTube restrictions."}
@@ -1159,7 +1158,6 @@ export default function Dashboard() {
           </div>
         </main>
       </div>
-
       {/* Processing Modal */}
       <ProcessingModal
         isOpen={isProcessing}
