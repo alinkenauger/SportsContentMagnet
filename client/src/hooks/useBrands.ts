@@ -89,6 +89,10 @@ export function useSetCurrentBrand() {
       });
     },
     onSuccess: (data, brandId) => {
+      // Invalidate dashboard stats and other brand-specific queries
+      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/stats"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/guides"] });
+      
       // Get the brand name for the toast
       const brands = queryClient.getQueryData(["/api/brands"]) as Brand[];
       const brand = brands?.find(b => b.id === brandId);

@@ -71,15 +71,41 @@ export function SpacePicker() {
 
         {!isCollapsed && (
           <>
-            {/* Personal Account */}
+            {/* Active Brand at Top - Blue */}
+            {currentBrandId && (
+              <>
+                {(() => {
+                  const activeBrand = brands.find(b => b.id === currentBrandId);
+                  return activeBrand ? (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button
+                          onClick={() => handleSwitchBrand(activeBrand)}
+                          className="w-12 h-12 rounded-full flex items-center justify-center transition-all duration-200 border-2 text-sm font-semibold bg-blue-600 text-white border-blue-600 shadow-md"
+                        >
+                          {getInitials(activeBrand.name)}
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent side="right">
+                        <p>{activeBrand.name} (Active)</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  ) : null;
+                })()}
+                
+                {/* Separator after active brand */}
+                <div className="w-8 h-px bg-slate-300 dark:bg-slate-600" />
+              </>
+            )}
+
+            {/* Personal Account - Blue when active */}
             <Tooltip>
               <TooltipTrigger asChild>
                 <button
                   onClick={handleSwitchToDefault}
-
                   className={`w-12 h-12 rounded-full flex items-center justify-center transition-all duration-200 border-2 ${
                     isInDefaultAccount
-                      ? 'bg-primary text-primary-foreground border-primary shadow-md'
+                      ? 'bg-blue-600 text-white border-blue-600 shadow-md'
                       : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 border-transparent hover:bg-slate-300 dark:hover:bg-slate-600'
                   }`}
                 >
@@ -87,25 +113,20 @@ export function SpacePicker() {
                 </button>
               </TooltipTrigger>
               <TooltipContent side="right">
-                <p>Personal Account</p>
+                <p>{isInDefaultAccount ? 'Personal Account (Active)' : 'Personal Account'}</p>
               </TooltipContent>
             </Tooltip>
 
             {/* Separator */}
             <div className="w-8 h-px bg-slate-300 dark:bg-slate-600" />
 
-            {/* Brand Spaces */}
-            {brands.map((brand) => (
+            {/* Non-Active Brand Spaces */}
+            {brands.filter(brand => brand.id !== currentBrandId).map((brand) => (
               <Tooltip key={brand.id}>
                 <TooltipTrigger asChild>
                   <button
                     onClick={() => handleSwitchBrand(brand)}
-
-                    className={`w-12 h-12 rounded-full flex items-center justify-center transition-all duration-200 border-2 text-sm font-semibold ${
-                      brand.id === currentBrandId
-                        ? 'bg-primary text-primary-foreground border-primary shadow-md'
-                        : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 border-transparent hover:bg-slate-300 dark:hover:bg-slate-600'
-                    }`}
+                    className="w-12 h-12 rounded-full flex items-center justify-center transition-all duration-200 border-2 text-sm font-semibold bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 border-transparent hover:bg-slate-300 dark:hover:bg-slate-600"
                   >
                     {getInitials(brand.name)}
                   </button>
@@ -137,9 +158,37 @@ export function SpacePicker() {
         )}
 
         {isCollapsed && (
-          <div className="w-8 h-8 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center">
-            <Building2 className="h-4 w-4 text-slate-600 dark:text-slate-300" />
-          </div>
+          <>
+            {/* Show active brand/account when collapsed */}
+            {currentBrandId ? (
+              (() => {
+                const activeBrand = brands.find(b => b.id === currentBrandId);
+                return activeBrand ? (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs font-semibold shadow-md">
+                        {getInitials(activeBrand.name)}
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent side="right">
+                      <p>{activeBrand.name} (Active)</p>
+                    </TooltipContent>
+                  </Tooltip>
+                ) : null;
+              })()
+            ) : (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center shadow-md">
+                    <User className="h-4 w-4" />
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent side="right">
+                  <p>Personal Account (Active)</p>
+                </TooltipContent>
+              </Tooltip>
+            )}
+          </>
         )}
       </div>
     </TooltipProvider>

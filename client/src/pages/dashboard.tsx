@@ -26,7 +26,7 @@ interface DashboardStats {
 
 export default function Dashboard() {
   const { toast } = useToast();
-  const { isAuthenticated, isLoading } = useAuth();
+  const { user, isAuthenticated, isLoading } = useAuth();
   const [, setLocation] = useLocation();
   const [youtubeUrl, setYoutubeUrl] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
@@ -120,7 +120,7 @@ export default function Dashboard() {
   }, [isAuthenticated, isLoading, toast]);
 
   const { data: stats, isLoading: statsLoading } = useQuery<DashboardStats>({
-    queryKey: ["/api/dashboard/stats"],
+    queryKey: ["/api/dashboard/stats", user?.currentBrandId],
     enabled: isAuthenticated,
   });
 

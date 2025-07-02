@@ -93,7 +93,7 @@ export interface IStorage {
 
   // Analytics operations
   createAnalyticsEvent(event: InsertAnalyticsEvent): Promise<AnalyticsEvent>;
-  getAnalyticsByUser(userId: string): Promise<{
+  getAnalyticsByUser(userId: string, brandId?: number | null): Promise<{
     totalGuides: number;
     totalLeads: number;
     totalViews: number;
@@ -402,13 +402,23 @@ export class DatabaseStorage implements IStorage {
     return newEvent;
   }
 
-  async getAnalyticsByUser(userId: string): Promise<{
+  async getAnalyticsByUser(userId: string, brandId?: number | null): Promise<{
     totalGuides: number;
     totalLeads: number;
     totalViews: number;
     totalDownloads: number;
     avgConversionRate: number;
   }> {
+    // Build where conditions for brand filtering
+    const whereConditions = [eq(guides.userId, userId)];
+    if (brandId !== undefined) {
+      if (brandId === null) {
+        whereConditions.push(isNull(guides.brandId));
+      } else {
+        whereConditions.push(eq(guides.brandId, brandId));
+      }
+    }
+
     const [stats] = await db
       .select({
         totalGuides: count(guides.id),
@@ -418,12 +428,26 @@ export class DatabaseStorage implements IStorage {
         avgConversionRate: sql<number>`COALESCE(AVG(${guides.conversionRate}), 0)`,
       })
       .from(guides)
-      .where(eq(guides.userId, userId));
+      .where(and(...whereConditions));
 
-    const [leadsCount] = await db
+    // Build where conditions for leads (need to join with guides to filter by brand)
+    const leadsWhereConditions = [eq(leads.userId, userId)];
+    let leadsQuery = db
       .select({ totalLeads: count(leads.id) })
-      .from(leads)
-      .where(eq(leads.userId, userId));
+      .from(leads);
+    
+    if (brandId !== undefined) {
+      leadsQuery = leadsQuery
+        .innerJoin(guides, eq(leads.guideId, guides.id));
+      
+      if (brandId === null) {
+        leadsWhereConditions.push(isNull(guides.brandId));
+      } else {
+        leadsWhereConditions.push(eq(guides.brandId, brandId));
+      }
+    }
+
+    const [leadsCount] = await leadsQuery.where(and(...leadsWhereConditions));
 
     return {
       totalGuides: stats.totalGuides,
