@@ -245,6 +245,14 @@ Changelog:
   * **PRODUCTION-READY INFRASTRUCTURE**: Built scalable architecture ready for deployment in resource-sufficient environments
   * **FALLBACK MECHANISMS**: Maintained existing yt-dlp and youtube-transcript methods as backup options
   * **CLEAR USER GUIDANCE**: Implemented informative error messages directing users to working alternatives when videos lack accessible content
+- July 02, 2025. Added automated screenshot extraction system for visual guide enhancement:
+  * **VIDEO SCREENSHOT EXTRACTION**: Implemented FFmpeg + yt-dlp pipeline for extracting screenshots at precise timestamps
+  * **SMART VISUAL SELECTION**: Automatically generates 3 screenshots per section (start, middle, key moment) based on timestamped content
+  * **SCALABLE ARCHITECTURE**: Built cost-effective system designed for thousands of users with minimal API costs
+  * **DATABASE INTEGRATION**: Added screenshots field to guides schema with metadata storage for each extracted image
+  * **PRODUCTION-READY STORAGE**: Configured static file serving with automatic cleanup and optimization for 640px web delivery
+  * **SEAMLESS INTEGRATION**: Screenshots automatically extracted during guide creation for YouTube videos with timestamp data
+  * **EDITOR-READY FORMAT**: Screenshots stored with metadata enabling future selection/replacement functionality in guide editor
 ```
 
 ## User Preferences
