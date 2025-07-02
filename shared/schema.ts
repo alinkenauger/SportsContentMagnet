@@ -78,6 +78,7 @@ export const guides = pgTable("guides", {
   transcript: text("transcript"),
   aiAnalysis: jsonb("ai_analysis"),
   content: jsonb("content"), // Generated guide content
+  screenshots: jsonb("screenshots"), // Array of screenshot metadata with timestamps
   category: varchar("category"),
   tags: text("tags").array(),
   leadTags: text("lead_tags").array(), // Tags applied to leads captured from this guide

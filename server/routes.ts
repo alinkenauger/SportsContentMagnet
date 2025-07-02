@@ -247,6 +247,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Step 4: Analyze content and generate practice guide
       let guideContent;
       let analysis;
+      let screenshots = null;
       
       if (videoData.segments && videoData.segments.length > 0) {
         // Use timestamped content generation for YouTube videos with timing data
@@ -255,6 +256,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         // Still need analysis for guide metadata
         analysis = await analyzeVideoContent(transcript, videoData.title, videoData.description);
+        
+        // Step 4.5: Extract screenshots for YouTube videos if URL provided
+        if (youtubeUrl && guideContent.sections && guideContent.sections.length > 0) {
+          try {
+            console.log('Extracting screenshots for timestamped sections...');
+            const { videoScreenshotService } = await import('./services/videoScreenshotService');
+            
+            // Map guide sections to screenshot timestamps
+            const timestampData = guideContent.sections.map((section: any) => ({
+              timestamp: section.timestamp || 0,
+              duration: section.duration || 30,
+              title: section.title || 'Section'
+            }));
+            
+            const screenshotResult = await videoScreenshotService.extractScreenshots(youtubeUrl, timestampData);
+            
+            if (screenshotResult.success && screenshotResult.screenshots) {
+              screenshots = screenshotResult.screenshots;
+              console.log(`Successfully extracted ${screenshots.length} screenshots`);
+              
+              // Clean up video file after processing
+              if (screenshotResult.cleanup) {
+                setTimeout(() => screenshotResult.cleanup!(), 5000); // Cleanup after 5 seconds
+              }
+            } else {
+              console.warn('Screenshot extraction failed:', screenshotResult.error);
+            }
+          } catch (error) {
+            console.warn('Screenshot extraction error:', error);
+            // Continue without screenshots - not a critical failure
+          }
+        }
       } else {
         // Fallback to regular content generation for manual/audio uploads
         analysis = await analyzeVideoContent(transcript, videoData.title, videoData.description);
@@ -278,6 +311,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         transcript,
         aiAnalysis: analysis,
         content: guideContent,
+        screenshots,
         category: analysis.category,
         tags: analysis.keyTips,
         leadTags: processedLeadTags,
