@@ -4,7 +4,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/useAuth";
-import { BrandSwitcher } from "@/components/brand-switcher";
+import { SpacePicker } from "@/components/space-picker";
 import NotFound from "@/pages/not-found";
 import Landing from "@/pages/landing";
 import Dashboard from "@/pages/dashboard";
@@ -30,15 +30,19 @@ function Router() {
         <Route path="/" component={Landing} />
       ) : (
         <>
-          <Route path="/" component={Dashboard} />
-          <Route path="/create" component={CreateGuide} />
-          <Route path="/content-library" component={ContentLibrary} />
-          <Route path="/guide-editor/:guideId" component={GuideEditorEnhanced} />
-          <Route path="/analytics" component={Analytics} />
-          <Route path="/leads" component={Leads} />
-          <Route path="/branding" component={Branding} />
-          <Route path="/settings" component={Settings} />
-          <BrandSwitcher />
+          <div className="flex h-screen">
+            <SpacePicker />
+            <div className="flex-1 flex flex-col min-w-0">
+              <Route path="/" component={Dashboard} />
+              <Route path="/create" component={CreateGuide} />
+              <Route path="/content-library" component={ContentLibrary} />
+              <Route path="/guide-editor/:guideId" component={GuideEditorEnhanced} />
+              <Route path="/analytics" component={Analytics} />
+              <Route path="/leads" component={Leads} />
+              <Route path="/branding" component={Branding} />
+              <Route path="/settings" component={Settings} />
+            </div>
+          </div>
         </>
       )}
       

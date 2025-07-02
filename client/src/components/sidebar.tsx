@@ -15,7 +15,7 @@ import {
   ChevronRight
 } from "lucide-react";
 import { useState } from "react";
-import { BrandSwitcher } from "@/components/brand-switcher";
+
 
 const navigation = [
   { name: "Dashboard", href: "/", icon: Home },
@@ -45,13 +45,7 @@ export default function Sidebar() {
           </div>
           {!isCollapsed && <h1 className="text-xl font-bold text-sidebar-foreground">VidMagnet</h1>}
         </div>
-        
-        {/* Brand Switcher */}
-        {!isCollapsed && (
-          <div className="mt-4">
-            <BrandSwitcher />
-          </div>
-        )}
+
         
         {/* Toggle Button */}
         <Button
