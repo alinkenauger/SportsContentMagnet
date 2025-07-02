@@ -5,6 +5,7 @@ import { setupAuth, isAuthenticated } from "./replitAuth";
 import { setupGoogleAuth, isGoogleAuthenticated } from "./googleAuth";
 import { analyzeVideoContent, generatePracticeGuide, personalizeGuideContent } from "./services/openai";
 import { getYouTubeVideoData, transcribeVideo } from "./services/youtube";
+import { generateGuidePDF, generatePDFFilename } from "./services/pdfGenerator";
 import { insertGuideSchema, insertLandingPageSchema, insertLeadSchema, insertBrandingSettingsSchema, insertTrainingSettingsSchema, insertKnowledgebaseEntrySchema } from "@shared/schema";
 import QRCode from 'qrcode';
 import multer from 'multer';
@@ -631,6 +632,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error updating guide:", error);
       res.status(500).json({ message: "Failed to update guide" });
+    }
+  });
+
+  // PDF download route
+  app.get('/api/guides/:id/download-pdf', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims?.sub || req.user.id;
+      const guideId = parseInt(req.params.id);
+      
+      // Get guide and verify ownership
+      const guide = await storage.getGuide(guideId);
+      if (!guide || guide.userId !== userId) {
+        return res.status(404).json({ message: "Guide not found" });
+      }
+
+      // Get branding settings
+      const branding = await storage.getBrandingSettings(userId);
+      
+      // Generate PDF
+      const pdfBuffer = await generateGuidePDF({
+        guide,
+        branding: branding || undefined,
+        channelTitle: guide.channelTitle || undefined
+      });
+
+      // Set response headers for PDF download
+      const filename = generatePDFFilename(guide);
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+      res.setHeader('Content-Length', pdfBuffer.length);
+
+      // Track download analytics
+      await storage.createAnalyticsEvent({
+        userId,
+        guideId,
+        eventType: 'download',
+        eventData: { format: 'pdf' },
+        ipAddress: req.ip,
+        userAgent: req.get('User-Agent'),
+        referrer: req.get('Referer')
+      });
+
+      res.send(pdfBuffer);
+    } catch (error) {
+      console.error("Error generating PDF:", error);
+      res.status(500).json({ message: "Failed to generate PDF" });
     }
   });
 

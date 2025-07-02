@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>{{title}}</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: white;
+        }
+
+        .header {
+            background: linear-gradient(135deg, {{primaryColor}} 0%, {{secondaryColor}} 100%);
+            color: white;
+            padding: 40px 30px;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .logo {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            margin: 0 auto 20px;
+            background: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            color: {{primaryColor}};
+            font-weight: bold;
+        }
+
+        .title {
+            font-size: 32px;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            font-size: 18px;
+            opacity: 0.9;
+            margin-bottom: 10px;
+        }
+
+        .brand-info {
+            font-size: 14px;
+            opacity: 0.8;
+        }
+
+        .content {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 0 30px 40px;
+        }
+
+        .section {
+            margin-bottom: 30px;
+            page-break-inside: avoid;
+        }
+
+        .section-title {
+            font-size: 24px;
+            font-weight: bold;
+            color: {{primaryColor}};
+            margin-bottom: 15px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid {{primaryColor}};
+        }
+
+        .section-content {
+            font-size: 16px;
+            line-height: 1.8;
+        }
+
+        .drill-breakdown {
+            background: #f8f9fa;
+            border-left: 4px solid {{primaryColor}};
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 0 8px 8px 0;
+        }
+
+        .drill-item {
+            display: flex;
+            align-items: flex-start;
+            margin-bottom: 12px;
+        }
+
+        .drill-icon {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            margin-right: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            color: white;
+            flex-shrink: 0;
+        }
+
+        .drill-icon.pain-point { background: #ef4444; }
+        .drill-icon.technique { background: #3b82f6; }
+        .drill-icon.repetitions { background: #10b981; }
+        .drill-icon.duration { background: #8b5cf6; }
+        .drill-icon.key-focus { background: #f59e0b; }
+
+        .drill-text {
+            flex: 1;
+        }
+
+        .drill-label {
+            font-weight: bold;
+            color: #374151;
+        }
+
+        .next-steps {
+            background: linear-gradient(135deg, {{primaryColor}}15 0%, {{secondaryColor}}15 100%);
+            padding: 25px;
+            border-radius: 12px;
+            margin-top: 30px;
+        }
+
+        .next-steps h3 {
+            color: {{primaryColor}};
+            margin-bottom: 15px;
+        }
+
+        .footer {
+            margin-top: 40px;
+            padding: 30px;
+            background: #f8f9fa;
+            text-align: center;
+            color: #6b7280;
+            font-size: 14px;
+            border-top: 1px solid #e5e7eb;
+        }
+
+        .disclaimer {
+            margin-top: 20px;
+            font-size: 12px;
+            color: #9ca3af;
+            line-height: 1.4;
+        }
+
+        ul, ol {
+            padding-left: 20px;
+            margin: 15px 0;
+        }
+
+        li {
+            margin-bottom: 8px;
+        }
+
+        strong {
+            color: {{primaryColor}};
+        }
+
+        @media print {
+            body {
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+            
+            .section {
+                page-break-inside: avoid;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        {{#if logoUrl}}
+            <img src="{{logoUrl}}" alt="{{companyName}} Logo" class="logo" style="background: none;">
+        {{else}}
+            <div class="logo">{{firstLetter}}</div>
+        {{/if}}
+        <h1 class="title">{{title}}</h1>
+        <p class="subtitle">{{description}}</p>
+        {{#if companyName}}
+            <p class="brand-info">Created by {{companyName}}</p>
+        {{/if}}
+        {{#if channelTitle}}
+            <p class="brand-info">Original content from {{channelTitle}}</p>
+        {{/if}}
+    </div>
+
+    <div class="content">
+        {{#each sections}}
+            <div class="section">
+                <h2 class="section-title">{{title}}</h2>
+                <div class="section-content">
+                    {{{content}}}
+                    
+                    {{#if drillBreakdown}}
+                        <div class="drill-breakdown">
+                            <h4 style="margin-bottom: 15px; color: {{../primaryColor}};">Practice Breakdown</h4>
+                            
+                            {{#if drillBreakdown.painPoint}}
+                                <div class="drill-item">
+                                    <div class="drill-icon pain-point">!</div>
+                                    <div class="drill-text">
+                                        <span class="drill-label">Pain Point:</span> {{drillBreakdown.painPoint}}
+                                    </div>
+                                </div>
+                            {{/if}}
+                            
+                            {{#if drillBreakdown.technique}}
+                                <div class="drill-item">
+                                    <div class="drill-icon technique">⚡</div>
+                                    <div class="drill-text">
+                                        <span class="drill-label">Technique:</span> {{drillBreakdown.technique}}
+                                    </div>
+                                </div>
+                            {{/if}}
+                            
+                            {{#if drillBreakdown.repetitions}}
+                                <div class="drill-item">
+                                    <div class="drill-icon repetitions">↻</div>
+                                    <div class="drill-text">
+                                        <span class="drill-label">Repetitions:</span> {{drillBreakdown.repetitions}}
+                                    </div>
+                                </div>
+                            {{/if}}
+                            
+                            {{#if drillBreakdown.duration}}
+                                <div class="drill-item">
+                                    <div class="drill-icon duration">⏱</div>
+                                    <div class="drill-text">
+                                        <span class="drill-label">Duration:</span> {{drillBreakdown.duration}}
+                                    </div>
+                                </div>
+                            {{/if}}
+                            
+                            {{#if drillBreakdown.keyFocus}}
+                                <div class="drill-item">
+                                    <div class="drill-icon key-focus">✓</div>
+                                    <div class="drill-text">
+                                        <span class="drill-label">Key Focus:</span> {{drillBreakdown.keyFocus}}
+                                    </div>
+                                </div>
+                            {{/if}}
+                        </div>
+                    {{/if}}
+                </div>
+            </div>
+        {{/each}}
+
+        {{#if nextSteps}}
+            <div class="next-steps">
+                <h3>Next Steps</h3>
+                {{{nextSteps}}}
+            </div>
+        {{/if}}
+    </div>
+
+    <div class="footer">
+        {{#if companyName}}
+            <p><strong>{{companyName}}</strong></p>
+        {{/if}}
+        {{#if website}}
+            <p>Visit us at {{website}}</p>
+        {{/if}}
+        
+        <div class="disclaimer">
+            <p><strong>Disclaimer:</strong> This practice guide is for educational purposes only. Always consult with a qualified professional before beginning any new training program. Results may vary based on individual effort and circumstances.</p>
+            <p>This content is designed to supplement, not replace, professional instruction. Practice safely and within your limits.</p>
+        </div>
+    </div>
+</body>
+</html>
