@@ -13,8 +13,8 @@ import {
   LogOut,
   Video,
   ChevronLeft,
-  ChevronRight,
-  Building2
+  Building2,
+  ChevronRight
 } from "lucide-react";
 import { useState } from "react";
 import { SpacePicker } from "./space-picker";
@@ -43,27 +43,13 @@ export default function Sidebar() {
 
   return (
     <div className={`${isCollapsed ? 'w-16' : 'w-64'} bg-sidebar-background shadow-lg border-r border-sidebar-border flex flex-col h-screen transition-all duration-300`}>
-      {/* Logo / Brand Emblem */}
+      {/* Logo */}
       <div className="p-6 relative">
         <div className="flex items-center space-x-3">
-          {currentBrand ? (
-            <button
-              onClick={() => setIsSpacePickerOpen(true)}
-              className="w-8 h-8 bg-blue-600 text-white rounded-lg flex items-center justify-center flex-shrink-0 hover:bg-blue-700 transition-colors"
-              title={isCollapsed ? `${currentBrand.name} - Click to switch brands` : undefined}
-            >
-              <Building2 className="w-4 h-4" />
-            </button>
-          ) : (
-            <div className="w-8 h-8 gradient-primary rounded-lg flex items-center justify-center flex-shrink-0">
-              <Video className="w-4 h-4 text-white" />
-            </div>
-          )}
-          {!isCollapsed && (
-            <h1 className="text-xl font-bold text-sidebar-foreground">
-              {currentBrand ? currentBrand.name : "VidMagnet"}
-            </h1>
-          )}
+          <div className="w-8 h-8 gradient-primary rounded-lg flex items-center justify-center flex-shrink-0">
+            <Video className="w-4 h-4 text-white" />
+          </div>
+          {!isCollapsed && <h1 className="text-xl font-bold text-sidebar-foreground">VidMagnet</h1>}
         </div>
 
         
@@ -102,32 +88,46 @@ export default function Sidebar() {
         </ul>
       </nav>
 
-      {/* User Profile */}
+      {/* User Profile / Brand Picker */}
       <div className="p-4 border-t border-sidebar-border">
         <div className={`flex items-center ${isCollapsed ? 'justify-center' : 'space-x-3'}`}>
-          <Avatar className="w-10 h-10 flex-shrink-0">
-            <AvatarImage 
-              src={user?.profileImageUrl || ""} 
-              alt={user?.firstName || "User"} 
-              className="object-cover"
-            />
-            <AvatarFallback>
-              {user?.firstName?.[0] || user?.email?.[0] || "U"}
-            </AvatarFallback>
-          </Avatar>
+          <button
+            onClick={() => setIsSpacePickerOpen(true)}
+            className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 transition-all hover:ring-2 hover:ring-blue-200 ${
+              currentBrand ? 'bg-blue-600' : 'bg-primary'
+            }`}
+            title={isCollapsed ? (currentBrand ? `${currentBrand.name} - Click to switch brands` : `${user?.firstName || 'Account'} - Click to switch brands`) : undefined}
+          >
+            {currentBrand ? (
+              <Building2 className="w-5 h-5 text-white" />
+            ) : user?.profileImageUrl ? (
+              <img 
+                src={user.profileImageUrl} 
+                alt={user.firstName || 'User'} 
+                className="w-10 h-10 rounded-full object-cover"
+              />
+            ) : (
+              <span className="text-white text-sm font-medium">
+                {user?.firstName?.[0] || user?.email?.[0] || "A"}
+              </span>
+            )}
+          </button>
           {!isCollapsed && (
             <>
-              <div className="flex-1 min-w-0">
+              <button
+                onClick={() => setIsSpacePickerOpen(true)}
+                className="flex-1 min-w-0 text-left p-2 rounded-lg hover:bg-sidebar-hover transition-colors"
+              >
                 <p className="text-sm font-medium text-sidebar-foreground truncate">
-                  {user?.firstName && user?.lastName 
+                  {currentBrand ? currentBrand.name : (user?.firstName && user?.lastName 
                     ? `${user.firstName} ${user.lastName}`
-                    : user?.email
+                    : user?.email)
                   }
                 </p>
                 <p className="text-xs text-muted-foreground truncate">
-                  Content Creator
+                  {currentBrand ? 'Brand Workspace' : 'Personal Account'}
                 </p>
-              </div>
+              </button>
               <Button 
                 variant="ghost" 
                 size="sm"

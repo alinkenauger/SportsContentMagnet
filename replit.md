@@ -291,6 +291,13 @@ Changelog:
   * **CONTEXTUAL UI**: Knowledge base training toggle only appears when creating guides within brand workspaces
   * **TIERED ARCHITECTURE**: Sets foundation for pricing tiers where basic users have global knowledge while premium users get brand-specific customization
   * **FALLBACK SYSTEM**: If brands have no custom entries, system automatically falls back to user's global knowledge base for consistency
+- July 02, 2025. Implemented space-efficient account-based brand picker:
+  * **ACCOUNT AVATAR INTEGRATION**: Replaced collapsed brand picker with account avatar that doubles as brand selector
+  * **DYNAMIC AVATAR DISPLAY**: Account avatar shows blue building icon when brand is selected, user avatar when in personal account
+  * **SPACE OPTIMIZATION**: Eliminated wasted vertical space from collapsed brand picker approach
+  * **CLICK-TO-SWITCH**: Both avatar icon and name area in expanded sidebar open brand picker drawer
+  * **VISUAL BRAND INDICATORS**: Clear distinction between personal account (user avatar/name) and brand workspace (building icon/brand name)
+  * **HOVER FEEDBACK**: Added hover effects and tooltips for better user experience when switching between accounts
 ```
 
 ## User Preferences
