@@ -38,12 +38,6 @@ export default function Sidebar() {
   const currentBrandId = (user as any)?.currentBrandId;
   const currentBrand = currentBrandId ? brands?.find(brand => brand.id === currentBrandId) : null;
 
-  // Debug logging
-  console.log('Debug - user:', user);
-  console.log('Debug - currentBrandId:', currentBrandId);
-  console.log('Debug - brands:', brands);
-  console.log('Debug - currentBrand:', currentBrand);
-
   const handleLogout = () => {
     window.location.href = "/api/logout";
   };
