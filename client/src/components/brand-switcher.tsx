@@ -22,7 +22,12 @@ export function BrandSwitcher() {
   const [newBrandName, setNewBrandName] = useState("");
   const [newBrandDescription, setNewBrandDescription] = useState("");
 
-  const currentBrand = brands.find(b => b.id === user?.currentBrandId) || brands[0];
+  // Don't render anything while loading or if no brands exist
+  if (isLoading || !brands || brands.length === 0) {
+    return null;
+  }
+
+  const currentBrand = brands.find(b => b.id === (user as any)?.currentBrandId) || brands[0];
 
   const handleCreateBrand = async (e: React.FormEvent) => {
     e.preventDefault();

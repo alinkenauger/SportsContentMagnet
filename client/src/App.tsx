@@ -30,7 +30,6 @@ function Router() {
         <Route path="/" component={Landing} />
       ) : (
         <>
-          <BrandSwitcher />
           <Route path="/" component={Dashboard} />
           <Route path="/create" component={CreateGuide} />
           <Route path="/content-library" component={ContentLibrary} />
@@ -39,6 +38,7 @@ function Router() {
           <Route path="/leads" component={Leads} />
           <Route path="/branding" component={Branding} />
           <Route path="/settings" component={Settings} />
+          <BrandSwitcher />
         </>
       )}
       

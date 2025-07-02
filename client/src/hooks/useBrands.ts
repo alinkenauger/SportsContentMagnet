@@ -13,15 +13,15 @@ export interface Brand {
 }
 
 export function useBrands() {
-  const { data: brands = [], isLoading } = useQuery({
+  const { data: brands = [], isLoading } = useQuery<Brand[]>({
     queryKey: ["/api/brands"],
     retry: false,
   });
 
   return {
-    brands: brands as Brand[],
+    brands: brands || [],
     isLoading,
-    hasMultipleBrands: brands.length > 1,
+    hasMultipleBrands: (brands || []).length > 1,
   };
 }
 
@@ -30,10 +30,7 @@ export function useCreateBrand() {
   
   return useMutation({
     mutationFn: async (brandData: Partial<Brand>) => {
-      return await apiRequest("/api/brands", {
-        method: "POST",
-        body: brandData,
-      });
+      return await apiRequest("/api/brands", "POST", brandData);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/brands"] });
@@ -47,10 +44,7 @@ export function useUpdateBrand() {
   
   return useMutation({
     mutationFn: async ({ id, ...brandData }: Partial<Brand> & { id: number }) => {
-      return await apiRequest(`/api/brands/${id}`, {
-        method: "PUT",
-        body: brandData,
-      });
+      return await apiRequest(`/api/brands/${id}`, "PUT", brandData);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/brands"] });
@@ -63,9 +57,7 @@ export function useSetCurrentBrand() {
   
   return useMutation({
     mutationFn: async (brandId: number) => {
-      return await apiRequest(`/api/brands/${brandId}/set-current`, {
-        method: "POST",
-      });
+      return await apiRequest(`/api/brands/${brandId}/set-current`, "POST");
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
@@ -84,9 +76,7 @@ export function useDeleteBrand() {
   
   return useMutation({
     mutationFn: async (brandId: number) => {
-      return await apiRequest(`/api/brands/${brandId}`, {
-        method: "DELETE",
-      });
+      return await apiRequest(`/api/brands/${brandId}`, "DELETE");
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/brands"] });
