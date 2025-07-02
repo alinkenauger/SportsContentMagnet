@@ -23,38 +23,16 @@ export function SpacePicker() {
 
   const handleSwitchBrand = async (brand: Brand) => {
     if (brand.id === currentBrandId) return;
-
-    try {
-      await setCurrentBrandMutation.mutateAsync(brand.id);
-      toast({
-        title: "Brand switched",
-        description: `Switched to ${brand.name}`,
-      });
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to switch brand. Please try again.",
-        variant: "destructive",
-      });
-    }
+    
+    // Optimistic UI - the mutation will handle the optimistic update
+    setCurrentBrandMutation.mutate(brand.id);
   };
 
   const handleSwitchToDefault = async () => {
     if (isInDefaultAccount) return;
-
-    try {
-      await clearCurrentBrandMutation.mutateAsync();
-      toast({
-        title: "Switched to default account",
-        description: "You're now using your personal account",
-      });
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to switch to default account. Please try again.",
-        variant: "destructive",
-      });
-    }
+    
+    // Optimistic UI - the mutation will handle the optimistic update
+    clearCurrentBrandMutation.mutate();
   };
 
   // Only show if user has brands
@@ -98,7 +76,7 @@ export function SpacePicker() {
               <TooltipTrigger asChild>
                 <button
                   onClick={handleSwitchToDefault}
-                  disabled={isInDefaultAccount || clearCurrentBrandMutation.isPending}
+
                   className={`w-12 h-12 rounded-full flex items-center justify-center transition-all duration-200 border-2 ${
                     isInDefaultAccount
                       ? 'bg-primary text-primary-foreground border-primary shadow-md'
@@ -122,7 +100,7 @@ export function SpacePicker() {
                 <TooltipTrigger asChild>
                   <button
                     onClick={() => handleSwitchBrand(brand)}
-                    disabled={brand.id === currentBrandId || setCurrentBrandMutation.isPending}
+
                     className={`w-12 h-12 rounded-full flex items-center justify-center transition-all duration-200 border-2 text-sm font-semibold ${
                       brand.id === currentBrandId
                         ? 'bg-primary text-primary-foreground border-primary shadow-md'
