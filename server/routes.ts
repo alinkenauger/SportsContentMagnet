@@ -325,7 +325,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log('Generating professional landing page copy...');
       const { landingPageCopywriter } = await import('./services/landingPageCopywriter');
       const professionalCopy = await landingPageCopywriter.generateLandingPageCopy(
-        guideContent,
+        guideContent as any,
         videoData,
         analysis
       );

@@ -361,10 +361,17 @@ export default function GuideLanding() {
               </Button>
             </form>
 
-            <p className="text-xs text-gray-500 text-center mt-4 leading-relaxed">
-              By submitting this form, you agree to receive emails from us. You can unsubscribe at any time.
-              {(landingPage as any).collectSms && " SMS terms apply if phone number provided."}
-            </p>
+            <div className="text-xs text-gray-500 text-center mt-4 leading-relaxed space-y-2">
+              <p>
+                By submitting this form, you agree to receive emails from us. You can unsubscribe at any time.
+                {(landingPage as any).collectSms && " SMS terms apply if phone number provided."}
+              </p>
+              {(landingPage as any).disclaimer && (
+                <p className="italic">
+                  {(landingPage as any).disclaimer}
+                </p>
+              )}
+            </div>
           </div>
         </div>
       </main>
