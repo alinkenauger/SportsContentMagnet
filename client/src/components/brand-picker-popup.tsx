@@ -2,7 +2,8 @@ import { Building2, User, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
-import { useBrands, useSetCurrentBrand, useClearCurrentBrand, type Brand } from "@/hooks/useBrands";
+import { useBrands, useSetCurrentBrand, useClearCurrentBrand } from "@/hooks/useBrands";
+import type { Brand } from "@shared/schema";
 import { useAuth } from "@/hooks/useAuth";
 
 interface BrandPickerPopupProps {
@@ -10,12 +11,14 @@ interface BrandPickerPopupProps {
 }
 
 export function BrandPickerPopup({ onClose }: BrandPickerPopupProps) {
-  const { data: brands = [], isLoading } = useBrands();
-  const { currentBrandId, isInDefaultAccount } = useBrands();
+  const { brands, isLoading } = useBrands();
   const { user } = useAuth();
   const { toast } = useToast();
   const setCurrentBrandMutation = useSetCurrentBrand();
   const clearCurrentBrandMutation = useClearCurrentBrand();
+  
+  const currentBrandId = (user as any)?.currentBrandId;
+  const isInDefaultAccount = !currentBrandId;
 
   if (isLoading) {
     return null;
