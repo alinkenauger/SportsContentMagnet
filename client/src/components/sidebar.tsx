@@ -1,6 +1,5 @@
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
-import { useBrands } from "@/hooks/useBrands";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { 
@@ -17,7 +16,9 @@ import {
   ChevronRight
 } from "lucide-react";
 import { useState } from "react";
-import { BrandPickerPopup } from "./brand-picker-popup";
+import { useBrands, useSetCurrentBrand, useClearCurrentBrand } from "@/hooks/useBrands";
+import { useToast } from "@/hooks/use-toast";
+import type { Brand } from "@shared/schema";
 
 
 const navigation = [
@@ -35,6 +36,9 @@ export default function Sidebar() {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isSpacePickerOpen, setIsSpacePickerOpen] = useState(false);
   const { brands } = useBrands();
+  const { toast } = useToast();
+  const setCurrentBrandMutation = useSetCurrentBrand();
+  const clearCurrentBrandMutation = useClearCurrentBrand();
   const currentBrandId = (user as any)?.currentBrandId;
   const currentBrand = currentBrandId ? brands?.find(brand => brand.id === currentBrandId) : null;
 
@@ -90,83 +94,152 @@ export default function Sidebar() {
       </nav>
 
       {/* User Profile / Brand Picker */}
-      <div className="p-4 border-t border-sidebar-border">
-        <div className={`flex items-center ${isCollapsed ? 'justify-center' : 'space-x-3'}`}>
-          <button
-            onClick={() => setIsSpacePickerOpen(true)}
-            className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 transition-all hover:ring-2 hover:ring-blue-200 ${
-              currentBrand ? 'bg-blue-600' : 'bg-primary'
-            }`}
-            title={isCollapsed ? (currentBrand ? `${currentBrand.name} - Click to switch brands` : `${user?.firstName || 'Account'} - Click to switch brands`) : undefined}
-          >
-            {currentBrand ? (
-              <Building2 className="w-5 h-5 text-white" />
-            ) : user?.profileImageUrl ? (
-              <img 
-                src={user.profileImageUrl} 
-                alt={user.firstName || 'User'} 
-                className="w-10 h-10 rounded-full object-cover"
-              />
-            ) : (
-              <span className="text-white text-sm font-medium">
-                {user?.firstName?.[0] || user?.email?.[0] || "A"}
-              </span>
+      <div className="border-t border-sidebar-border">
+        {/* Brand Picker Toggle */}
+        <div className="p-4">
+          <div className={`flex items-center ${isCollapsed ? 'justify-center' : 'space-x-3'}`}>
+            <button
+              onClick={() => setIsSpacePickerOpen(!isSpacePickerOpen)}
+              className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 transition-all hover:ring-2 hover:ring-blue-200 ${
+                currentBrand ? 'bg-blue-600' : 'bg-primary'
+              }`}
+              title={isCollapsed ? (currentBrand ? `${currentBrand.name} - Click to switch brands` : `Account - Click to switch brands`) : undefined}
+            >
+              {currentBrand ? (
+                <Building2 className="w-5 h-5 text-white" />
+              ) : (
+                <span className="text-white text-sm font-medium">
+                  {(user as any)?.firstName?.[0] || (user as any)?.email?.[0] || "A"}
+                </span>
+              )}
+            </button>
+            {!isCollapsed && (
+              <>
+                <button
+                  onClick={() => setIsSpacePickerOpen(!isSpacePickerOpen)}
+                  className="flex-1 min-w-0 text-left p-2 rounded-lg hover:bg-sidebar-hover transition-colors"
+                >
+                  <p className="text-sm font-medium text-sidebar-foreground truncate">
+                    {currentBrand ? currentBrand.name : ((user as any)?.firstName && (user as any)?.lastName 
+                      ? `${(user as any).firstName} ${(user as any).lastName}`
+                      : (user as any)?.email)
+                    }
+                  </p>
+                  <p className="text-xs text-muted-foreground truncate">
+                    {currentBrand ? 'Brand Workspace' : 'Personal Account'}
+                  </p>
+                </button>
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  onClick={handleLogout}
+                  className="text-muted-foreground hover:text-foreground"
+                >
+                  <LogOut className="w-4 h-4" />
+                </Button>
+              </>
             )}
-          </button>
-          {!isCollapsed && (
-            <>
-              <button
-                onClick={() => setIsSpacePickerOpen(true)}
-                className="flex-1 min-w-0 text-left p-2 rounded-lg hover:bg-sidebar-hover transition-colors"
-              >
-                <p className="text-sm font-medium text-sidebar-foreground truncate">
-                  {currentBrand ? currentBrand.name : (user?.firstName && user?.lastName 
-                    ? `${user.firstName} ${user.lastName}`
-                    : user?.email)
-                  }
-                </p>
-                <p className="text-xs text-muted-foreground truncate">
-                  {currentBrand ? 'Brand Workspace' : 'Personal Account'}
-                </p>
-              </button>
+          </div>
+          {isCollapsed && (
+            <div className="mt-2 flex justify-center">
               <Button 
                 variant="ghost" 
                 size="sm"
                 onClick={handleLogout}
-                className="text-muted-foreground hover:text-foreground"
+                className="text-muted-foreground hover:text-foreground p-1"
+                title="Logout"
               >
                 <LogOut className="w-4 h-4" />
               </Button>
-            </>
+            </div>
           )}
         </div>
-        {isCollapsed && (
-          <div className="mt-2 flex justify-center">
-            <Button 
-              variant="ghost" 
-              size="sm"
-              onClick={handleLogout}
-              className="text-muted-foreground hover:text-foreground p-1"
-              title="Logout"
-            >
-              <LogOut className="w-4 h-4" />
-            </Button>
+
+        {/* Brand Picker Accordion */}
+        {isSpacePickerOpen && !isCollapsed && (
+          <div className="px-4 pb-4">
+            <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm">
+              {/* Personal Account */}
+              <div 
+                className={`p-3 rounded-t-lg flex items-center space-x-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors ${
+                  !currentBrand ? 'bg-blue-50 dark:bg-blue-900/20 border-l-4 border-blue-500' : ''
+                }`}
+                onClick={() => {
+                  if (currentBrand) {
+                    clearCurrentBrandMutation.mutate();
+                    setIsSpacePickerOpen(false);
+                  }
+                }}
+              >
+                <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center">
+                  <span className="text-white text-sm font-medium">
+                    {(user as any)?.firstName?.[0] || (user as any)?.email?.[0] || "A"}
+                  </span>
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-gray-900 dark:text-white">Personal Account</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    {!currentBrand ? 'Currently active' : 'Switch to personal'}
+                  </p>
+                </div>
+              </div>
+
+              {/* Brand Workspaces */}
+              {brands && brands.length > 0 && (
+                <>
+                  <div className="px-3 py-2 border-t border-gray-200 dark:border-gray-700">
+                    <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      Brand Workspaces
+                    </p>
+                  </div>
+                  {brands.map((brand) => (
+                    <div
+                      key={brand.id}
+                      className={`p-3 flex items-center space-x-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors ${
+                        currentBrand?.id === brand.id ? 'bg-blue-50 dark:bg-blue-900/20 border-l-4 border-blue-500' : ''
+                      }`}
+                      onClick={() => {
+                        if (currentBrand?.id !== brand.id) {
+                          setCurrentBrandMutation.mutate(brand.id);
+                          setIsSpacePickerOpen(false);
+                        }
+                      }}
+                    >
+                      <div className="w-8 h-8 rounded-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center">
+                        <span className="text-gray-700 dark:text-gray-300 text-sm font-medium">
+                          {brand.name.split(' ').map(word => word[0]).join('').toUpperCase().slice(0, 2)}
+                        </span>
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-gray-900 dark:text-white">{brand.name}</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                          {currentBrand?.id === brand.id ? 'Currently active' : 'Switch to brand'}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </>
+              )}
+
+              {/* Add Brand */}
+              <div 
+                className="p-3 border-t border-gray-200 dark:border-gray-700 flex items-center space-x-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors rounded-b-lg"
+                onClick={() => {
+                  window.location.href = '/settings';
+                }}
+              >
+                <div className="w-8 h-8 rounded-full border-2 border-dashed border-gray-300 dark:border-gray-600 flex items-center justify-center">
+                  <Plus className="w-4 h-4 text-gray-400 dark:text-gray-500" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-gray-900 dark:text-white">Add Brand</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">Create new workspace</p>
+                </div>
+              </div>
+            </div>
           </div>
         )}
       </div>
-
-      {/* Brand Picker Popup */}
-      {isSpacePickerOpen && (
-        <div className="fixed inset-0 z-50">
-          <div 
-            className="absolute inset-0" 
-            onClick={() => setIsSpacePickerOpen(false)}
-          />
-          <div className="absolute bottom-20 left-4 mb-2">
-            <BrandPickerPopup onClose={() => setIsSpacePickerOpen(false)} />
-          </div>
-        </div>
-      )}
     </div>
   );
 }
