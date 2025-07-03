@@ -17,7 +17,7 @@ import {
   ChevronRight
 } from "lucide-react";
 import { useState } from "react";
-import { SpacePicker } from "./space-picker";
+import { BrandPickerPopup } from "./brand-picker-popup";
 
 
 const navigation = [
@@ -155,15 +155,15 @@ export default function Sidebar() {
         )}
       </div>
 
-      {/* Space Picker Overlay */}
+      {/* Brand Picker Popup */}
       {isSpacePickerOpen && (
         <div className="fixed inset-0 z-50">
           <div 
-            className="absolute inset-0 bg-black/20" 
+            className="absolute inset-0" 
             onClick={() => setIsSpacePickerOpen(false)}
           />
-          <div className="absolute left-0 top-0 h-full">
-            <SpacePicker onClose={() => setIsSpacePickerOpen(false)} />
+          <div className="absolute bottom-20 left-4 mb-2">
+            <BrandPickerPopup onClose={() => setIsSpacePickerOpen(false)} />
           </div>
         </div>
       )}
