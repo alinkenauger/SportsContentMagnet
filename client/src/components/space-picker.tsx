@@ -57,10 +57,10 @@ export function SpacePicker({ onClose }: SpacePickerProps = {}) {
 
   return (
     <TooltipProvider>
-      <div className={`${isCollapsed ? 'w-16' : 'w-20'} bg-slate-50 dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex flex-col items-center py-4 space-y-4 transition-all duration-300 relative`}>
+      <div className={`${isCollapsed ? 'w-16' : 'w-20'} bg-slate-50 dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex flex-col-reverse items-center py-4 space-y-reverse space-y-4 transition-all duration-300 relative`}>
         
         {/* Toggle Button */}
-        <div className="absolute -right-3 top-4 z-10">
+        <div className="absolute -right-3 bottom-4 z-10">
           <Button
             variant="outline"
             size="sm"
