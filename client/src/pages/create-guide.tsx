@@ -5,6 +5,7 @@ import { useToast } from "@/hooks/use-toast";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import Sidebar from "@/components/sidebar";
 import ProcessingModal from "@/components/processing-modal";
+import { PromptTemplatePicker, type PromptTemplate } from "@/components/prompt-template-picker";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -25,6 +26,8 @@ export default function CreateGuide() {
   const [inputMethod, setInputMethod] = useState<"youtube" | "manual">("youtube");
   const [manualTranscript, setManualTranscript] = useState("");
   const [manualTitle, setManualTitle] = useState("");
+  const [selectedTemplate, setSelectedTemplate] = useState<string>("full_report");
+  const [showCustomTemplate, setShowCustomTemplate] = useState(false);
   const [customSettings, setCustomSettings] = useState({
     category: "",
     customInstructions: "",
@@ -100,11 +103,13 @@ export default function CreateGuide() {
       // Actually create the guide
       const requestData = inputMethod === "youtube" ? {
         youtubeUrl,
+        selectedTemplate,
         ...customSettings
       } : {
         manualTranscript: manualTranscript,
         manualTitle: manualTitle,
         inputMethod: "manual",
+        selectedTemplate,
         ...customSettings
       };
       
@@ -242,12 +247,33 @@ export default function CreateGuide() {
               </CardContent>
             </Card>
 
-            {/* Step 2: Customization */}
+            {/* Step 2: Choose Guide Template */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-2">
+                  <Zap className="w-5 h-5 text-primary" />
+                  <span>Step 2: Choose Guide Template</span>
+                </CardTitle>
+                <p className="text-sm text-muted-foreground mt-2">
+                  Select how you want your guide structured and analyzed. Each template focuses on different aspects and creates content tailored for specific use cases.
+                </p>
+              </CardHeader>
+              <CardContent>
+                <PromptTemplatePicker
+                  selectedTemplate={selectedTemplate}
+                  onTemplateSelect={(template: PromptTemplate) => setSelectedTemplate(template.id)}
+                  onCustomTemplate={() => setShowCustomTemplate(true)}
+                  compact={true}
+                />
+              </CardContent>
+            </Card>
+
+            {/* Step 3: Customization */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center space-x-2">
                   <Settings className="w-5 h-5 text-primary" />
-                  <span>Step 2: Customization (Optional)</span>
+                  <span>Step 3: Customization (Optional)</span>
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -406,12 +432,12 @@ export default function CreateGuide() {
               </CardContent>
             </Card>
 
-            {/* Step 3: Generate */}
+            {/* Step 4: Generate */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center space-x-2">
                   <Zap className="w-5 h-5 text-accent" />
-                  <span>Step 3: Generate Guide</span>
+                  <span>Step 4: Generate Guide</span>
                 </CardTitle>
               </CardHeader>
               <CardContent>

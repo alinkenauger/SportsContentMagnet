@@ -238,8 +238,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let inputMethod = req.body.inputMethod;
       
       // Extract common parameters
-      const { youtubeUrl, leadTags, collectSms, smsConsentText } = req.body;
-      console.log(`Guide creation: inputMethod=${inputMethod}, youtubeUrl=${youtubeUrl}`);
+      const { youtubeUrl, leadTags, collectSms, smsConsentText, selectedTemplate } = req.body;
+      console.log(`Guide creation: inputMethod=${inputMethod}, youtubeUrl=${youtubeUrl}, template=${selectedTemplate}`);
       
       // Handle different input methods
       if (inputMethod === "youtube") {
@@ -361,7 +361,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (videoData.segments && videoData.segments.length > 0) {
         // Use timestamped content generation for YouTube videos with timing data
         const { generateTimestampedContent } = await import('./services/aiContentWithTimestamps');
-        guideContent = await generateTimestampedContent(transcript, videoData.segments, videoData, trainingSettings);
+        guideContent = await generateTimestampedContent(transcript, videoData.segments, videoData, trainingSettings, selectedTemplate);
         
         // Still need analysis for guide metadata
         analysis = await analyzeVideoContent(transcript, videoData.title, videoData.description);
@@ -405,7 +405,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } else {
         // Fallback to regular content generation for manual/audio uploads
         analysis = await analyzeVideoContent(transcript, videoData.title, videoData.description);
-        guideContent = await generatePracticeGuide(analysis, videoData.title, videoData.channelTitle, brandingSettings);
+        guideContent = await generatePracticeGuide(analysis, videoData.title, videoData.channelTitle, brandingSettings, selectedTemplate);
       }
       
       // Process lead tags (convert comma-separated string to array)

@@ -64,6 +64,46 @@ export const googleConnections = pgTable("google_connections", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Prompt templates for guide generation
+export const promptTemplates = pgTable("prompt_templates", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  brandId: integer("brand_id").references(() => brands.id, { onDelete: "cascade" }), // nullable for personal account templates
+  name: varchar("name", { length: 100 }).notNull(),
+  description: text("description"),
+  type: varchar("type", { length: 50 }).notNull(), // 'predefined' or 'custom'
+  category: varchar("category", { length: 50 }).notNull(), // 'full_report', 'sop', 'step_by_step', 'workout', 'deeper_dive', 'custom'
+  analysisPrompt: text("analysis_prompt").notNull(),
+  guidePrompt: text("guide_prompt").notNull(),
+  personalizationPrompt: text("personalization_prompt"),
+  isActive: boolean("is_active").default(true),
+  sortOrder: integer("sort_order").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Media center for user/brand assets
+export const mediaAssets = pgTable("media_assets", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  brandId: integer("brand_id").references(() => brands.id, { onDelete: "cascade" }), // nullable for personal account assets
+  name: varchar("name", { length: 200 }).notNull(),
+  description: text("description"),
+  type: varchar("type", { length: 50 }).notNull(), // 'image', 'video', 'audio', 'embed', 'document'
+  mimeType: varchar("mime_type", { length: 100 }),
+  fileUrl: text("file_url").notNull(), // URL to the actual file
+  thumbnailUrl: text("thumbnail_url"), // For video/document previews
+  embedCode: text("embed_code"), // For YouTube/Vimeo embeds
+  fileSize: integer("file_size"), // In bytes
+  dimensions: jsonb("dimensions"), // {width: number, height: number} for images/videos
+  tags: jsonb("tags").default([]), // Array of tags for organization
+  folder: varchar("folder", { length: 100 }).default(""), // Folder organization
+  isPublic: boolean("is_public").default(false), // Whether accessible in guides
+  sortOrder: integer("sort_order").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Branding settings for each brand
 export const brandingSettings = pgTable("branding_settings", {
   id: serial("id").primaryKey(),
@@ -264,6 +304,8 @@ export const usersRelations = relations(users, ({ many, one }) => ({
   knowledgebaseEntries: many(knowledgebaseEntries),
   personalizationProfiles: many(personalizationProfiles),
   personalizationRules: many(personalizationRules),
+  promptTemplates: many(promptTemplates),
+  mediaAssets: many(mediaAssets),
   googleConnection: one(googleConnections),
 }));
 
@@ -273,6 +315,8 @@ export const brandsRelations = relations(brands, ({ one, many }) => ({
   brandingSettings: one(brandingSettings),
   trainingSettings: one(trainingSettings),
   knowledgebaseEntries: many(knowledgebaseEntries),
+  promptTemplates: many(promptTemplates),
+  mediaAssets: many(mediaAssets),
 }));
 
 export const guidesRelations = relations(guides, ({ one, many }) => ({
@@ -333,6 +377,16 @@ export const personalizationRulesRelations = relations(personalizationRules, ({ 
 export const contentVariantsRelations = relations(contentVariants, ({ one }) => ({
   guide: one(guides, { fields: [contentVariants.guideId], references: [guides.id] }),
   profile: one(personalizationProfiles, { fields: [contentVariants.profileId], references: [personalizationProfiles.id] }),
+}));
+
+export const promptTemplatesRelations = relations(promptTemplates, ({ one }) => ({
+  user: one(users, { fields: [promptTemplates.userId], references: [users.id] }),
+  brand: one(brands, { fields: [promptTemplates.brandId], references: [brands.id] }),
+}));
+
+export const mediaAssetsRelations = relations(mediaAssets, ({ one }) => ({
+  user: one(users, { fields: [mediaAssets.userId], references: [users.id] }),
+  brand: one(brands, { fields: [mediaAssets.brandId], references: [brands.id] }),
 }));
 
 export const googleConnectionsRelations = relations(googleConnections, ({ one }) => ({
@@ -418,6 +472,18 @@ export const insertBrandSchema = createInsertSchema(brands).omit({
   updatedAt: true,
 });
 
+export const insertPromptTemplateSchema = createInsertSchema(promptTemplates).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertMediaAssetSchema = createInsertSchema(mediaAssets).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 // Types
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
@@ -447,3 +513,7 @@ export type GoogleConnection = typeof googleConnections.$inferSelect;
 export type InsertGoogleConnection = z.infer<typeof insertGoogleConnectionSchema>;
 export type Brand = typeof brands.$inferSelect;
 export type InsertBrand = z.infer<typeof insertBrandSchema>;
+export type PromptTemplate = typeof promptTemplates.$inferSelect;
+export type InsertPromptTemplate = z.infer<typeof insertPromptTemplateSchema>;
+export type MediaAsset = typeof mediaAssets.$inferSelect;
+export type InsertMediaAsset = z.infer<typeof insertMediaAssetSchema>;

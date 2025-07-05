@@ -116,10 +116,30 @@ export async function analyzeVideoContent(transcript: string, videoTitle: string
   }
 }
 
-export async function generatePracticeGuide(analysis: VideoAnalysis, videoTitle: string, channelTitle?: string, brandingSettings?: any): Promise<GuideContent> {
+export async function generatePracticeGuide(analysis: VideoAnalysis, videoTitle: string, channelTitle?: string, brandingSettings?: any, selectedTemplate?: string): Promise<GuideContent> {
   try {
+    // Import template service and get template prompts
+    const { getTemplate } = await import('./promptTemplates');
+    const template = getTemplate(selectedTemplate || 'full_report');
+    
+    // Use template prompts if available, fallback to default
+    const templatePrompt = template ? template.guidePrompt : `Create a comprehensive practice guide with these sections:
+1. **Executive Summary** - Key takeaways and main objectives
+2. **Detailed Analysis** - Break down each technique with explanations
+3. **Practice Drills** - Specific exercises with reps, sets, and progressions
+4. **Implementation Strategy** - How to incorporate into routine
+5. **Troubleshooting** - Common issues and solutions
+6. **Advanced Techniques** - Next-level progressions
+7. **Performance Tracking** - Metrics to monitor progress
+8. **Resources** - Additional tools and references
+
+Make it actionable, detailed, and professional.`;
+
     const prompt = `
-    Create a comprehensive practice guide based on this video analysis.
+    Create a practice guide based on this video analysis using the following structure and approach:
+    
+    TEMPLATE INSTRUCTIONS:
+    ${templatePrompt}
     
     Video Title: ${videoTitle}
     Channel Name: ${channelTitle || 'the channel'}
@@ -147,10 +167,10 @@ export async function generatePracticeGuide(analysis: VideoAnalysis, videoTitle:
     }
     
     Guidelines:
+    - Follow the template structure and approach above
     - Make it actionable and practical
     - Use clear, motivating language
     - Include specific steps and measurements where possible
-    - Structure it as a comprehensive practice guide
     - Make it valuable enough to be worth exchanging an email for
     - Include ${brandingSettings?.companyName || 'your coach'} branding naturally
     - IMPORTANT: In the introduction, specifically mention that this guide is based on insights from ${channelTitle || 'the original content creator'} to give proper attribution

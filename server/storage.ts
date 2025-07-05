@@ -9,6 +9,9 @@ import {
   brandingSettings,
   trainingSettings,
   knowledgebaseEntries,
+  googleConnections,
+  promptTemplates,
+  mediaAssets,
   type User,
   type UpsertUser,
   type Brand,
@@ -29,9 +32,12 @@ import {
   type InsertTrainingSettings,
   type KnowledgebaseEntry,
   type InsertKnowledgebaseEntry,
-  googleConnections,
   type GoogleConnection,
   type InsertGoogleConnection,
+  type PromptTemplate,
+  type InsertPromptTemplate,
+  type MediaAsset,
+  type InsertMediaAsset,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, sql, count, avg, isNull } from "drizzle-orm";
@@ -126,6 +132,22 @@ export interface IStorage {
   // Google connection operations
   getUserGoogleConnection(userId: string): Promise<GoogleConnection | undefined>;
   updateUserGoogleConnection(userId: string, connection: InsertGoogleConnection | null): Promise<GoogleConnection | null>;
+
+  // Prompt template operations with global inheritance
+  createPromptTemplate(template: InsertPromptTemplate): Promise<PromptTemplate>;
+  getPromptTemplates(userId: string, brandId?: number | null): Promise<PromptTemplate[]>;
+  getPromptTemplate(id: number): Promise<PromptTemplate | undefined>;
+  updatePromptTemplate(id: number, template: Partial<InsertPromptTemplate>): Promise<PromptTemplate>;
+  deletePromptTemplate(id: number): Promise<void>;
+  getPredefinedTemplates(): Promise<PromptTemplate[]>;
+
+  // Media asset operations with global inheritance
+  createMediaAsset(asset: InsertMediaAsset): Promise<MediaAsset>;
+  getMediaAssets(userId: string, brandId?: number | null, folder?: string): Promise<MediaAsset[]>;
+  getMediaAsset(id: number): Promise<MediaAsset | undefined>;
+  updateMediaAsset(id: number, asset: Partial<InsertMediaAsset>): Promise<MediaAsset>;
+  deleteMediaAsset(id: number): Promise<void>;
+  searchMediaAssets(userId: string, query?: string, brandId?: number | null): Promise<MediaAsset[]>;
 }
 
 export class DatabaseStorage implements IStorage {

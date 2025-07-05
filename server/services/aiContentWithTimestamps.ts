@@ -27,7 +27,8 @@ export async function generateTimestampedContent(
   transcript: string,
   segments: TranscriptSegment[],
   videoData: any,
-  trainingSettings?: any
+  trainingSettings?: any,
+  selectedTemplate?: string
 ): Promise<{
   title: string;
   introduction: string;
@@ -40,8 +41,28 @@ export async function generateTimestampedContent(
     `${formatTime(seg.start)} - ${formatTime(seg.end)}: ${seg.text.trim()}`
   ).join('\n');
 
+  // Get template prompts
+  const { getTemplate } = await import('./promptTemplates');
+  const template = getTemplate(selectedTemplate || 'full_report');
+  
+  // Use template prompts if available, fallback to default
+  const templatePrompt = template ? template.guidePrompt : `Create a comprehensive practice guide with these sections:
+1. **Executive Summary** - Key takeaways and main objectives
+2. **Detailed Analysis** - Break down each technique with explanations
+3. **Practice Drills** - Specific exercises with reps, sets, and progressions
+4. **Implementation Strategy** - How to incorporate into routine
+5. **Troubleshooting** - Common issues and solutions
+6. **Advanced Techniques** - Next-level progressions
+7. **Performance Tracking** - Metrics to monitor progress
+8. **Resources** - Additional tools and references
+
+Make it actionable, detailed, and professional.`;
+
   const prompt = `
 You are an expert content creator analyzing a ${videoData.channelTitle || 'content creator'} video titled "${videoData.title}".
+
+TEMPLATE INSTRUCTIONS:
+${templatePrompt}
 
 TRANSCRIPT WITH TIMESTAMPS:
 ${segmentData}
@@ -61,7 +82,7 @@ TRAINING CONTEXT:
 - Personalization: ${trainingSettings.personalizationPrompt}
 ` : ''}
 
-Create a comprehensive practice guide with accurate timestamps that match the video timing. Each section should include:
+Create a comprehensive practice guide with accurate timestamps that match the video timing, following the template structure above. Each section should include:
 1. The exact timestamp (in seconds) where that topic begins in the video
 2. How long that segment lasts
 3. Specific, actionable content from that time period
