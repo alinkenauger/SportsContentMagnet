@@ -35,6 +35,7 @@ export const users = pgTable("users", {
   lastName: varchar("last_name"),
   profileImageUrl: varchar("profile_image_url"),
   currentBrandId: integer("current_brand_id"), // Reference to active brand
+  role: varchar("role", { length: 50 }).default("user"), // 'user', 'admin'
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

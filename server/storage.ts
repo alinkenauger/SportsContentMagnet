@@ -148,6 +148,39 @@ export interface IStorage {
   updateMediaAsset(id: number, asset: Partial<InsertMediaAsset>): Promise<MediaAsset>;
   deleteMediaAsset(id: number): Promise<void>;
   searchMediaAssets(userId: string, query?: string, brandId?: number | null): Promise<MediaAsset[]>;
+
+  // Global admin operations
+  getAllUsers(): Promise<Array<{
+    id: string;
+    email: string | null;
+    firstName: string | null;
+    lastName: string | null;
+    role: string | null;
+    totalGuides: number;
+    totalLeads: number;
+    createdAt: Date | null;
+  }>>;
+  getUserStats(userId: string): Promise<{
+    totalGuides: number;
+    totalLeads: number;
+    totalViews: number;
+    totalDownloads: number;
+    recentActivity: Array<{
+      type: string;
+      title: string;
+      date: Date;
+    }>;
+  }>;
+  updateUserRole(userId: string, role: string): Promise<User>;
+  deleteUser(userId: string): Promise<void>;
+  getSystemStats(): Promise<{
+    totalUsers: number;
+    totalGuides: number;
+    totalLeads: number;
+    totalViews: number;
+    activeUsersLast30Days: number;
+    newUsersLast30Days: number;
+  }>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -745,6 +778,121 @@ export class DatabaseStorage implements IStorage {
       .returning();
 
     return result;
+  }
+
+  // Global admin operations
+  async getAllUsers() {
+    const usersWithStats = await db
+      .select({
+        id: users.id,
+        email: users.email,
+        firstName: users.firstName,
+        lastName: users.lastName,
+        role: users.role,
+        createdAt: users.createdAt,
+        totalGuides: sql<number>`COALESCE(${count(guides.id)}, 0)`,
+        totalLeads: sql<number>`COALESCE(${count(leads.id)}, 0)`,
+      })
+      .from(users)
+      .leftJoin(guides, eq(users.id, guides.userId))
+      .leftJoin(leads, eq(guides.id, leads.guideId))
+      .groupBy(users.id, users.email, users.firstName, users.lastName, users.role, users.createdAt)
+      .orderBy(desc(users.createdAt));
+
+    return usersWithStats;
+  }
+
+  async getUserStats(userId: string) {
+    const userGuides = await db.select().from(guides).where(eq(guides.userId, userId));
+    const userLeads = await db
+      .select()
+      .from(leads)
+      .innerJoin(guides, eq(leads.guideId, guides.id))
+      .where(eq(guides.userId, userId));
+
+    const totalViews = userGuides.reduce((sum, guide) => sum + (guide.views || 0), 0);
+    const totalDownloads = userGuides.reduce((sum, guide) => sum + (guide.downloads || 0), 0);
+
+    // Recent activity - last 10 guides and leads
+    const recentGuides = userGuides
+      .slice(0, 5)
+      .map(guide => ({
+        type: 'guide',
+        title: guide.title,
+        date: guide.createdAt || new Date(),
+      }));
+
+    const recentLeads = userLeads
+      .slice(0, 5)
+      .map(({ leads: lead, guides: guide }) => ({
+        type: 'lead',
+        title: `Lead from "${guide.title}"`,
+        date: lead.createdAt || new Date(),
+      }));
+
+    const recentActivity = [...recentGuides, ...recentLeads]
+      .sort((a, b) => b.date.getTime() - a.date.getTime())
+      .slice(0, 10);
+
+    return {
+      totalGuides: userGuides.length,
+      totalLeads: userLeads.length,
+      totalViews,
+      totalDownloads,
+      recentActivity,
+    };
+  }
+
+  async updateUserRole(userId: string, role: string): Promise<User> {
+    const [user] = await db
+      .update(users)
+      .set({ role, updatedAt: new Date() })
+      .where(eq(users.id, userId))
+      .returning();
+    
+    if (!user) {
+      throw new Error('User not found');
+    }
+    
+    return user;
+  }
+
+  async deleteUser(userId: string): Promise<void> {
+    // This will cascade delete all related data due to foreign key constraints
+    await db.delete(users).where(eq(users.id, userId));
+  }
+
+  async getSystemStats() {
+    const [userCount] = await db.select({ count: count() }).from(users);
+    const [guideCount] = await db.select({ count: count() }).from(guides);
+    const [leadCount] = await db.select({ count: count() }).from(leads);
+
+    const totalViews = await db
+      .select({ total: sql<number>`COALESCE(SUM(${guides.views}), 0)` })
+      .from(guides);
+
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+    const [activeUsers] = await db
+      .select({ count: count() })
+      .from(guides)
+      .where(sql`${guides.createdAt} >= ${thirtyDaysAgo}`)
+      .innerJoin(users, eq(guides.userId, users.id));
+
+    const [newUsers] = await db
+      .select({ count: count() })
+      .from(users)
+      .where(sql`${users.createdAt} >= ${thirtyDaysAgo}`);
+
+    return {
+      totalUsers: userCount.count,
+      totalGuides: guideCount.count,
+      totalLeads: leadCount.count,
+      totalViews: totalViews[0]?.total || 0,
+      activeUsersLast30Days: activeUsers.count,
+      newUsersLast30Days: newUsers.count,
+    };
   }
 }
 

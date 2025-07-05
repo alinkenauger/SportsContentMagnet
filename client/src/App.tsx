@@ -20,6 +20,7 @@ import GuideView from "@/pages/guide-view";
 import Library from "@/pages/library";
 import PublicLibrary from "@/pages/public-library";
 import GuideEditorEnhanced from "@/pages/guide-editor-enhanced";
+import AdminDashboard from "@/pages/admin";
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -38,6 +39,7 @@ function Router() {
           <Route path="/leads" component={Leads} />
           <Route path="/branding" component={Branding} />
           <Route path="/settings" component={Settings} />
+          <Route path="/admin" component={AdminDashboard} />
         </>
       )}
       
