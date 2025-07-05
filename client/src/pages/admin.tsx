@@ -412,16 +412,16 @@ export default function AdminDashboard() {
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                <Card>
+                <Card className="relative">
+                  <Badge variant="outline" className="absolute top-3 right-3 z-10">Active</Badge>
                   <CardHeader>
-                    <CardTitle className="text-lg">Beginner-Friendly</CardTitle>
+                    <CardTitle className="text-lg pr-16">Beginner-Friendly</CardTitle>
                     <CardDescription>Encouraging, supportive, and accessible for newcomers</CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <div className="flex justify-between items-center">
-                      <div className="flex gap-2">
-                        <Badge variant="outline">Active</Badge>
-                        <Badge variant="secondary">23 users</Badge>
+                    <div className="space-y-3">
+                      <div className="text-sm text-muted-foreground">
+                        Used by <span className="font-medium text-foreground">23 users</span>
                       </div>
                       <div className="flex gap-2">
                         <Button variant="outline" size="sm">
@@ -437,16 +437,16 @@ export default function AdminDashboard() {
                   </CardContent>
                 </Card>
 
-                <Card>
+                <Card className="relative">
+                  <Badge variant="outline" className="absolute top-3 right-3 z-10">Active</Badge>
                   <CardHeader>
-                    <CardTitle className="text-lg">Detailed and In-Depth</CardTitle>
+                    <CardTitle className="text-lg pr-16">Detailed and In-Depth</CardTitle>
                     <CardDescription>Comprehensive, thorough analysis with extensive detail</CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <div className="flex justify-between items-center">
-                      <div className="flex gap-2">
-                        <Badge variant="outline">Active</Badge>
-                        <Badge variant="secondary">34 users</Badge>
+                    <div className="space-y-3">
+                      <div className="text-sm text-muted-foreground">
+                        Used by <span className="font-medium text-foreground">34 users</span>
                       </div>
                       <div className="flex gap-2">
                         <Button variant="outline" size="sm">
@@ -462,16 +462,16 @@ export default function AdminDashboard() {
                   </CardContent>
                 </Card>
 
-                <Card>
+                <Card className="relative">
+                  <Badge variant="outline" className="absolute top-3 right-3 z-10">Active</Badge>
                   <CardHeader>
-                    <CardTitle className="text-lg">Entertaining</CardTitle>
+                    <CardTitle className="text-lg pr-16">Entertaining</CardTitle>
                     <CardDescription>Engaging, fun, and memorable with personality</CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <div className="flex justify-between items-center">
-                      <div className="flex gap-2">
-                        <Badge variant="outline">Active</Badge>
-                        <Badge variant="secondary">45 users</Badge>
+                    <div className="space-y-3">
+                      <div className="text-sm text-muted-foreground">
+                        Used by <span className="font-medium text-foreground">45 users</span>
                       </div>
                       <div className="flex gap-2">
                         <Button variant="outline" size="sm">
@@ -487,16 +487,16 @@ export default function AdminDashboard() {
                   </CardContent>
                 </Card>
 
-                <Card>
+                <Card className="relative">
+                  <Badge variant="outline" className="absolute top-3 right-3 z-10">Active</Badge>
                   <CardHeader>
-                    <CardTitle className="text-lg">Advanced Performance</CardTitle>
+                    <CardTitle className="text-lg pr-16">Advanced Performance</CardTitle>
                     <CardDescription>Technical, data-driven approach for serious practitioners</CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <div className="flex justify-between items-center">
-                      <div className="flex gap-2">
-                        <Badge variant="outline">Active</Badge>
-                        <Badge variant="secondary">67 users</Badge>
+                    <div className="space-y-3">
+                      <div className="text-sm text-muted-foreground">
+                        Used by <span className="font-medium text-foreground">67 users</span>
                       </div>
                       <div className="flex gap-2">
                         <Button variant="outline" size="sm">
@@ -512,16 +512,16 @@ export default function AdminDashboard() {
                   </CardContent>
                 </Card>
 
-                <Card>
+                <Card className="relative">
+                  <Badge variant="outline" className="absolute top-3 right-3 z-10">Active</Badge>
                   <CardHeader>
-                    <CardTitle className="text-lg">World's Greatest Teacher</CardTitle>
+                    <CardTitle className="text-lg pr-16">World's Greatest Teacher</CardTitle>
                     <CardDescription>Masterful instruction with wisdom, patience, and insight</CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <div className="flex justify-between items-center">
-                      <div className="flex gap-2">
-                        <Badge variant="outline">Active</Badge>
-                        <Badge variant="secondary">89 users</Badge>
+                    <div className="space-y-3">
+                      <div className="text-sm text-muted-foreground">
+                        Used by <span className="font-medium text-foreground">89 users</span>
                       </div>
                       <div className="flex gap-2">
                         <Button variant="outline" size="sm">
@@ -553,172 +553,164 @@ export default function AdminDashboard() {
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <Card>
+                <Card className="relative">
+                  <Badge variant="outline" className="absolute top-3 right-3 z-10">Active</Badge>
                   <CardHeader>
-                    <CardTitle className="text-lg flex items-center gap-2">
+                    <CardTitle className="text-lg flex items-center gap-2 pr-16">
                       Step-By-Step
                       <Badge variant="secondary" className="text-xs">Recent</Badge>
                     </CardTitle>
                     <CardDescription>Clear numbered instructions with one-click video timestamps</CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <div className="space-y-2">
+                    <div className="space-y-3">
                       <div className="flex items-center gap-2 text-sm text-muted-foreground">
                         <Target className="w-4 h-4" />
                         Special Features: Timestamp buttons, Video navigation
                       </div>
-                      <div className="flex justify-between items-center">
-                        <div className="flex gap-2">
-                          <Badge variant="outline">Active</Badge>
-                          <Badge variant="secondary">156 users</Badge>
-                        </div>
-                        <div className="flex gap-2">
-                          <Button variant="outline" size="sm">
-                            <Edit className="w-4 h-4 mr-1" />
-                            Edit
-                          </Button>
-                          <Button variant="outline" size="sm">
-                            <Eye className="w-4 h-4 mr-1" />
-                            Preview
-                          </Button>
-                        </div>
+                      <div className="text-sm text-muted-foreground">
+                        Used by <span className="font-medium text-foreground">156 users</span>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button variant="outline" size="sm">
+                          <Edit className="w-4 h-4 mr-1" />
+                          Edit
+                        </Button>
+                        <Button variant="outline" size="sm">
+                          <Eye className="w-4 h-4 mr-1" />
+                          Preview
+                        </Button>
                       </div>
                     </div>
                   </CardContent>
                 </Card>
 
-                <Card>
+                <Card className="relative">
+                  <Badge variant="outline" className="absolute top-3 right-3 z-10">Active</Badge>
                   <CardHeader>
-                    <CardTitle className="text-lg flex items-center gap-2">
+                    <CardTitle className="text-lg flex items-center gap-2 pr-16">
                       SOP
                       <Badge variant="secondary" className="text-xs">Recent</Badge>
                     </CardTitle>
                     <CardDescription>Professional document for employee implementation</CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <div className="space-y-2">
+                    <div className="space-y-3">
                       <div className="flex items-center gap-2 text-sm text-muted-foreground">
                         <Settings className="w-4 h-4" />
                         Professional operational document format
                       </div>
-                      <div className="flex justify-between items-center">
-                        <div className="flex gap-2">
-                          <Badge variant="outline">Active</Badge>
-                          <Badge variant="secondary">89 users</Badge>
-                        </div>
-                        <div className="flex gap-2">
-                          <Button variant="outline" size="sm">
-                            <Edit className="w-4 h-4 mr-1" />
-                            Edit
-                          </Button>
-                          <Button variant="outline" size="sm">
-                            <Eye className="w-4 h-4 mr-1" />
-                            Preview
-                          </Button>
-                        </div>
+                      <div className="text-sm text-muted-foreground">
+                        Used by <span className="font-medium text-foreground">89 users</span>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button variant="outline" size="sm">
+                          <Edit className="w-4 h-4 mr-1" />
+                          Edit
+                        </Button>
+                        <Button variant="outline" size="sm">
+                          <Eye className="w-4 h-4 mr-1" />
+                          Preview
+                        </Button>
                       </div>
                     </div>
                   </CardContent>
                 </Card>
 
-                <Card>
+                <Card className="relative">
+                  <Badge variant="outline" className="absolute top-3 right-3 z-10">Active</Badge>
                   <CardHeader>
-                    <CardTitle className="text-lg flex items-center gap-2">
+                    <CardTitle className="text-lg flex items-center gap-2 pr-16">
                       Workout
                       <Badge variant="secondary" className="text-xs">Recent</Badge>
                     </CardTitle>
                     <CardDescription>Training plan with tracking sheets for sets, reps, and progress</CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <div className="space-y-2">
+                    <div className="space-y-3">
                       <div className="flex items-center gap-2 text-sm text-muted-foreground">
                         <Activity className="w-4 h-4" />
                         Special Features: Tracking sheets, Progress metrics, Exercise logging
                       </div>
-                      <div className="flex justify-between items-center">
-                        <div className="flex gap-2">
-                          <Badge variant="outline">Active</Badge>
-                          <Badge variant="secondary">234 users</Badge>
-                        </div>
-                        <div className="flex gap-2">
-                          <Button variant="outline" size="sm">
-                            <Edit className="w-4 h-4 mr-1" />
-                            Edit
-                          </Button>
-                          <Button variant="outline" size="sm">
-                            <Eye className="w-4 h-4 mr-1" />
-                            Preview
-                          </Button>
-                        </div>
+                      <div className="text-sm text-muted-foreground">
+                        Used by <span className="font-medium text-foreground">234 users</span>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button variant="outline" size="sm">
+                          <Edit className="w-4 h-4 mr-1" />
+                          Edit
+                        </Button>
+                        <Button variant="outline" size="sm">
+                          <Eye className="w-4 h-4 mr-1" />
+                          Preview
+                        </Button>
                       </div>
                     </div>
                   </CardContent>
                 </Card>
 
-                <Card>
+                <Card className="relative">
+                  <Badge variant="outline" className="absolute top-3 right-3 z-10">Active</Badge>
                   <CardHeader>
-                    <CardTitle className="text-lg flex items-center gap-2">
+                    <CardTitle className="text-lg flex items-center gap-2 pr-16">
                       Detailed Analysis
                       <Badge variant="secondary" className="text-xs">Recent</Badge>
                     </CardTitle>
                     <CardDescription>Comprehensive 7+ page guide with WHAT-WHERE-WHY-WHO-HOW structure</CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <div className="space-y-2">
+                    <div className="space-y-3">
                       <div className="flex items-center gap-2 text-sm text-muted-foreground">
                         <Database className="w-4 h-4" />
                         Special Features: Minimum 7 pages, Research depth, Factual analysis
                       </div>
-                      <div className="flex justify-between items-center">
-                        <div className="flex gap-2">
-                          <Badge variant="outline">Active</Badge>
-                          <Badge variant="secondary">67 users</Badge>
-                        </div>
-                        <div className="flex gap-2">
-                          <Button variant="outline" size="sm">
-                            <Edit className="w-4 h-4 mr-1" />
-                            Edit
-                          </Button>
-                          <Button variant="outline" size="sm">
-                            <Eye className="w-4 h-4 mr-1" />
-                            Preview
-                          </Button>
-                        </div>
+                      <div className="text-sm text-muted-foreground">
+                        Used by <span className="font-medium text-foreground">67 users</span>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button variant="outline" size="sm">
+                          <Edit className="w-4 h-4 mr-1" />
+                          Edit
+                        </Button>
+                        <Button variant="outline" size="sm">
+                          <Eye className="w-4 h-4 mr-1" />
+                          Preview
+                        </Button>
                       </div>
                     </div>
                   </CardContent>
                 </Card>
 
-                <Card className="md:col-span-2">
+                <Card className="md:col-span-2 relative">
+                  <Badge variant="outline" className="absolute top-3 right-3 z-10">Active</Badge>
                   <CardHeader>
-                    <CardTitle className="text-lg flex items-center gap-2">
+                    <CardTitle className="text-lg flex items-center gap-2 pr-16">
                       Next Step
                       <Badge variant="destructive" className="text-xs">Requires 10+ Guides</Badge>
                     </CardTitle>
                     <CardDescription>Advanced implementation guide for experienced users who have created at least 10 guides</CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <div className="space-y-2">
+                    <div className="space-y-3">
                       <div className="flex items-center gap-2 text-sm text-muted-foreground">
                         <TrendingUp className="w-4 h-4" />
                         Special Features: Advanced implementation, Continuation focus, Experience required
                       </div>
-                      <div className="flex justify-between items-center">
-                        <div className="flex gap-2">
-                          <Badge variant="outline">Active</Badge>
-                          <Badge variant="secondary">12 users</Badge>
-                          <Badge variant="outline" className="text-orange-600">Restricted Access</Badge>
+                      <div className="flex items-center gap-3">
+                        <div className="text-sm text-muted-foreground">
+                          Used by <span className="font-medium text-foreground">12 users</span>
                         </div>
-                        <div className="flex gap-2">
-                          <Button variant="outline" size="sm">
-                            <Edit className="w-4 h-4 mr-1" />
-                            Edit
-                          </Button>
-                          <Button variant="outline" size="sm">
-                            <Eye className="w-4 h-4 mr-1" />
-                            Preview
-                          </Button>
-                        </div>
+                        <Badge variant="outline" className="text-orange-600">Restricted Access</Badge>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button variant="outline" size="sm">
+                          <Edit className="w-4 h-4 mr-1" />
+                          Edit
+                        </Button>
+                        <Button variant="outline" size="sm">
+                          <Eye className="w-4 h-4 mr-1" />
+                          Preview
+                        </Button>
                       </div>
                     </div>
                   </CardContent>
