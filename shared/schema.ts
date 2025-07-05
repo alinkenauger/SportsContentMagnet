@@ -65,18 +65,21 @@ export const googleConnections = pgTable("google_connections", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-// Prompt templates for guide generation
+// Prompt templates for guide generation - Two-tier system: Brand Voice + Guide Structure
 export const promptTemplates = pgTable("prompt_templates", {
   id: serial("id").primaryKey(),
   userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   brandId: integer("brand_id").references(() => brands.id, { onDelete: "cascade" }), // nullable for personal account templates
   name: varchar("name", { length: 100 }).notNull(),
   description: text("description"),
-  type: varchar("type", { length: 50 }).notNull(), // 'predefined' or 'custom'
-  category: varchar("category", { length: 50 }).notNull(), // 'full_report', 'sop', 'step_by_step', 'workout', 'deeper_dive', 'custom'
+  type: varchar("type", { length: 50 }).notNull(), // 'global', 'brand', 'custom'
+  templateType: varchar("template_type", { length: 50 }).notNull(), // 'brand_voice' or 'guide_structure'
+  category: varchar("category", { length: 50 }).notNull(), // Brand Voice: 'beginner_friendly', 'detailed_indepth', 'entertaining', 'advanced_performance', 'worlds_greatest_teacher' | Guide Structure: 'step_by_step', 'sop', 'workout', 'detailed_analysis', 'next_step'
   analysisPrompt: text("analysis_prompt").notNull(),
   guidePrompt: text("guide_prompt").notNull(),
   personalizationPrompt: text("personalization_prompt"),
+  specialFeatures: text("special_features"), // JSON string for special features like timestamp buttons, tracking sheets, etc.
+  minimumGuides: integer("minimum_guides").default(0), // For "Next Step" template requiring 10+ guides
   isActive: boolean("is_active").default(true),
   sortOrder: integer("sort_order").default(0),
   createdAt: timestamp("created_at").defaultNow(),

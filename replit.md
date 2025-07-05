@@ -307,6 +307,13 @@ Changelog:
   * **SYSTEM OPERATIONS**: Client management, statistics reset, cache clearing, data export, and maintenance mode
   * **USER ACCOUNT ACCESS**: "Login as User" functionality to access any user's dashboard for support
   * **ROLE-BASED SECURITY**: Global admin access restricted to specific user IDs with proper authentication middleware
+- July 05, 2025. Restructured prompt template system into comprehensive two-tier architecture:
+  * **BRAND VOICE TEMPLATES**: Control AI writing style and personality (Beginner-Friendly, Detailed & In-Depth, Entertaining, Advanced Performance, World's Greatest Teacher)
+  * **GUIDE STRUCTURE TEMPLATES**: Control format and layout (Step-By-Step with timestamp buttons, SOP for employees, Workout with tracking sheets, Detailed Analysis 7+ pages, Next Step for 10+ guides)
+  * **SPECIAL FEATURES INTEGRATION**: Timestamp navigation, progress tracking, comprehensive analysis, experience requirements
+  * **TWO-TIER COMBINATION**: Users select one Brand Voice + one Guide Structure for complete customization
+  * **ADMIN INTERFACE UPDATE**: Templates tab now shows both categories with usage statistics and special feature indicators
+  * **NON-TECHNICAL FRIENDLY**: Clear explanations for users without AI knowledge to understand voice vs structure differences
 ```
 
 ## User Preferences
