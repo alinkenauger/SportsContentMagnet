@@ -556,9 +556,8 @@ export default function AdminDashboard() {
                 <Card className="relative">
                   <Badge variant="outline" className="absolute top-3 right-3 z-10">Active</Badge>
                   <CardHeader>
-                    <CardTitle className="text-lg flex items-center gap-2 pr-16">
+                    <CardTitle className="text-lg pr-16">
                       Step-By-Step
-                      <Badge variant="secondary" className="text-xs">Recent</Badge>
                     </CardTitle>
                     <CardDescription>Clear numbered instructions with one-click video timestamps</CardDescription>
                   </CardHeader>
@@ -588,9 +587,8 @@ export default function AdminDashboard() {
                 <Card className="relative">
                   <Badge variant="outline" className="absolute top-3 right-3 z-10">Active</Badge>
                   <CardHeader>
-                    <CardTitle className="text-lg flex items-center gap-2 pr-16">
+                    <CardTitle className="text-lg pr-16">
                       SOP
-                      <Badge variant="secondary" className="text-xs">Recent</Badge>
                     </CardTitle>
                     <CardDescription>Professional document for employee implementation</CardDescription>
                   </CardHeader>
@@ -620,9 +618,8 @@ export default function AdminDashboard() {
                 <Card className="relative">
                   <Badge variant="outline" className="absolute top-3 right-3 z-10">Active</Badge>
                   <CardHeader>
-                    <CardTitle className="text-lg flex items-center gap-2 pr-16">
+                    <CardTitle className="text-lg pr-16">
                       Workout
-                      <Badge variant="secondary" className="text-xs">Recent</Badge>
                     </CardTitle>
                     <CardDescription>Training plan with tracking sheets for sets, reps, and progress</CardDescription>
                   </CardHeader>
@@ -652,9 +649,8 @@ export default function AdminDashboard() {
                 <Card className="relative">
                   <Badge variant="outline" className="absolute top-3 right-3 z-10">Active</Badge>
                   <CardHeader>
-                    <CardTitle className="text-lg flex items-center gap-2 pr-16">
+                    <CardTitle className="text-lg pr-16">
                       Detailed Analysis
-                      <Badge variant="secondary" className="text-xs">Recent</Badge>
                     </CardTitle>
                     <CardDescription>Comprehensive 7+ page guide with WHAT-WHERE-WHY-WHO-HOW structure</CardDescription>
                   </CardHeader>
