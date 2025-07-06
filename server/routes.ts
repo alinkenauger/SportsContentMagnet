@@ -1893,6 +1893,70 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Email Templates API
+  app.get("/api/email-templates", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const brandId = req.user.currentBrandId || null;
+      
+      const templates = await storage.getEmailTemplates(userId, brandId);
+      res.json(templates);
+    } catch (error) {
+      console.error("Error fetching email templates:", error);
+      res.status(500).json({ message: "Failed to fetch email templates" });
+    }
+  });
+
+  app.post("/api/email-templates", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const brandId = req.user.currentBrandId || null;
+      
+      const template = await storage.createEmailTemplate({
+        userId,
+        brandId,
+        ...req.body,
+      });
+      
+      res.json(template);
+    } catch (error) {
+      console.error("Error creating email template:", error);
+      res.status(500).json({ message: "Failed to create email template" });
+    }
+  });
+
+  // Email Integrations API
+  app.get("/api/email-integrations", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const brandId = req.user.currentBrandId || null;
+      
+      const integrations = await storage.getEmailIntegrations(userId, brandId);
+      res.json(integrations);
+    } catch (error) {
+      console.error("Error fetching email integrations:", error);
+      res.status(500).json({ message: "Failed to fetch email integrations" });
+    }
+  });
+
+  app.post("/api/email-integrations", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const brandId = req.user.currentBrandId || null;
+      
+      const integration = await storage.createEmailIntegration({
+        userId,
+        brandId,
+        ...req.body,
+      });
+      
+      res.json(integration);
+    } catch (error) {
+      console.error("Error creating email integration:", error);
+      res.status(500).json({ message: "Failed to create email integration" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

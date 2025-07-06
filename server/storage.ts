@@ -21,6 +21,8 @@ import {
   subscriptionPlans,
   userSubscriptions,
   brandUsers,
+  emailTemplates,
+  emailIntegrations,
   type User,
   type UpsertUser,
   type Brand,
@@ -47,6 +49,10 @@ import {
   type InsertKnowledgebaseUsageSettings,
   type GoogleConnection,
   type InsertGoogleConnection,
+  type EmailTemplate,
+  type InsertEmailTemplate,
+  type EmailIntegration,
+  type InsertEmailIntegration,
   type PromptTemplate,
   type InsertPromptTemplate,
   type MediaAsset,
@@ -268,6 +274,16 @@ export interface IStorage {
   createStorageBilling(billing: InsertStorageBilling): Promise<StorageBilling>;
   updateStorageBilling(id: number, data: Partial<InsertStorageBilling>): Promise<void>;
   getStorageBillingHistory(userId: string): Promise<StorageBilling[]>;
+
+  // Email template operations
+  getEmailTemplates(userId: string, brandId: number | null): Promise<EmailTemplate[]>;
+  createEmailTemplate(template: InsertEmailTemplate): Promise<EmailTemplate>;
+  updateEmailTemplate(id: number, template: Partial<InsertEmailTemplate>): Promise<EmailTemplate>;
+
+  // Email integration operations
+  getEmailIntegrations(userId: string, brandId: number | null): Promise<EmailIntegration[]>;
+  createEmailIntegration(integration: InsertEmailIntegration): Promise<EmailIntegration>;
+  updateEmailIntegration(id: number, integration: Partial<InsertEmailIntegration>): Promise<EmailIntegration>;
 }
 
 export class DatabaseStorage implements IStorage {

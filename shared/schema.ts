@@ -631,6 +631,57 @@ export const insertContentVariantSchema = createInsertSchema(contentVariants).om
   updatedAt: true,
 });
 
+// Email Templates - Customizable transactional emails
+export const emailTemplates = pgTable("email_templates", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").references(() => users.id).notNull(),
+  brandId: integer("brand_id").references(() => brands.id), // null = global user template
+  templateType: varchar("template_type").notNull(), // 'guide_delivery', 'welcome', 'password_reset'
+  subject: varchar("subject").notNull(),
+  htmlContent: text("html_content").notNull(),
+  isActive: boolean("is_active").default(true),
+  requiredVariables: jsonb("required_variables").notNull(), // Array of required variables like ['firstName', 'guideTitle']
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Email Integrations - Connected email marketing tools
+export const emailIntegrations = pgTable("email_integrations", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").references(() => users.id).notNull(),
+  brandId: integer("brand_id").references(() => brands.id), // null = global user integration
+  provider: varchar("provider").notNull(), // 'zapier', 'mailchimp', 'convertkit', 'activecampaign', 'hubspot'
+  webhookUrl: varchar("webhook_url"), // For Zapier webhooks
+  apiKey: varchar("api_key"), // Encrypted API key for direct integrations
+  listId: varchar("list_id"), // For email marketing lists
+  isActive: boolean("is_active").default(true),
+  settings: jsonb("settings"), // Provider-specific settings
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const emailTemplatesRelations = relations(emailTemplates, ({ one }) => ({
+  user: one(users, { fields: [emailTemplates.userId], references: [users.id] }),
+  brand: one(brands, { fields: [emailTemplates.brandId], references: [brands.id] }),
+}));
+
+export const emailIntegrationsRelations = relations(emailIntegrations, ({ one }) => ({
+  user: one(users, { fields: [emailIntegrations.userId], references: [users.id] }),
+  brand: one(brands, { fields: [emailIntegrations.brandId], references: [brands.id] }),
+}));
+
+export const insertEmailTemplateSchema = createInsertSchema(emailTemplates).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertEmailIntegrationSchema = createInsertSchema(emailIntegrations).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 export const insertGoogleConnectionSchema = createInsertSchema(googleConnections).omit({
   id: true,
   connectedAt: true,
@@ -714,6 +765,10 @@ export type PersonalizationRule = typeof personalizationRules.$inferSelect;
 export type InsertPersonalizationRule = z.infer<typeof insertPersonalizationRuleSchema>;
 export type ContentVariant = typeof contentVariants.$inferSelect;
 export type InsertContentVariant = z.infer<typeof insertContentVariantSchema>;
+export type EmailTemplate = typeof emailTemplates.$inferSelect;
+export type InsertEmailTemplate = z.infer<typeof insertEmailTemplateSchema>;
+export type EmailIntegration = typeof emailIntegrations.$inferSelect;
+export type InsertEmailIntegration = z.infer<typeof insertEmailIntegrationSchema>;
 export type GoogleConnection = typeof googleConnections.$inferSelect;
 export type InsertGoogleConnection = z.infer<typeof insertGoogleConnectionSchema>;
 export type Brand = typeof brands.$inferSelect;
