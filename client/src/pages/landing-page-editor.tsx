@@ -670,7 +670,7 @@ export default function LandingPageEditor() {
                 </Button>
               </div>
             ) : (
-              <div className="mb-4">
+              <div className="mb-4 cursor-pointer hover:bg-gray-50 p-2 rounded" onClick={handleClick}>
                 {element.content.items.map((item: string, index: number) => (
                   <div key={index} className="flex items-center gap-3 mb-2">
                     <CheckCircle className="h-5 w-5 text-green-600 flex-shrink-0" style={{ color: accentColor }} />

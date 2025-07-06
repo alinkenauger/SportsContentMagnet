@@ -1024,6 +1024,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Update landing page (for editor)
+  app.put('/api/landing/:customUrl', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { customUrl } = req.params;
+      const landingPage = await storage.getLandingPageByUrl(customUrl);
+      
+      if (!landingPage || landingPage.userId !== userId) {
+        return res.status(404).json({ message: "Landing page not found" });
+      }
+
+      const updatedData = req.body;
+      const updatedLandingPage = await storage.updateLandingPage(landingPage.id, updatedData);
+
+      res.json(updatedLandingPage);
+    } catch (error) {
+      console.error("Error updating landing page:", error);
+      res.status(500).json({ message: "Failed to update landing page" });
+    }
+  });
+
   app.post('/api/landing/:customUrl/submit', async (req, res) => {
     try {
       const { customUrl } = req.params;
