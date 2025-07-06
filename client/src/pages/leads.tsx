@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -22,6 +23,7 @@ import {
 import { format } from "date-fns";
 
 export default function Leads() {
+  const { user } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
   const [dateFilter, setDateFilter] = useState("all");
   const [sourceFilter, setSourceFilter] = useState("all");
@@ -29,12 +31,12 @@ export default function Leads() {
 
   // Fetch leads data
   const { data: leads, isLoading } = useQuery({
-    queryKey: ["/api/leads"],
+    queryKey: ["/api/leads", user?.currentBrandId],
   });
 
   // Fetch guides for filtering by landing page
   const { data: guides } = useQuery({
-    queryKey: ["/api/guides"],
+    queryKey: ["/api/guides", user?.currentBrandId],
   });
 
   // Filter leads based on search and filters

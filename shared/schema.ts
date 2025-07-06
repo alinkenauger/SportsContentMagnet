@@ -56,6 +56,22 @@ export const brands = pgTable("brands", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Brand users table - many-to-many relationship between users and brands with roles
+export const brandUsers = pgTable("brand_users", {
+  id: serial("id").primaryKey(),
+  brandId: integer("brand_id").notNull().references(() => brands.id, { onDelete: "cascade" }),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  role: varchar("role", { length: 20 }).notNull(), // 'admin', 'editor', 'viewer'
+  invitedBy: varchar("invited_by").references(() => users.id),
+  invitedAt: timestamp("invited_at").defaultNow(),
+  acceptedAt: timestamp("accepted_at"),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  unique().on(table.brandId, table.userId) // Prevent duplicate brand-user relationships
+]);
+
 export const googleConnections = pgTable("google_connections", {
   id: serial("id").primaryKey(),
   userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
@@ -569,6 +585,12 @@ export const insertBrandSchema = createInsertSchema(brands).omit({
   updatedAt: true,
 });
 
+export const insertBrandUserSchema = createInsertSchema(brandUsers).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 export const insertPromptTemplateSchema = createInsertSchema(promptTemplates).omit({
   id: true,
   createdAt: true,
@@ -626,6 +648,8 @@ export type GoogleConnection = typeof googleConnections.$inferSelect;
 export type InsertGoogleConnection = z.infer<typeof insertGoogleConnectionSchema>;
 export type Brand = typeof brands.$inferSelect;
 export type InsertBrand = z.infer<typeof insertBrandSchema>;
+export type BrandUser = typeof brandUsers.$inferSelect;
+export type InsertBrandUser = z.infer<typeof insertBrandUserSchema>;
 export type PromptTemplate = typeof promptTemplates.$inferSelect;
 export type InsertPromptTemplate = z.infer<typeof insertPromptTemplateSchema>;
 export type MediaAsset = typeof mediaAssets.$inferSelect;

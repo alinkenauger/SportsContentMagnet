@@ -31,12 +31,13 @@ interface AnalyticsData {
 }
 
 export default function Analytics() {
+  const { user } = useAuth();
   const { toast } = useToast();
   const [dateRange, setDateRange] = useState("30days");
   const [selectedGuide, setSelectedGuide] = useState<string>("all");
 
   const { data: analytics, isLoading: analyticsLoading } = useQuery<AnalyticsData>({
-    queryKey: ["/api/analytics", dateRange],
+    queryKey: ["/api/analytics", dateRange, user?.currentBrandId],
     onError: (error) => {
       if (isUnauthorizedError(error as Error)) {
         toast({
@@ -52,7 +53,7 @@ export default function Analytics() {
   });
 
   const { data: guides } = useQuery<Guide[]>({
-    queryKey: ["/api/guides"],
+    queryKey: ["/api/guides", user?.currentBrandId],
     onError: (error) => {
       if (isUnauthorizedError(error as Error)) {
         toast({

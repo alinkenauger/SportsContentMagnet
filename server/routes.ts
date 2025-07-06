@@ -1369,7 +1369,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/analytics', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const analytics = await storage.getAnalyticsByUser(userId);
+      // Get current brand from database
+      const user = await storage.getUser(userId);
+      const currentBrandId = user?.currentBrandId;
+      const analytics = await storage.getAnalyticsByUser(userId, currentBrandId);
       res.json(analytics);
     } catch (error) {
       console.error("Error fetching analytics:", error);
@@ -1381,7 +1384,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/leads', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const leads = await storage.getLeadsByUser(userId);
+      // Get current brand from database
+      const user = await storage.getUser(userId);
+      const currentBrandId = user?.currentBrandId || null;
+      const leads = await storage.getLeadsByUserAndBrand(userId, currentBrandId);
       res.json(leads);
     } catch (error) {
       console.error("Error fetching leads:", error);

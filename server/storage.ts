@@ -108,6 +108,7 @@ export interface IStorage {
   // Lead operations
   createLead(lead: InsertLead): Promise<Lead>;
   getLeadsByUser(userId: string): Promise<Lead[]>;
+  getLeadsByUserAndBrand(userId: string, brandId: number | null): Promise<Lead[]>;
   getLeadsByGuide(guideId: number): Promise<Lead[]>;
 
   // QR code operations
@@ -508,6 +509,41 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(leads.createdAt));
   }
 
+  async getLeadsByUserAndBrand(userId: string, brandId: number | null): Promise<Lead[]> {
+    const whereConditions = [eq(leads.userId, userId)];
+    
+    let query = db
+      .select({
+        id: leads.id,
+        landingPageId: leads.landingPageId,
+        guideId: leads.guideId,
+        userId: leads.userId,
+        email: leads.email,
+        firstName: leads.firstName,
+        lastName: leads.lastName,
+        phone: leads.phone,
+        smsConsent: leads.smsConsent,
+        tags: leads.tags,
+        customFieldData: leads.customFieldData,
+        ipAddress: leads.ipAddress,
+        userAgent: leads.userAgent,
+        referrer: leads.referrer,
+        createdAt: leads.createdAt,
+      })
+      .from(leads)
+      .innerJoin(guides, eq(leads.guideId, guides.id));
+    
+    if (brandId === null) {
+      whereConditions.push(isNull(guides.brandId));
+    } else if (brandId !== undefined) {
+      whereConditions.push(eq(guides.brandId, brandId));
+    }
+    
+    return await query
+      .where(and(...whereConditions))
+      .orderBy(desc(leads.createdAt));
+  }
+
   async getLeadsByGuide(guideId: number): Promise<Lead[]> {
     return await db
       .select()
@@ -573,12 +609,12 @@ export class DatabaseStorage implements IStorage {
 
     // Build where conditions for leads (need to join with guides to filter by brand)
     const leadsWhereConditions = [eq(leads.userId, userId)];
-    let leadsQuery = db
-      .select({ totalLeads: count(leads.id) })
-      .from(leads);
     
+    let leadsQuery;
     if (brandId !== undefined) {
-      leadsQuery = leadsQuery
+      leadsQuery = db
+        .select({ totalLeads: count(leads.id) })
+        .from(leads)
         .innerJoin(guides, eq(leads.guideId, guides.id));
       
       if (brandId === null) {
@@ -586,6 +622,10 @@ export class DatabaseStorage implements IStorage {
       } else {
         leadsWhereConditions.push(eq(guides.brandId, brandId));
       }
+    } else {
+      leadsQuery = db
+        .select({ totalLeads: count(leads.id) })
+        .from(leads);
     }
 
     const [leadsCount] = await leadsQuery.where(and(...leadsWhereConditions));
