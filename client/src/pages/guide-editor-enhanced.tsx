@@ -366,15 +366,19 @@ export default function GuideEditorEnhanced() {
 
   const handleCanvasDrop = (e: DragEvent<HTMLDivElement>, insertIndex?: number, columnId?: string, parentId?: string) => {
     e.preventDefault();
+    e.stopPropagation();
+    
+    // Use dragOverIndex if insertIndex is not provided
+    const targetIndex = insertIndex !== undefined ? insertIndex : dragOverIndex;
     
     if (draggedFromToolbar) {
-      addElement(draggedFromToolbar, columnId, parentId, insertIndex);
+      addElement(draggedFromToolbar, columnId, parentId, targetIndex);
       setDraggedFromToolbar(null);
       setDropZoneVisible(false);
       setDragOverColumn(null);
       setDragOverIndex(null);
     } else if (draggedElement) {
-      moveElement(draggedElement, insertIndex, columnId, parentId);
+      moveElement(draggedElement, targetIndex, columnId, parentId);
       setDraggedElement(null);
       setDragOverIndex(null);
     }
@@ -412,13 +416,17 @@ export default function GuideEditorEnhanced() {
     const newElements = [...elements];
     const [movedElement] = newElements.splice(elementIndex, 1);
     
-    // Update element properties
-    movedElement.columnId = columnId;
-    movedElement.parentId = parentId;
+    // Update element properties - ensure we don't accidentally hide elements
+    movedElement.columnId = columnId || movedElement.columnId;
+    movedElement.parentId = parentId || movedElement.parentId;
     
-    if (insertIndex !== undefined) {
-      newElements.splice(insertIndex, 0, movedElement);
+    // Handle insertion logic more carefully
+    if (insertIndex !== undefined && insertIndex >= 0) {
+      // Adjust insertion index if we're moving element to a position after its original position
+      const adjustedIndex = insertIndex > elementIndex ? insertIndex - 1 : insertIndex;
+      newElements.splice(adjustedIndex, 0, movedElement);
     } else {
+      // If no specific index, append to end
       newElements.push(movedElement);
     }
     
