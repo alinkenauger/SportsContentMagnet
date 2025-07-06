@@ -181,11 +181,15 @@ export default function SalesPage() {
             ⚠️ YOUR LEAD MAGNETS ARE DYING (AND YOUR COMPETITORS KNOW IT)
           </div>
           
-          <h1 className="text-5xl md:text-7xl font-black mb-6 leading-tight">
-            <span className="text-gray-900">The Secret to </span>
-            <span className="bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">10X MORE LEADS</span>
-            <span className="block text-gray-900 mt-2">From The SAME Traffic</span>
+          <h1 className="text-5xl md:text-7xl font-black mb-4 leading-tight">
+            <span className="text-gray-900">ConvertMag.net Can </span>
+            <span className="bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">10x Lead Flow</span>
+            <span className="block text-gray-900 mt-2">From The Same Traffic...</span>
           </h1>
+          
+          <p className="text-2xl md:text-3xl font-bold text-gray-700 mb-6">
+            ... and instantly create your high converting funnels for you.
+          </p>
           
           <div className="bg-yellow-100 border-l-4 border-yellow-500 p-6 rounded-r-lg max-w-4xl mx-auto mb-8 text-left">
             <p className="text-xl font-bold text-gray-900 mb-4">
