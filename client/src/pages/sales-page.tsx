@@ -392,19 +392,28 @@ export default function SalesPage() {
       </section>
 
       {/* Proven Results Section */}
-      <section className="bg-white py-16">
+      <section className="bg-gradient-to-r from-yellow-400 to-orange-500 py-16">
         <div className="container mx-auto px-4">
-          <div className="bg-yellow-100 border-l-4 border-yellow-500 p-6 rounded-r-lg max-w-4xl mx-auto mb-8 text-left">
-            <p className="text-xl font-bold text-gray-900 mb-4">
-              🔥 <strong>PROVEN RESULTS:</strong> One content creator's 2024 test revealed...
-            </p>
-            <div className="bg-white p-4 rounded-lg border-2 border-green-500">
-              <p className="text-2xl font-black text-center text-green-800">
-                5 Video-Specific Lead Magnets = Same Results as 25+ Category-Based Lead Magnets
-              </p>
-              <p className="text-center text-gray-600 mt-2 font-semibold">
-                That's a 10X improvement in lead generation efficiency
-              </p>
+          <div className="max-w-6xl mx-auto text-center">
+            <div className="bg-white text-orange-600 rounded-full px-6 py-3 inline-block mb-6 font-bold text-lg animate-pulse">
+              🔥 PROVEN RESULTS FROM 2024 TEST
+            </div>
+            
+            <h2 className="text-4xl md:text-5xl font-black mb-8 text-white">
+              The Discovery That Changed Everything
+            </h2>
+            
+            <div className="bg-white bg-opacity-20 rounded-3xl p-8 backdrop-blur-sm mb-8">
+              <div className="bg-white rounded-2xl p-8 shadow-2xl">
+                <p className="text-3xl md:text-4xl font-black text-center text-gray-900 mb-4">
+                  5 Video-Specific Lead Magnets = Same Results as 25+ Category-Based Lead Magnets
+                </p>
+                <div className="bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-xl p-4">
+                  <p className="text-2xl font-bold text-center">
+                    That's a 10X improvement in lead generation efficiency
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
           
