@@ -221,15 +221,7 @@ export default function GuideLanding() {
                   </div>
                 </div>
               </div>
-              
-              {/* Social Proof */}
-              {(landingPage as any).socialProof && (
-                <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4 text-center">
-                  <p className="text-blue-800 font-semibold">
-                    📺 {(landingPage as any).socialProof}
-                  </p>
-                </div>
-              )}
+
             </div>
 
             {/* Professional Benefits */}

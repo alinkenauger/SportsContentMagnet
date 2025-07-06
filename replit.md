@@ -107,6 +107,11 @@ VidMagnet is a comprehensive SAAS application that transforms YouTube videos int
 
 ```
 Changelog:
+- July 06, 2025. Enhanced drag-and-drop interface for improved usability:
+  * Increased drop zones from 8px to 32px height (4x larger) for easier targeting
+  * Added always-visible drop zone indicators with "Drop Zone" text and hover effects
+  * Simplified column resizing to single drag dot between columns with intuitive visual feedback
+  * Removed endorsement boxes from landing pages for cleaner, professional appearance
 - July 01, 2025. Initial setup
 - July 01, 2025. Updated app name to "VidMagnet"
 - July 01, 2025. Added SMS collection feature with legal compliance:
