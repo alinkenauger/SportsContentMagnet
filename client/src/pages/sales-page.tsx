@@ -408,7 +408,6 @@ export default function SalesPage() {
           </div>
         </div>
       </section>
-
       {/* Urgency/Scarcity Section */}
       <section className="bg-gradient-to-r from-red-600 to-pink-600 py-16 text-white">
         <div className="container mx-auto px-4">
@@ -451,7 +450,6 @@ export default function SalesPage() {
           </div>
         </div>
       </section>
-
       {/* Problem Statement Section */}
       <section className="bg-white py-16">
         <div className="container mx-auto px-4">
@@ -525,7 +523,7 @@ export default function SalesPage() {
                   <div className="w-16 h-16 bg-green-600 rounded-full flex items-center justify-center mx-auto mb-4">
                     <Zap className="text-white h-8 w-8" />
                   </div>
-                  <h3 className="text-2xl font-bold text-green-800">ConvertMag.net Solution</h3>
+                  <h3 className="text-2xl font-bold text-green-800">ConvertMag.net</h3>
                 </div>
                 <div className="space-y-4 text-center">
                   <div className="bg-white rounded-lg p-4 shadow-sm">
@@ -563,7 +561,6 @@ export default function SalesPage() {
           </div>
         </div>
       </section>
-
       {/* AI Solution Section */}
       <section className="bg-white py-16">
         <div className="container mx-auto px-4">
@@ -631,7 +628,6 @@ export default function SalesPage() {
           </div>
         </div>
       </section>
-
       {/* Customization & Editing Section */}
       <section className="bg-gradient-to-r from-purple-50 to-blue-50 py-16">
         <div className="container mx-auto px-4">
@@ -675,7 +671,6 @@ export default function SalesPage() {
           </div>
         </div>
       </section>
-
       {/* Library Feature Section */}
       <section className="bg-white py-16">
         <div className="container mx-auto px-4">
@@ -743,7 +738,6 @@ export default function SalesPage() {
           </div>
         </div>
       </section>
-
       {/* Special Offers & Content Types Section */}
       <section className="bg-gradient-to-r from-orange-50 to-red-50 py-16">
         <div className="container mx-auto px-4">
@@ -780,7 +774,6 @@ export default function SalesPage() {
           </div>
         </div>
       </section>
-
       {/* CRM & Email Marketing Integration Section */}
       <section className="bg-white py-16">
         <div className="container mx-auto px-4">
@@ -866,7 +859,6 @@ export default function SalesPage() {
           </div>
         </div>
       </section>
-
       {/* How It Works Section */}
       <section className="bg-gradient-to-r from-slate-50 to-blue-50 py-16">
         <div className="container mx-auto px-4">
@@ -932,7 +924,6 @@ export default function SalesPage() {
           </div>
         </div>
       </section>
-
       {/* Origin Story Section */}
       <section className="bg-gradient-to-r from-blue-50 to-purple-50 py-16">
         <div className="container mx-auto px-4">
@@ -1022,7 +1013,6 @@ export default function SalesPage() {
           </div>
         </div>
       </section>
-
       {/* Why Choose ConvertMag.net Section */}
       <section className="bg-white py-16">
         <div className="container mx-auto px-4">
@@ -1123,7 +1113,6 @@ export default function SalesPage() {
           </div>
         </div>
       </section>
-
       {/* Features Section */}
       <section className="container mx-auto px-4 py-16">
         <div className="text-center mb-12">
@@ -1149,7 +1138,6 @@ export default function SalesPage() {
           ))}
         </div>
       </section>
-
       {/* Testimonials Section */}
       <section className="bg-white py-16">
         <div className="container mx-auto px-4">
@@ -1178,7 +1166,6 @@ export default function SalesPage() {
           </div>
         </div>
       </section>
-
       {/* Pricing Section */}
       <section className="container mx-auto px-4 py-16">
         <div className="text-center mb-12">
@@ -1226,7 +1213,6 @@ export default function SalesPage() {
           ))}
         </div>
       </section>
-
       {/* CTA Section */}
       <section className="bg-gradient-to-r from-blue-600 to-purple-600 text-white py-16">
         <div className="container mx-auto px-4 text-center">
@@ -1262,7 +1248,6 @@ export default function SalesPage() {
           </div>
         </div>
       </section>
-
       {/* Risk Reversal & Final CTA Section */}
       <section className="bg-gradient-to-r from-green-600 to-emerald-600 py-20 text-white">
         <div className="container mx-auto px-4">
@@ -1358,7 +1343,6 @@ export default function SalesPage() {
           </div>
         </div>
       </section>
-
       {/* FAQ Section */}
       <section className="bg-gray-50 py-16">
         <div className="container mx-auto px-4">
@@ -1407,7 +1391,6 @@ export default function SalesPage() {
           </div>
         </div>
       </section>
-
       {/* Footer */}
       <footer className="bg-gray-900 text-white py-12">
         <div className="container mx-auto px-4">
