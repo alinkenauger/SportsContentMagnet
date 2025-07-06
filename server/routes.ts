@@ -1259,8 +1259,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         fileSizeMB: (file.size / (1024 * 1024)).toString(),
         fileType: file.mimetype,
         fileUrl: null, // Will be updated after actual storage
-        processingCostUSD: "0",
-        storageCostUSD: "0"
       });
 
       res.json({

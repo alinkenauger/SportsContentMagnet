@@ -173,9 +173,9 @@ export default function AdminDashboard() {
                 <Users className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{isLoadingStats ? "..." : stats?.totalUsers || 0}</div>
+                <div className="text-2xl font-bold">{isLoadingStats ? "..." : (stats as any)?.totalUsers || 0}</div>
                 <p className="text-xs text-muted-foreground">
-                  +{stats?.newUsersLast30Days || 0} this month
+                  +{(stats as any)?.newUsersLast30Days || 0} this month
                 </p>
               </CardContent>
             </Card>
@@ -186,7 +186,7 @@ export default function AdminDashboard() {
                 <FileText className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{isLoadingStats ? "..." : stats?.totalGuides || 0}</div>
+                <div className="text-2xl font-bold">{isLoadingStats ? "..." : (stats as any)?.totalGuides || 0}</div>
                 <p className="text-xs text-muted-foreground">
                   Content generated
                 </p>
@@ -199,7 +199,7 @@ export default function AdminDashboard() {
                 <Mail className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{isLoadingStats ? "..." : stats?.totalLeads || 0}</div>
+                <div className="text-2xl font-bold">{isLoadingStats ? "..." : (stats as any)?.totalLeads || 0}</div>
                 <p className="text-xs text-muted-foreground">
                   Lead captures
                 </p>
@@ -212,7 +212,7 @@ export default function AdminDashboard() {
                 <Eye className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{isLoadingStats ? "..." : stats?.totalViews || 0}</div>
+                <div className="text-2xl font-bold">{isLoadingStats ? "..." : (stats as any)?.totalViews || 0}</div>
                 <p className="text-xs text-muted-foreground">
                   Page views
                 </p>
@@ -321,12 +321,12 @@ export default function AdminDashboard() {
                     <TableRow>
                       <TableCell colSpan={7} className="text-center">Loading users...</TableCell>
                     </TableRow>
-                  ) : users?.length === 0 ? (
+                  ) : (users as any)?.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={7} className="text-center">No users found</TableCell>
                     </TableRow>
                   ) : (
-                    users?.map((user: User) => (
+                    (users as any)?.map((user: any) => (
                       <TableRow key={user.id}>
                         <TableCell className="font-medium">{getUserDisplayName(user)}</TableCell>
                         <TableCell>{user.email}</TableCell>
