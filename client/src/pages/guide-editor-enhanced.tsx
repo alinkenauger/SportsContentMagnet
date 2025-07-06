@@ -595,7 +595,9 @@ export default function GuideEditorEnhanced() {
               <Input
                 value={element.content.text || ''}
                 onChange={(e) => updateElement(element.id, { ...element.content, text: e.target.value })}
-                className="font-semibold text-lg"
+                className="font-bold text-lg"
+                placeholder="Enter heading text"
+                autoFocus
               />
               <Select
                 value={element.content.level?.toString() || '2'}
@@ -614,7 +616,12 @@ export default function GuideEditorEnhanced() {
             </div>
           ) : (
             <HeadingTag 
-              className="font-semibold cursor-pointer"
+              className={`font-bold text-slate-800 cursor-pointer mb-6 ${
+                element.content.level === 1 ? 'text-3xl md:text-4xl' : 
+                element.content.level === 2 ? 'text-2xl md:text-3xl' : 
+                element.content.level === 3 ? 'text-xl md:text-2xl' : 
+                'text-lg md:text-xl'
+              }`}
               onClick={() => setIsEditing(element.id)}
             >
               {element.content.text || 'Click to edit heading'}
@@ -631,14 +638,15 @@ export default function GuideEditorEnhanced() {
             value={element.content.text || ''}
             onChange={(e) => updateElement(element.id, { ...element.content, text: e.target.value })}
             className="min-h-20"
+            placeholder="Enter paragraph text"
             autoFocus
           />
         ) : (
           <p 
-            className="cursor-pointer"
+            className="text-lg text-slate-700 leading-relaxed cursor-pointer mb-6"
             onClick={() => setIsEditing(element.id)}
           >
-            {element.content.text || 'Click to edit...'}
+            {element.content.text || 'Click to edit paragraph text...'}
           </p>
         );
 
@@ -1096,14 +1104,33 @@ export default function GuideEditorEnhanced() {
             )}
           </div>
 
-          {/* Enhanced Editor Canvas */}
+          {/* Enhanced Editor Canvas - Match Guide View Design */}
           <div 
-            className={`flex-1 overflow-y-auto p-8 ${dropZoneVisible ? 'bg-primary/5' : ''}`}
+            className={`flex-1 overflow-y-auto bg-slate-50 ${dropZoneVisible ? 'bg-primary/5' : ''}`}
             onDragOver={handleDragOver}
             onDrop={(e) => handleCanvasDrop(e)}
             onDragLeave={handleElementDragLeave}
           >
-            <div className="max-w-4xl mx-auto space-y-2">
+            {/* Guide-Style Header */}
+            <div className="bg-white border-b border-slate-200 px-8 py-6">
+              <div className="max-w-4xl mx-auto">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h1 className="text-xl font-bold text-slate-800">Practice Guide Editor</h1>
+                    <p className="text-sm text-slate-600">Create your professional training guide</p>
+                  </div>
+                  <Badge variant="secondary" className="bg-blue-100 text-blue-700">
+                    Preview Mode
+                  </Badge>
+                </div>
+              </div>
+            </div>
+
+            {/* Main Guide Content Area */}
+            <div className="px-8 py-8">
+              <div className="max-w-4xl mx-auto">
+                {/* Guide Content Card - Matches guide-view.tsx exactly */}
+                <div className="bg-white rounded-xl shadow-sm p-8 space-y-2">
               {elements.filter(el => !el.parentId).length === 0 ? (
                 <div className="text-center py-16 text-muted-foreground">
                   <Type className="h-12 w-12 mx-auto mb-4 opacity-50" />
@@ -1170,6 +1197,8 @@ export default function GuideEditorEnhanced() {
                   <p className="text-sm text-muted-foreground">Drop element here</p>
                 </div>
               )}
+                </div>
+              </div>
             </div>
           </div>
         </div>
