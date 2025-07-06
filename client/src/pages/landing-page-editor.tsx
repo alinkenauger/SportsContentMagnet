@@ -572,6 +572,14 @@ export default function LandingPageEditor() {
                   />
                 </div>
                 <div>
+                  <Label>Button URL</Label>
+                  <Input
+                    value={element.content.url || ''}
+                    onChange={(e) => updateElement(element.id, { ...element.content, url: e.target.value })}
+                    placeholder="https://example.com"
+                  />
+                </div>
+                <div>
                   <Label>Button Style</Label>
                   <Select 
                     value={element.content.style} 
@@ -584,9 +592,29 @@ export default function LandingPageEditor() {
                       <SelectItem value="primary">Primary</SelectItem>
                       <SelectItem value="secondary">Secondary</SelectItem>
                       <SelectItem value="outline">Outline</SelectItem>
+                      <SelectItem value="custom">Custom Color</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
+                {element.content.style === 'custom' && (
+                  <div>
+                    <Label>Custom Color</Label>
+                    <div className="flex gap-2">
+                      <Input
+                        type="color"
+                        value={element.content.customColor || '#3b82f6'}
+                        onChange={(e) => updateElement(element.id, { ...element.content, customColor: e.target.value })}
+                        className="w-16 h-10 p-1 rounded"
+                      />
+                      <Input
+                        placeholder="#3b82f6"
+                        value={element.content.customColor || '#3b82f6'}
+                        onChange={(e) => updateElement(element.id, { ...element.content, customColor: e.target.value })}
+                        className="flex-1"
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
             ) : (
               <Button 
@@ -594,10 +622,13 @@ export default function LandingPageEditor() {
                 className="w-full mb-4"
                 style={{ 
                   backgroundColor: element.content.style === 'primary' ? primaryColor : 
-                                 element.content.style === 'secondary' ? secondaryColor : 'transparent',
-                  borderColor: primaryColor
+                                 element.content.style === 'secondary' ? secondaryColor : 
+                                 element.content.style === 'custom' ? element.content.customColor || '#3b82f6' : 'transparent',
+                  borderColor: element.content.style === 'custom' ? element.content.customColor || '#3b82f6' : primaryColor,
+                  color: element.content.style === 'custom' ? 'white' : undefined
                 }}
                 variant={element.content.style === 'outline' ? 'outline' : 'default'}
+                onClick={element.content.url ? () => window.open(element.content.url, '_blank') : undefined}
               >
                 {element.content.text}
               </Button>

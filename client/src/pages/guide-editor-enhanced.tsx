@@ -1444,37 +1444,73 @@ export default function GuideEditorEnhanced() {
 
       case 'button':
         return isActive ? (
-          <div className="space-y-2">
-            <Input
-              placeholder="Button text"
-              value={element.content.text || ''}
-              onChange={(e) => updateElement(element.id, { ...element.content, text: e.target.value })}
-            />
-            <Input
-              placeholder="Button URL"
-              value={element.content.url || ''}
-              onChange={(e) => updateElement(element.id, { ...element.content, url: e.target.value })}
-            />
-            <Select
-              value={element.content.style || 'primary'}
-              onValueChange={(value) => updateElement(element.id, { ...element.content, style: value })}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="primary">Primary</SelectItem>
-                <SelectItem value="secondary">Secondary</SelectItem>
-                <SelectItem value="outline">Outline</SelectItem>
-              </SelectContent>
-            </Select>
+          <div className="space-y-3 p-4 border rounded bg-white">
+            <div>
+              <label className="text-sm font-medium text-gray-700 mb-1 block">Button Text</label>
+              <Input
+                placeholder="Button text"
+                value={element.content.text || ''}
+                onChange={(e) => updateElement(element.id, { ...element.content, text: e.target.value })}
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium text-gray-700 mb-1 block">Button URL</label>
+              <Input
+                placeholder="https://example.com"
+                value={element.content.url || ''}
+                onChange={(e) => updateElement(element.id, { ...element.content, url: e.target.value })}
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium text-gray-700 mb-1 block">Button Style</label>
+              <Select
+                value={element.content.style || 'primary'}
+                onValueChange={(value) => updateElement(element.id, { ...element.content, style: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="primary">Primary</SelectItem>
+                  <SelectItem value="secondary">Secondary</SelectItem>
+                  <SelectItem value="outline">Outline</SelectItem>
+                  <SelectItem value="custom">Custom Color</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            {element.content.style === 'custom' && (
+              <div>
+                <label className="text-sm font-medium text-gray-700 mb-1 block">Custom Color</label>
+                <div className="flex gap-2">
+                  <Input
+                    type="color"
+                    value={element.content.customColor || '#3b82f6'}
+                    onChange={(e) => updateElement(element.id, { ...element.content, customColor: e.target.value })}
+                    className="w-16 h-10 p-1 rounded"
+                  />
+                  <Input
+                    placeholder="#3b82f6"
+                    value={element.content.customColor || '#3b82f6'}
+                    onChange={(e) => updateElement(element.id, { ...element.content, customColor: e.target.value })}
+                    className="flex-1"
+                  />
+                </div>
+              </div>
+            )}
           </div>
         ) : (
           <div className="text-center">
             <Button
-              variant={element.content.style === 'primary' ? 'default' : element.content.style === 'secondary' ? 'secondary' : 'outline'}
-              onClick={() => setIsEditing(element.id)}
+              variant={element.content.style === 'primary' ? 'default' : 
+                      element.content.style === 'secondary' ? 'secondary' : 
+                      element.content.style === 'outline' ? 'outline' : 'default'}
+              onClick={element.content.url ? () => window.open(element.content.url, '_blank') : () => setIsEditing(element.id)}
               className="cursor-pointer"
+              style={element.content.style === 'custom' ? {
+                backgroundColor: element.content.customColor || '#3b82f6',
+                borderColor: element.content.customColor || '#3b82f6',
+                color: 'white'
+              } : undefined}
             >
               {element.content.text || 'Button Text'}
             </Button>
@@ -1548,15 +1584,15 @@ export default function GuideEditorEnhanced() {
         <div className="flex-1 flex overflow-hidden">
           {/* Enhanced Element Toolbar - Accordion Style */}
           <div className={`${isToolbarCollapsed ? 'w-12' : 'w-64'} border-r bg-card overflow-y-auto transition-all duration-300 ease-in-out relative`}>
-            {/* Toggle Button */}
-            <div className="absolute top-4 -right-3 z-10">
+            {/* Toggle Button - Fixed positioning */}
+            <div className="absolute top-4 right-2 z-20">
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => setIsToolbarCollapsed(!isToolbarCollapsed)}
-                className="h-6 w-6 p-0 rounded-full bg-background border shadow-sm hover:shadow-md transition-shadow"
+                className="h-8 w-8 p-0 rounded-full bg-background border shadow-md hover:shadow-lg transition-all duration-200 hover:scale-105"
               >
-                {isToolbarCollapsed ? <ChevronRight className="h-3 w-3" /> : <ChevronLeft className="h-3 w-3" />}
+                {isToolbarCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
               </Button>
             </div>
 
