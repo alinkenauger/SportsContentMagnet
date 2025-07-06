@@ -25,6 +25,8 @@ import AdminDashboard from "@/pages/admin";
 import TranscriptionTest from "@/pages/transcription-test";
 import StorageDashboard from "@/pages/storage-dashboard";
 import KnowledgeBaseSettings from "@/pages/knowledge-base-settings";
+import Pricing from "@/pages/pricing";
+import TeamManagement from "@/pages/team-management";
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -46,6 +48,8 @@ function Router() {
           <Route path="/settings" component={Settings} />
           <Route path="/storage" component={StorageDashboard} />
           <Route path="/knowledge-base" component={KnowledgeBaseSettings} />
+          <Route path="/pricing" component={Pricing} />
+          <Route path="/team" component={TeamManagement} />
           <Route path="/admin" component={AdminDashboard} />
           <Route path="/test-transcription" component={TranscriptionTest} />
         </>

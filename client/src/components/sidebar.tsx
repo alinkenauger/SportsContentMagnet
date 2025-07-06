@@ -13,7 +13,9 @@ import {
   Video,
   ChevronLeft,
   Building2,
-  ChevronRight
+  ChevronRight,
+  CreditCard,
+  UserCog
 } from "lucide-react";
 import { useState } from "react";
 import { useBrands, useSetCurrentBrand, useClearCurrentBrand } from "@/hooks/useBrands";
@@ -28,6 +30,8 @@ const navigation = [
   { name: "Content Library", href: "/content-library", icon: Book },
   { name: "Analytics", href: "/analytics", icon: BarChart3 },
   { name: "Leads", href: "/leads", icon: Users },
+  { name: "Team", href: "/team", icon: UserCog },
+  { name: "Pricing", href: "/pricing", icon: CreditCard },
   { name: "Settings", href: "/settings", icon: Settings },
 ];
 

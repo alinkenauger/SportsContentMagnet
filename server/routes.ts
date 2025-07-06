@@ -2,12 +2,13 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
-import { isGlobalAdmin } from "./adminAuth";
 import { setupGoogleAuth, isGoogleAuthenticated } from "./googleAuth";
 import { analyzeVideoContent, generatePracticeGuide, personalizeGuideContent } from "./services/openai";
 import { getYouTubeVideoData, transcribeVideo } from "./services/youtube";
 import { generateGuidePDF, generatePDFFilename } from "./services/pdfGenerator";
-import { insertGuideSchema, insertLandingPageSchema, insertLeadSchema, insertBrandingSettingsSchema, insertTrainingSettingsSchema, insertKnowledgebaseEntrySchema } from "@shared/schema";
+import { insertGuideSchema, insertLandingPageSchema, insertLeadSchema, insertBrandingSettingsSchema, insertTrainingSettingsSchema, insertKnowledgebaseEntrySchema, brandUsers, subscriptionPlans } from "@shared/schema";
+import { db } from "./db";
+import { eq } from "drizzle-orm";
 import QRCode from 'qrcode';
 import multer from 'multer';
 import { StorageCostManager } from "./services/storageManager";
@@ -1495,9 +1496,210 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Global Admin routes
+  // Initialize default subscription plans (run once)
   const { isGlobalAdmin } = await import('./adminAuth');
+  app.post('/api/subscription/init-plans', isGlobalAdmin, async (req, res) => {
+    try {
+      const plans = [
+        {
+          name: 'free',
+          displayName: 'Free',
+          price: '0.00',
+          currency: 'USD',
+          billingCycle: 'monthly',
+          maxLeads: 50,
+          maxVisits: 500,
+          maxBrands: 0, // Personal account only
+          customBranding: false,
+          whiteLabeling: false,
+          features: ['basic_guides', 'vidmagnet_branding'],
+          isActive: true
+        },
+        {
+          name: 'personal',
+          displayName: 'Personal',
+          price: '24.95',
+          currency: 'USD',
+          billingCycle: 'monthly',
+          maxLeads: null, // unlimited
+          maxVisits: null, // unlimited
+          maxBrands: 0, // Personal account only
+          customBranding: true,
+          whiteLabeling: false,
+          features: ['unlimited_guides', 'custom_branding', 'priority_support'],
+          isActive: true
+        },
+        {
+          name: 'business',
+          displayName: 'Business',
+          price: '33.00',
+          currency: 'USD',
+          billingCycle: 'monthly',
+          maxLeads: null, // unlimited
+          maxVisits: null, // unlimited
+          maxBrands: null, // unlimited brands - $33 per brand
+          customBranding: true,
+          whiteLabeling: true,
+          features: ['unlimited_guides', 'white_labeling', 'team_management', 'priority_support'],
+          isActive: true
+        }
+      ];
 
+      // Insert plans if they don't exist
+      for (const plan of plans) {
+        await db.insert(subscriptionPlans)
+          .values(plan)
+          .onConflictDoNothing();
+      }
+
+      res.json({ message: "Subscription plans initialized successfully" });
+    } catch (error) {
+      console.error("Error initializing subscription plans:", error);
+      res.status(500).json({ message: "Failed to initialize subscription plans" });
+    }
+  });
+
+  // Subscription routes
+  app.get('/api/subscription/plans', async (req, res) => {
+    try {
+      const plans = await storage.getSubscriptionPlans();
+      res.json(plans);
+    } catch (error) {
+      console.error("Error fetching subscription plans:", error);
+      res.status(500).json({ message: "Failed to fetch subscription plans" });
+    }
+  });
+
+  app.get('/api/subscription/current', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const subscription = await storage.getUserSubscription(userId);
+      res.json(subscription);
+    } catch (error) {
+      console.error("Error fetching user subscription:", error);
+      res.status(500).json({ message: "Failed to fetch subscription" });
+    }
+  });
+
+  app.post('/api/subscription/create', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const subscriptionData = { ...req.body, userId };
+      const subscription = await storage.createUserSubscription(subscriptionData);
+      res.json(subscription);
+    } catch (error) {
+      console.error("Error creating subscription:", error);
+      res.status(500).json({ message: "Failed to create subscription" });
+    }
+  });
+
+  // Brand user management routes
+  app.get('/api/brands/:brandId/users', isAuthenticated, async (req: any, res) => {
+    try {
+      const { brandId } = req.params;
+      const userId = req.user.claims.sub;
+      
+      // Check if user has admin access to this brand
+      const userRole = await storage.getBrandUserRole(userId, parseInt(brandId));
+      if (!userRole || userRole !== 'admin') {
+        return res.status(403).json({ message: "Admin access required for this brand" });
+      }
+
+      const brandUsers = await storage.getBrandUsers(parseInt(brandId));
+      res.json(brandUsers);
+    } catch (error) {
+      console.error("Error fetching brand users:", error);
+      res.status(500).json({ message: "Failed to fetch brand users" });
+    }
+  });
+
+  app.post('/api/brands/:brandId/users', isAuthenticated, async (req: any, res) => {
+    try {
+      const { brandId } = req.params;
+      const userId = req.user.claims.sub;
+      
+      // Check if user has admin access to this brand
+      const userRole = await storage.getBrandUserRole(userId, parseInt(brandId));
+      if (!userRole || userRole !== 'admin') {
+        return res.status(403).json({ message: "Admin access required for this brand" });
+      }
+
+      const brandUserData = { 
+        ...req.body, 
+        brandId: parseInt(brandId),
+        invitedBy: userId 
+      };
+      const brandUser = await storage.addUserToBrand(brandUserData);
+      res.json(brandUser);
+    } catch (error) {
+      console.error("Error adding user to brand:", error);
+      res.status(500).json({ message: "Failed to add user to brand" });
+    }
+  });
+
+  app.patch('/api/brand-users/:id/role', isAuthenticated, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const { role } = req.body;
+      const userId = req.user.claims.sub;
+      
+      // Get the brand user to check permissions
+      const [existingBrandUser] = await db.select().from(brandUsers).where(eq(brandUsers.id, parseInt(id)));
+      if (!existingBrandUser) {
+        return res.status(404).json({ message: "Brand user not found" });
+      }
+
+      // Check if current user has admin access to this brand
+      const userRole = await storage.getBrandUserRole(userId, existingBrandUser.brandId);
+      if (!userRole || userRole !== 'admin') {
+        return res.status(403).json({ message: "Admin access required for this brand" });
+      }
+
+      const updatedBrandUser = await storage.updateBrandUserRole(parseInt(id), role);
+      res.json(updatedBrandUser);
+    } catch (error) {
+      console.error("Error updating brand user role:", error);
+      res.status(500).json({ message: "Failed to update brand user role" });
+    }
+  });
+
+  app.delete('/api/brand-users/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const userId = req.user.claims.sub;
+      
+      // Get the brand user to check permissions
+      const [existingBrandUser] = await db.select().from(brandUsers).where(eq(brandUsers.id, parseInt(id)));
+      if (!existingBrandUser) {
+        return res.status(404).json({ message: "Brand user not found" });
+      }
+
+      // Check if current user has admin access to this brand
+      const userRole = await storage.getBrandUserRole(userId, existingBrandUser.brandId);
+      if (!userRole || userRole !== 'admin') {
+        return res.status(403).json({ message: "Admin access required for this brand" });
+      }
+
+      await storage.removeBrandUser(parseInt(id));
+      res.json({ message: "User removed from brand successfully" });
+    } catch (error) {
+      console.error("Error removing brand user:", error);
+      res.status(500).json({ message: "Failed to remove user from brand" });
+    }
+  });
+
+  app.get('/api/user/brands', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const userBrands = await storage.getUserBrands(userId);
+      res.json(userBrands);
+    } catch (error) {
+      console.error("Error fetching user brands:", error);
+      res.status(500).json({ message: "Failed to fetch user brands" });
+    }
+  });
+
+  // Global Admin routes
   // Admin: Get all users with stats
   app.get('/api/admin/users', isGlobalAdmin, async (req, res) => {
     try {

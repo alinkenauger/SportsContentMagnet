@@ -145,6 +145,41 @@ export const brandingSettings = pgTable("branding_settings", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Subscription plans and pricing
+export const subscriptionPlans = pgTable("subscription_plans", {
+  id: serial("id").primaryKey(),
+  name: varchar("name").notNull(), // 'free', 'personal', 'business'
+  displayName: varchar("display_name").notNull(), // 'Free', 'Personal', 'Business'
+  price: decimal("price", { precision: 10, scale: 2 }).notNull(),
+  currency: varchar("currency").default("USD"),
+  billingCycle: varchar("billing_cycle").default("monthly"), // 'monthly', 'yearly'
+  maxLeads: integer("max_leads"), // null = unlimited
+  maxVisits: integer("max_visits"), // null = unlimited
+  maxBrands: integer("max_brands").default(1), // number of brands allowed
+  customBranding: boolean("custom_branding").default(false),
+  whiteLabeling: boolean("white_labeling").default(false),
+  features: jsonb("features").default([]), // array of feature flags
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// User subscriptions
+export const userSubscriptions = pgTable("user_subscriptions", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").references(() => users.id).notNull(),
+  planId: integer("plan_id").references(() => subscriptionPlans.id).notNull(),
+  status: varchar("status").default("active"), // 'active', 'cancelled', 'expired', 'trialing'
+  currentPeriodStart: timestamp("current_period_start"),
+  currentPeriodEnd: timestamp("current_period_end"),
+  cancelAtPeriodEnd: boolean("cancel_at_period_end").default(false),
+  stripeCustomerId: varchar("stripe_customer_id"),
+  stripeSubscriptionId: varchar("stripe_subscription_id"),
+  trialEnd: timestamp("trial_end"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Practice guides generated from videos
 export const guides = pgTable("guides", {
   id: serial("id").primaryKey(),
@@ -420,6 +455,8 @@ export const usersRelations = relations(users, ({ many, one }) => ({
   promptTemplates: many(promptTemplates),
   mediaAssets: many(mediaAssets),
   googleConnection: one(googleConnections),
+  brandUsers: many(brandUsers),
+  userSubscription: one(userSubscriptions),
 }));
 
 export const brandsRelations = relations(brands, ({ one, many }) => ({
@@ -430,6 +467,7 @@ export const brandsRelations = relations(brands, ({ one, many }) => ({
   knowledgebaseEntries: many(knowledgebaseEntries),
   promptTemplates: many(promptTemplates),
   mediaAssets: many(mediaAssets),
+  brandUsers: many(brandUsers),
 }));
 
 export const guidesRelations = relations(guides, ({ one, many }) => ({
@@ -507,6 +545,21 @@ export const googleConnectionsRelations = relations(googleConnections, ({ one })
     fields: [googleConnections.userId],
     references: [users.id],
   }),
+}));
+
+export const subscriptionPlansRelations = relations(subscriptionPlans, ({ many }) => ({
+  userSubscriptions: many(userSubscriptions),
+}));
+
+export const userSubscriptionsRelations = relations(userSubscriptions, ({ one }) => ({
+  user: one(users, { fields: [userSubscriptions.userId], references: [users.id] }),
+  plan: one(subscriptionPlans, { fields: [userSubscriptions.planId], references: [subscriptionPlans.id] }),
+}));
+
+export const brandUsersRelations = relations(brandUsers, ({ one }) => ({
+  brand: one(brands, { fields: [brandUsers.brandId], references: [brands.id] }),
+  user: one(users, { fields: [brandUsers.userId], references: [users.id] }),
+  inviter: one(users, { fields: [brandUsers.invitedBy], references: [users.id] }),
 }));
 
 // Insert schemas
@@ -591,6 +644,18 @@ export const insertBrandUserSchema = createInsertSchema(brandUsers).omit({
   updatedAt: true,
 });
 
+export const insertSubscriptionPlanSchema = createInsertSchema(subscriptionPlans).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertUserSubscriptionSchema = createInsertSchema(userSubscriptions).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 export const insertPromptTemplateSchema = createInsertSchema(promptTemplates).omit({
   id: true,
   createdAt: true,
@@ -650,6 +715,10 @@ export type Brand = typeof brands.$inferSelect;
 export type InsertBrand = z.infer<typeof insertBrandSchema>;
 export type BrandUser = typeof brandUsers.$inferSelect;
 export type InsertBrandUser = z.infer<typeof insertBrandUserSchema>;
+export type SubscriptionPlan = typeof subscriptionPlans.$inferSelect;
+export type InsertSubscriptionPlan = z.infer<typeof insertSubscriptionPlanSchema>;
+export type UserSubscription = typeof userSubscriptions.$inferSelect;
+export type InsertUserSubscription = z.infer<typeof insertUserSubscriptionSchema>;
 export type PromptTemplate = typeof promptTemplates.$inferSelect;
 export type InsertPromptTemplate = z.infer<typeof insertPromptTemplateSchema>;
 export type MediaAsset = typeof mediaAssets.$inferSelect;

@@ -107,6 +107,14 @@ VidMagnet is a comprehensive SAAS application that transforms YouTube videos int
 
 ```
 Changelog:
+- July 06, 2025. Implemented comprehensive subscription system with 3-tier pricing structure:
+  * Added complete subscription schema with plans, user subscriptions, and brand user management
+  * Created default subscription plans: Free (50 leads/500 visits), Personal ($24.95), Business ($33/brand)
+  * Built comprehensive pricing page with feature comparison and subscription management
+  * Implemented brand-level user roles: Admin, Editor, and View Only with hierarchical permissions
+  * Added team management interface with user invitation and role management
+  * Created API endpoints for subscription management and brand user operations
+  * Updated navigation to include pricing and team management pages
 - July 06, 2025. Added complete branding customization system for brand accounts:
   * Implemented full logo upload functionality with file validation (5MB limit, image types only)
   * Added favicon upload with automatic resizing to 32x32px using Sharp image processing

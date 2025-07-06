@@ -18,6 +18,9 @@ import {
   storageBilling,
   subscriptionTiers,
   fileCleanupJobs,
+  subscriptionPlans,
+  userSubscriptions,
+  brandUsers,
   type User,
   type UpsertUser,
   type Brand,
@@ -55,6 +58,12 @@ import {
   type SubscriptionTier,
   type FileCleanupJob,
   type InsertFileCleanupJob,
+  type SubscriptionPlan,
+  type InsertSubscriptionPlan,
+  type UserSubscription,
+  type InsertUserSubscription,
+  type BrandUser,
+  type InsertBrandUser,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, sql, count, avg, isNull } from "drizzle-orm";
@@ -210,6 +219,20 @@ export interface IStorage {
     activeUsersLast30Days: number;
     newUsersLast30Days: number;
   }>;
+
+  // Subscription operations
+  getSubscriptionPlans(): Promise<SubscriptionPlan[]>;
+  getUserSubscription(userId: string): Promise<UserSubscription | null>;
+  createUserSubscription(subscription: InsertUserSubscription): Promise<UserSubscription>;
+  updateUserSubscription(id: number, subscription: Partial<InsertUserSubscription>): Promise<UserSubscription>;
+  
+  // Brand user operations
+  getBrandUsers(brandId: number): Promise<BrandUser[]>;
+  getUserBrands(userId: string): Promise<BrandUser[]>;
+  addUserToBrand(brandUser: InsertBrandUser): Promise<BrandUser>;
+  updateBrandUserRole(id: number, role: string): Promise<BrandUser>;
+  removeBrandUser(id: number): Promise<void>;
+  getBrandUserRole(userId: string, brandId: number): Promise<string | null>;
 
   // Storage management operations
   createStorageUsage(usage: InsertStorageUsage): Promise<StorageUsage>;
@@ -1150,6 +1173,95 @@ export class DatabaseStorage implements IStorage {
       .from(storageBilling)
       .where(eq(storageBilling.userId, userId))
       .orderBy(desc(storageBilling.createdAt));
+  }
+
+  // Subscription operations
+  async getSubscriptionPlans(): Promise<SubscriptionPlan[]> {
+    return await db
+      .select()
+      .from(subscriptionPlans)
+      .where(eq(subscriptionPlans.isActive, true))
+      .orderBy(subscriptionPlans.price);
+  }
+
+  async getUserSubscription(userId: string): Promise<UserSubscription | null> {
+    const [subscription] = await db
+      .select()
+      .from(userSubscriptions)
+      .where(eq(userSubscriptions.userId, userId))
+      .orderBy(desc(userSubscriptions.createdAt))
+      .limit(1);
+    return subscription || null;
+  }
+
+  async createUserSubscription(subscription: InsertUserSubscription): Promise<UserSubscription> {
+    const [newSubscription] = await db
+      .insert(userSubscriptions)
+      .values(subscription)
+      .returning();
+    return newSubscription;
+  }
+
+  async updateUserSubscription(id: number, subscription: Partial<InsertUserSubscription>): Promise<UserSubscription> {
+    const [updatedSubscription] = await db
+      .update(userSubscriptions)
+      .set({ ...subscription, updatedAt: new Date() })
+      .where(eq(userSubscriptions.id, id))
+      .returning();
+    return updatedSubscription;
+  }
+
+  // Brand user operations
+  async getBrandUsers(brandId: number): Promise<BrandUser[]> {
+    return await db
+      .select()
+      .from(brandUsers)
+      .where(and(eq(brandUsers.brandId, brandId), eq(brandUsers.isActive, true)))
+      .orderBy(brandUsers.role, desc(brandUsers.createdAt));
+  }
+
+  async getUserBrands(userId: string): Promise<BrandUser[]> {
+    return await db
+      .select()
+      .from(brandUsers)
+      .where(and(eq(brandUsers.userId, userId), eq(brandUsers.isActive, true)))
+      .orderBy(desc(brandUsers.createdAt));
+  }
+
+  async addUserToBrand(brandUser: InsertBrandUser): Promise<BrandUser> {
+    const [newBrandUser] = await db
+      .insert(brandUsers)
+      .values(brandUser)
+      .returning();
+    return newBrandUser;
+  }
+
+  async updateBrandUserRole(id: number, role: string): Promise<BrandUser> {
+    const [updatedBrandUser] = await db
+      .update(brandUsers)
+      .set({ role, updatedAt: new Date() })
+      .where(eq(brandUsers.id, id))
+      .returning();
+    return updatedBrandUser;
+  }
+
+  async removeBrandUser(id: number): Promise<void> {
+    await db
+      .update(brandUsers)
+      .set({ isActive: false, updatedAt: new Date() })
+      .where(eq(brandUsers.id, id));
+  }
+
+  async getBrandUserRole(userId: string, brandId: number): Promise<string | null> {
+    const [brandUser] = await db
+      .select({ role: brandUsers.role })
+      .from(brandUsers)
+      .where(and(
+        eq(brandUsers.userId, userId), 
+        eq(brandUsers.brandId, brandId), 
+        eq(brandUsers.isActive, true)
+      ));
+    return brandUser?.role || null;
   }
 }
 
