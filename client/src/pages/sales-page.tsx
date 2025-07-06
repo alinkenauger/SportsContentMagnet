@@ -701,6 +701,175 @@ export default function SalesPage() {
           </div>
         </div>
       </section>
+      
+      {/* Examples Section */}
+      <section className="bg-gradient-to-r from-gray-50 to-white py-16">
+        <div className="container mx-auto px-4">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl font-bold mb-4">See The Magic In Action</h2>
+            <p className="text-xl text-gray-600">
+              Watch how any content transforms into high-converting lead magnets in minutes
+            </p>
+          </div>
+          
+          <div className="max-w-7xl mx-auto">
+            {/* YouTube Video Example */}
+            <div className="bg-white rounded-3xl shadow-2xl p-8 mb-12 border border-gray-100">
+              <div className="grid lg:grid-cols-5 gap-8 items-center">
+                {/* Source Content */}
+                <div className="lg:col-span-1 text-center">
+                  <h3 className="text-lg font-bold text-gray-800 mb-4">YouTube Video</h3>
+                  <div className="relative">
+                    <img 
+                      src="/attached_assets/image_1751824933774.png" 
+                      alt="YouTube Golf Video Thumbnail" 
+                      className="w-full max-w-[200px] mx-auto rounded-lg shadow-lg"
+                    />
+                    <div className="absolute -right-2 top-1/2 transform -translate-y-1/2">
+                      <div className="bg-blue-500 text-white px-3 py-1 rounded-full text-sm font-semibold flex items-center">
+                        <ArrowRight className="h-4 w-4 mr-1" />
+                        Instantly Converts To
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Landing Page */}
+                <div className="lg:col-span-2 text-center">
+                  <h3 className="text-lg font-bold text-gray-800 mb-4">High-Converting Landing Page</h3>
+                  <div className="relative">
+                    <img 
+                      src="/attached_assets/CleanShot 2025-07-06 at 13.58.18@2x_1751824935600.png" 
+                      alt="Golf Landing Page" 
+                      className="w-full max-w-[300px] mx-auto rounded-lg shadow-lg border border-gray-200"
+                    />
+                    <div className="absolute -right-2 top-1/2 transform -translate-y-1/2">
+                      <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
+                        <span className="text-white font-bold text-lg">+</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Guide Output */}
+                <div className="lg:col-span-2 text-center">
+                  <h3 className="text-lg font-bold text-gray-800 mb-4">Interactive Practice Guide</h3>
+                  <div className="relative">
+                    <img 
+                      src="/attached_assets/CleanShot 2025-07-06 at 13.59.43_1751824980682.gif" 
+                      alt="Interactive Golf Practice Guide" 
+                      className="w-full max-w-[350px] mx-auto rounded-lg shadow-lg border border-gray-200"
+                    />
+                  </div>
+                </div>
+              </div>
+              
+              {/* Results Stats */}
+              <div className="mt-8 bg-gradient-to-r from-green-50 to-emerald-50 rounded-2xl p-6">
+                <div className="grid md:grid-cols-3 gap-6 text-center">
+                  <div>
+                    <div className="text-3xl font-black text-green-600 mb-2">5 min</div>
+                    <div className="text-sm font-semibold text-gray-700">Total Creation Time</div>
+                  </div>
+                  <div>
+                    <div className="text-3xl font-black text-blue-600 mb-2">18%</div>
+                    <div className="text-sm font-semibold text-gray-700">Conversion Rate Achieved</div>
+                  </div>
+                  <div>
+                    <div className="text-3xl font-black text-purple-600 mb-2">Smart</div>
+                    <div className="text-sm font-semibold text-gray-700">Timestamping Included</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            {/* Additional Content Type Examples */}
+            <div className="grid md:grid-cols-2 gap-8">
+              {/* Podcast Example */}
+              <div className="bg-white rounded-2xl shadow-xl p-6 border border-gray-100">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center">
+                    <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center mr-4">
+                      <span className="text-2xl">🎙️</span>
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-gray-800">Podcast Episodes</h4>
+                      <p className="text-sm text-gray-600">Audio interviews & discussions</p>
+                    </div>
+                  </div>
+                  <ArrowRight className="h-6 w-6 text-blue-500" />
+                </div>
+                <div className="space-y-2 text-sm text-gray-600">
+                  <div className="flex items-center">
+                    <div className="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
+                    <span>AI transcribes and extracts key insights</span>
+                  </div>
+                  <div className="flex items-center">
+                    <div className="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
+                    <span>Creates actionable guide with timestamps</span>
+                  </div>
+                  <div className="flex items-center">
+                    <div className="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
+                    <span>Generates landing page automatically</span>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Book/Document Example */}
+              <div className="bg-white rounded-2xl shadow-xl p-6 border border-gray-100">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center">
+                    <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center mr-4">
+                      <span className="text-2xl">📚</span>
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-gray-800">Books & Documents</h4>
+                      <p className="text-sm text-gray-600">PDFs, eBooks, articles</p>
+                    </div>
+                  </div>
+                  <ArrowRight className="h-6 w-6 text-blue-500" />
+                </div>
+                <div className="space-y-2 text-sm text-gray-600">
+                  <div className="flex items-center">
+                    <div className="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
+                    <span>Analyzes chapters and key concepts</span>
+                  </div>
+                  <div className="flex items-center">
+                    <div className="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
+                    <span>Creates implementation roadmaps</span>
+                  </div>
+                  <div className="flex items-center">
+                    <div className="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
+                    <span>Builds step-by-step practice guides</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            {/* Call to Action */}
+            <div className="text-center mt-12">
+              <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl p-8 text-white">
+                <h3 className="text-2xl font-bold mb-4">Ready to Transform Your Content?</h3>
+                <p className="text-lg mb-6 opacity-90">
+                  Join thousands of creators getting 10X more leads with video-specific strategies
+                </p>
+                <Dialog open={isSignUpOpen} onOpenChange={setIsSignUpOpen}>
+                  <DialogTrigger asChild>
+                    <Button 
+                      size="lg" 
+                      className="bg-white text-blue-600 hover:bg-gray-100 px-8 py-4 text-lg font-bold"
+                    >
+                      🚀 Start Creating 10X Lead Magnets Now
+                      <ArrowRight className="ml-2 h-5 w-5" />
+                    </Button>
+                  </DialogTrigger>
+                </Dialog>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+      
       {/* Customization & Editing Section */}
       <section className="bg-gradient-to-r from-purple-50 to-blue-50 py-16">
         <div className="container mx-auto px-4">
