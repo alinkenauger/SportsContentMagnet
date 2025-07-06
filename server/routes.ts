@@ -204,14 +204,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`Testing transcription for video: ${videoId}`);
       const transcript = await transcribeVideo(videoId);
       
+      // Handle different transcript response formats
+      const transcriptText = typeof transcript === 'string' 
+        ? transcript 
+        : transcript?.text || 'No transcript available';
+      
       res.json({ 
         success: true, 
-        transcript: transcript.substring(0, 500) + '...', // Truncate for response
-        length: transcript.length 
+        transcript: transcriptText.substring(0, 500) + '...', // Truncate for response
+        length: transcriptText.length 
       });
     } catch (error) {
       console.error('Test transcription error:', error);
-      res.status(500).json({ error: error.message });
+      res.status(500).json({ error: error instanceof Error ? error.message : 'Unknown error occurred' });
     }
   });
 

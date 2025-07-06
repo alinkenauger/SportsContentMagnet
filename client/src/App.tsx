@@ -21,6 +21,7 @@ import Library from "@/pages/library";
 import PublicLibrary from "@/pages/public-library";
 import GuideEditorEnhanced from "@/pages/guide-editor-enhanced";
 import AdminDashboard from "@/pages/admin";
+import TranscriptionTest from "@/pages/transcription-test";
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -40,6 +41,7 @@ function Router() {
           <Route path="/branding" component={Branding} />
           <Route path="/settings" component={Settings} />
           <Route path="/admin" component={AdminDashboard} />
+          <Route path="/test-transcription" component={TranscriptionTest} />
         </>
       )}
       

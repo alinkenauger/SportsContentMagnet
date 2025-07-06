@@ -49,13 +49,16 @@ export default function CreateGuide() {
     leadTags: "",
     addToKnowledgeBase: true, // Default to true - automatically include in knowledge base
   });
+  type ProcessingStatus = "pending" | "processing" | "completed";
+  type ProcessingStep = { id: string; title: string; status: ProcessingStatus };
+  
   const [isProcessing, setIsProcessing] = useState(false);
-  const [processingSteps, setProcessingSteps] = useState([
-    { id: "metadata", title: "Extracting video metadata", status: "pending" as const },
-    { id: "transcript", title: "Transcribing video content", status: "pending" as const },
-    { id: "analysis", title: "Analyzing coaching insights with AI", status: "pending" as const },
-    { id: "guide", title: "Generating personalized practice guide", status: "pending" as const },
-    { id: "landing", title: "Creating landing page", status: "pending" as const },
+  const [processingSteps, setProcessingSteps] = useState<ProcessingStep[]>([
+    { id: "metadata", title: "Extracting video metadata", status: "pending" },
+    { id: "transcript", title: "Transcribing video content", status: "pending" },
+    { id: "analysis", title: "Analyzing coaching insights with AI", status: "pending" },
+    { id: "guide", title: "Generating personalized practice guide", status: "pending" },
+    { id: "landing", title: "Creating landing page", status: "pending" },
   ]);
   const [currentStep, setCurrentStep] = useState("");
   const [progress, setProgress] = useState(0);
