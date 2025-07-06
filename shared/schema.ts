@@ -639,6 +639,9 @@ export const emailTemplates = pgTable("email_templates", {
   templateType: varchar("template_type").notNull(), // 'guide_delivery', 'welcome', 'password_reset'
   subject: varchar("subject").notNull(),
   htmlContent: text("html_content").notNull(),
+  logoType: varchar("logo_type").default('default'), // 'default', 'custom', 'text', 'none'
+  customLogoUrl: varchar("custom_logo_url"),
+  textLogo: varchar("text_logo"),
   isActive: boolean("is_active").default(true),
   requiredVariables: jsonb("required_variables").notNull(), // Array of required variables like ['firstName', 'guideTitle']
   createdAt: timestamp("created_at").defaultNow(),

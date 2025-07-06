@@ -15,11 +15,47 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/useAuth";
 
 const EMAIL_TYPES = [
-  { key: 'welcome', label: 'Welcome Email', description: 'Sent when someone signs up' },
-  { key: 'guide_delivery', label: 'Guide Delivery', description: 'Sent when someone downloads a guide' },
-  { key: 'lead_notification', label: 'Lead Notification', description: 'Sent to you when someone signs up' },
-  { key: 'password_reset', label: 'Password Reset', description: 'Sent when password reset is requested' },
-  { key: 'subscription_confirmation', label: 'Subscription Confirmation', description: 'Sent when subscription is confirmed' },
+  { 
+    key: 'welcome', 
+    label: 'Welcome Email', 
+    description: 'Sent when someone signs up',
+    category: 'system',
+    requiredElements: ['username', 'password', 'loginUrl'],
+    defaultContent: 'Welcome to ConvertMag.net! Your account has been created successfully.\n\nYour login credentials:\nUsername: {{username}}\nPassword: {{tempPassword}}\n\nLogin anytime at: {{loginUrl}}\n\nStart creating your first lead magnet today!'
+  },
+  { 
+    key: 'guide_delivery', 
+    label: 'Guide Delivery', 
+    description: 'Sent when someone downloads a guide',
+    category: 'guide',
+    requiredElements: ['guideName', 'downloadUrl'],
+    defaultContent: 'Thank you for your interest! Here\'s your free guide:\n\n{{guideName}}\n\nDownload your guide: {{downloadUrl}}\n\nThis guide contains valuable insights to help you improve your skills. Enjoy!',
+    canDisable: true
+  },
+  { 
+    key: 'lead_notification', 
+    label: 'Lead Notification', 
+    description: 'Sent to you when someone signs up',
+    category: 'system',
+    requiredElements: ['leadName', 'leadEmail', 'guideName'],
+    defaultContent: 'New lead captured!\n\nName: {{leadName}}\nEmail: {{leadEmail}}\nGuide: {{guideName}}\nTime: {{captureTime}}\n\nLogin to your dashboard to view full details.'
+  },
+  { 
+    key: 'password_reset', 
+    label: 'Password Reset', 
+    description: 'Sent when password reset is requested',
+    category: 'system',
+    requiredElements: ['resetUrl'],
+    defaultContent: 'You requested a password reset for your ConvertMag.net account.\n\nClick here to reset your password:\n{{resetUrl}}\n\nThis link expires in 24 hours. If you didn\'t request this, please ignore this email.'
+  },
+  { 
+    key: 'subscription_confirmation', 
+    label: 'Subscription Confirmation', 
+    description: 'Sent when subscription is confirmed',
+    category: 'system',
+    requiredElements: ['planName', 'amount', 'billingDate'],
+    defaultContent: 'Your subscription has been confirmed!\n\nPlan: {{planName}}\nAmount: ${{amount}}\nNext billing: {{billingDate}}\n\nThank you for upgrading to unlock unlimited lead magnets!'
+  },
 ];
 
 const INTEGRATION_PROVIDERS = [
@@ -36,6 +72,9 @@ export default function EmailSettings() {
   const [activeTab, setActiveTab] = useState('templates');
   const [editingTemplate, setEditingTemplate] = useState<string | null>(null);
   const [templateContent, setTemplateContent] = useState('');
+  const [logoType, setLogoType] = useState('default');
+  const [textLogo, setTextLogo] = useState('');
+  const [isUploadingLogo, setIsUploadingLogo] = useState(false);
 
   const { data: templates, isLoading: templatesLoading } = useQuery({
     queryKey: ['/api/email-templates'],
@@ -83,11 +122,84 @@ export default function EmailSettings() {
   const handleSaveTemplate = () => {
     if (!editingTemplate) return;
     
+    if (!templateContent.trim()) {
+      toast({
+        title: "Error",
+        description: "Template content cannot be empty",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate required elements for system emails
+    const emailType = EMAIL_TYPES.find(t => t.key === editingTemplate);
+    if (emailType && emailType.requiredElements) {
+      const missingElements = emailType.requiredElements.filter(element => 
+        !templateContent.includes(`{{${element}}}`)
+      );
+      
+      if (missingElements.length > 0) {
+        toast({
+          title: "Missing Required Elements",
+          description: `This email must contain: ${missingElements.map(e => `{{${e}}}`).join(', ')}`,
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+    
     updateTemplateMutation.mutate({
       type: editingTemplate,
       content: templateContent,
+      logoType,
+      textLogo: logoType === 'text' ? textLogo : undefined,
       enabled: true,
     });
+  };
+
+  const handleLogoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      toast({
+        title: "Invalid File",
+        description: "Please select an image file",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) { // 5MB limit
+      toast({
+        title: "File Too Large",
+        description: "Please select an image smaller than 5MB",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsUploadingLogo(true);
+    const formData = new FormData();
+    formData.append('logo', file);
+
+    try {
+      const response = await apiRequest('POST', '/api/email-logo-upload', formData);
+      const { logoUrl } = response as { logoUrl: string };
+      setLogoType('custom');
+      toast({
+        title: "Logo Uploaded",
+        description: "Your logo has been uploaded successfully",
+      });
+    } catch (error) {
+      toast({
+        title: "Upload Failed",
+        description: "Failed to upload logo. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsUploadingLogo(false);
+    }
   };
 
   const renderTemplateCard = (emailType: any) => {
@@ -127,18 +239,94 @@ export default function EmailSettings() {
         {isEditing && (
           <CardContent>
             <div className="space-y-4">
+              {/* Logo Settings - Only for paid accounts */}
+              <div className="border rounded-lg p-4 bg-muted/50">
+                <h4 className="font-medium mb-3">Email Logo (Paid Feature)</h4>
+                <div className="space-y-3">
+                  <div className="grid grid-cols-2 gap-2">
+                    <Button
+                      variant={logoType === 'default' ? 'default' : 'outline'}
+                      onClick={() => setLogoType('default')}
+                      className="text-left"
+                    >
+                      ConvertMag.net Logo
+                    </Button>
+                    <Button
+                      variant={logoType === 'none' ? 'default' : 'outline'}
+                      onClick={() => setLogoType('none')}
+                      className="text-left"
+                    >
+                      No Logo
+                    </Button>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <Button
+                      variant={logoType === 'text' ? 'default' : 'outline'}
+                      onClick={() => setLogoType('text')}
+                      className="text-left"
+                    >
+                      Text Logo
+                    </Button>
+                    <div className="relative">
+                      <Button
+                        variant={logoType === 'custom' ? 'default' : 'outline'}
+                        onClick={() => document.getElementById('logo-upload')?.click()}
+                        disabled={isUploadingLogo}
+                        className="w-full text-left"
+                      >
+                        {isUploadingLogo ? 'Uploading...' : 'Upload Logo'}
+                      </Button>
+                      <input
+                        id="logo-upload"
+                        type="file"
+                        accept="image/*"
+                        onChange={handleLogoUpload}
+                        className="hidden"
+                      />
+                    </div>
+                  </div>
+                  {logoType === 'text' && (
+                    <div className="space-y-2">
+                      <Label htmlFor="text-logo">Text Logo</Label>
+                      <Input
+                        id="text-logo"
+                        value={textLogo}
+                        onChange={(e) => setTextLogo(e.target.value)}
+                        placeholder="Your Company Name"
+                      />
+                    </div>
+                  )}
+                </div>
+              </div>
+
               <div>
                 <Label htmlFor={`template-${emailType.key}`}>Email Template</Label>
                 <Textarea
                   id={`template-${emailType.key}`}
                   value={templateContent}
                   onChange={(e) => setTemplateContent(e.target.value)}
-                  placeholder="Enter your email template content here..."
+                  placeholder={emailType.defaultContent || "Enter your email template content here..."}
                   className="min-h-[200px]"
                 />
                 <p className="text-sm text-muted-foreground mt-2">
                   Use variables like {"{{customerName}}, {{guideName}}, {{brandName}}"} in your template.
                 </p>
+                {emailType.requiredElements && (
+                  <div className="bg-blue-50 p-3 rounded-lg mt-2">
+                    <p className="text-sm font-medium text-blue-800 mb-1">Required Elements:</p>
+                    <p className="text-sm text-blue-600">
+                      This email must include: {emailType.requiredElements.map((e: string) => `{{${e}}}`).join(', ')}
+                    </p>
+                  </div>
+                )}
+                {emailType.category === 'system' && (
+                  <div className="bg-orange-50 p-3 rounded-lg mt-2">
+                    <p className="text-sm font-medium text-orange-800 mb-1">System Email</p>
+                    <p className="text-sm text-orange-600">
+                      This email is sent automatically by the system. Required elements cannot be removed.
+                    </p>
+                  </div>
+                )}
               </div>
               <div className="flex gap-2">
                 <Button onClick={handleSaveTemplate} disabled={updateTemplateMutation.isPending}>
