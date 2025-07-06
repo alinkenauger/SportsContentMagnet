@@ -175,7 +175,7 @@ export default function SalesPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50">
       {/* Hero Section */}
-      <section className="container mx-auto px-4 pt-16 pb-24">
+      <section className="container mx-auto px-4 pt-16 pb-0">
         <div className="text-center max-w-4xl mx-auto">
           <div className="bg-red-600 text-white px-6 py-3 rounded-full mb-6 inline-block animate-pulse">
             ⚠️ YOUR LEAD MAGNETS ARE DYING (AND YOUR COMPETITORS KNOW IT)
