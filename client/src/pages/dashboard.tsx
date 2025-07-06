@@ -259,15 +259,17 @@ export default function Dashboard() {
         // Use JSON for other input methods
         const requestData: any = {
           inputMethod,
-          title: inputMethod === "youtube" ? youtubeUrl : manualTitle,
         };
         
         if (inputMethod === "youtube") {
           requestData.youtubeUrl = youtubeUrl;
+          // Don't set title for YouTube - let server extract it
         } else if (inputMethod === "manual") {
+          requestData.title = manualTitle;
           requestData.transcript = manualTranscript;
         } else if (inputMethod === "streaming") {
           requestData.streamingUrl = streamingUrl;
+          requestData.title = manualTitle;
         }
         
         await apiRequest("POST", "/api/guides", requestData);
@@ -298,6 +300,7 @@ export default function Dashboard() {
         return;
       }
       
+      console.error("Guide creation error:", error);
       const errorMessage = (error as Error).message;
       
       if (errorMessage.includes("TRANSCRIPTION_BLOCKED")) {
@@ -306,10 +309,34 @@ export default function Dashboard() {
           description: "YouTube blocks automatic transcription for most modern videos. Try older educational videos or contact support for manual options.",
           variant: "destructive",
         });
+      } else if (errorMessage.includes("YouTube URL is required")) {
+        toast({
+          title: "Invalid Input",
+          description: "Please enter a valid YouTube URL",
+          variant: "destructive",
+        });
+      } else if (errorMessage.includes("Invalid YouTube URL")) {
+        toast({
+          title: "Invalid URL",
+          description: "Please check your YouTube URL and try again",
+          variant: "destructive",
+        });
+      } else if (errorMessage.includes("Video not found")) {
+        toast({
+          title: "Video Not Found",
+          description: "The YouTube video could not be found. Check if it's public and accessible.",
+          variant: "destructive",
+        });
+      } else if (errorMessage.includes("YouTube API error")) {
+        toast({
+          title: "YouTube API Error",
+          description: "There was an issue accessing YouTube. Please try again in a moment.",
+          variant: "destructive",
+        });
       } else {
         toast({
           title: "Error",
-          description: "Failed to create guide. Please try again.",
+          description: errorMessage.includes("Failed to create guide:") ? errorMessage : `Failed to create guide: ${errorMessage}`,
           variant: "destructive",
         });
       }
