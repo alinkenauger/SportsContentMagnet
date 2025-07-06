@@ -45,6 +45,8 @@ interface EditableElement {
   order: number;
   parentId?: string;
   columnId?: string;
+  timestamp?: string;
+  timestampSeconds?: number;
 }
 
 interface ColumnData {
@@ -139,7 +141,9 @@ export default function GuideEditorEnhanced() {
               id: `section-title-${index}`,
               type: 'heading',
               content: { text: section.title, level: 2 },
-              order: order++
+              order: order++,
+              timestamp: section.timestamp,
+              timestampSeconds: section.timestampSeconds
             });
             
             initialElements.push({
@@ -642,17 +646,38 @@ export default function GuideEditorEnhanced() {
               </Select>
             </div>
           ) : (
-            <HeadingTag 
-              className={`font-bold text-slate-800 cursor-pointer mb-6 ${
-                element.content.level === 1 ? 'text-3xl md:text-4xl' : 
-                element.content.level === 2 ? 'text-2xl md:text-3xl' : 
-                element.content.level === 3 ? 'text-xl md:text-2xl' : 
-                'text-lg md:text-xl'
-              }`}
-              onClick={() => setIsEditing(element.id)}
-            >
-              {element.content.text || 'Click to edit heading'}
-            </HeadingTag>
+            <div className="space-y-3">
+              <div className="flex items-start gap-3">
+                {element.timestamp && element.timestampSeconds && guide?.youtubeVideoId && (
+                  <Button
+                    variant="default"
+                    size="sm"
+                    className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white shadow-md text-xs shrink-0 mt-1"
+                    onClick={() => {
+                      const iframe = document.getElementById('youtube-player') as HTMLIFrameElement;
+                      if (iframe && element.timestampSeconds) {
+                        iframe.src = `https://www.youtube.com/embed/${guide.youtubeVideoId}?start=${element.timestampSeconds}&autoplay=1&enablejsapi=1`;
+                        iframe.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                      }
+                    }}
+                  >
+                    <Play className="w-3 h-3 mr-1" />
+                    {element.timestamp}
+                  </Button>
+                )}
+                <HeadingTag 
+                  className={`font-bold text-slate-800 cursor-pointer mb-0 flex-1 ${
+                    element.content.level === 1 ? 'text-3xl md:text-4xl' : 
+                    element.content.level === 2 ? 'text-2xl md:text-3xl' : 
+                    element.content.level === 3 ? 'text-xl md:text-2xl' : 
+                    'text-lg md:text-xl'
+                  }`}
+                  onClick={() => setIsEditing(element.id)}
+                >
+                  {element.content.text || 'Click to edit heading'}
+                </HeadingTag>
+              </div>
+            </div>
           );
         } catch (error) {
           console.error('Error rendering heading:', error);
@@ -888,6 +913,13 @@ export default function GuideEditorEnhanced() {
               alt={element.content.alt || 'Guide image'}
               className="max-w-full h-auto rounded-lg mx-auto cursor-pointer"
               onClick={() => setIsEditing(element.id)}
+              onError={(e) => {
+                console.error('Image failed to load:', element.content.src);
+                console.error('Error details:', e);
+              }}
+              onLoad={() => {
+                console.log('Image loaded successfully:', element.content.src);
+              }}
             />
             {element.content.caption && (
               <p className="text-sm text-muted-foreground mt-2 italic">
@@ -1234,6 +1266,36 @@ export default function GuideEditorEnhanced() {
                 </div>
               </div>
             </div>
+
+            {/* YouTube Video Player Section */}
+            {guide?.youtubeVideoId && (
+              <div className="px-8 pt-6 pb-4">
+                <div className="max-w-4xl mx-auto">
+                  <div className="bg-white rounded-xl shadow-sm p-6">
+                    <h3 className="text-lg font-semibold text-slate-800 mb-4 flex items-center gap-2">
+                      <Play className="h-5 w-5 text-blue-600" />
+                      Source Video
+                    </h3>
+                    <div className="relative aspect-video rounded-lg overflow-hidden bg-slate-100">
+                      <iframe
+                        id="youtube-player"
+                        className="w-full h-full"
+                        src={`https://www.youtube.com/embed/${guide.youtubeVideoId}?enablejsapi=1`}
+                        title="YouTube video player"
+                        frameBorder="0"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowFullScreen
+                      />
+                    </div>
+                    {guide.channelTitle && (
+                      <p className="text-sm text-slate-600 mt-3">
+                        From: {guide.channelTitle}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Main Guide Content Area */}
             <div className="px-8 py-8">
