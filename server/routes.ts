@@ -2,6 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
+import { isGlobalAdmin } from "./adminAuth";
 import { setupGoogleAuth, isGoogleAuthenticated } from "./googleAuth";
 import { analyzeVideoContent, generatePracticeGuide, personalizeGuideContent } from "./services/openai";
 import { getYouTubeVideoData, transcribeVideo } from "./services/youtube";
@@ -714,6 +715,121 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error updating guide status:", error);
       res.status(500).json({ message: "Failed to update guide status" });
+    }
+  });
+
+  // Transfer guide between Personal and Brand accounts
+  app.patch('/api/guides/:id/transfer', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const guideId = parseInt(req.params.id);
+      const { targetBrandId } = req.body;
+
+      // Validate input
+      if (targetBrandId !== null && (typeof targetBrandId !== 'number' || targetBrandId <= 0)) {
+        return res.status(400).json({ message: "Invalid target brand ID" });
+      }
+
+      // Get the guide and verify ownership
+      const guide = await storage.getGuide(guideId);
+      if (!guide) {
+        return res.status(404).json({ message: "Guide not found" });
+      }
+
+      if (guide.userId !== userId) {
+        return res.status(403).json({ message: "Unauthorized - you don't own this guide" });
+      }
+
+      // If transferring to a brand, verify the user owns that brand
+      if (targetBrandId !== null) {
+        const targetBrand = await storage.getBrand(targetBrandId);
+        if (!targetBrand || targetBrand.userId !== userId) {
+          return res.status(403).json({ message: "Unauthorized - you don't own the target brand" });
+        }
+      }
+
+      // Perform the transfer
+      const updatedGuide = await storage.updateGuide(guideId, {
+        brandId: targetBrandId
+      });
+
+      // Landing page transfer not implemented yet
+      // Landing pages will need to be recreated for the new brand if needed
+
+      let message;
+      if (targetBrandId === null) {
+        message = "Guide transferred to Personal account";
+      } else {
+        const brand = await storage.getBrand(targetBrandId);
+        message = `Guide transferred to ${brand?.name || 'Brand'} account`;
+      }
+
+      res.json({ 
+        guide: updatedGuide, 
+        message
+      });
+    } catch (error) {
+      console.error("Error transferring guide:", error);
+      res.status(500).json({ message: "Failed to transfer guide" });
+    }
+  });
+
+  // Import admin auth at the top of the route handler to avoid hoisting issues
+  const { isGlobalAdmin: adminAuth } = await import('./adminAuth');
+  
+  // Admin-only guide transfer between any brand accounts  
+  app.patch('/api/admin/guides/:id/transfer', isAuthenticated, adminAuth, async (req: any, res) => {
+    try {
+      const guideId = parseInt(req.params.id);
+      const { targetBrandId, targetUserId } = req.body;
+
+      // Validate input
+      if (targetBrandId !== null && (typeof targetBrandId !== 'number' || targetBrandId <= 0)) {
+        return res.status(400).json({ message: "Invalid target brand ID" });
+      }
+
+      if (!targetUserId) {
+        return res.status(400).json({ message: "Target user ID is required" });
+      }
+
+      // Get the guide
+      const guide = await storage.getGuide(guideId);
+      if (!guide) {
+        return res.status(404).json({ message: "Guide not found" });
+      }
+
+      // If transferring to a brand, verify the target brand exists and belongs to target user
+      if (targetBrandId !== null) {
+        const targetBrand = await storage.getBrand(targetBrandId);
+        if (!targetBrand || targetBrand.userId !== targetUserId) {
+          return res.status(400).json({ message: "Target brand doesn't exist or doesn't belong to target user" });
+        }
+      }
+
+      // Perform the transfer
+      const updatedGuide = await storage.updateGuide(guideId, {
+        userId: targetUserId,
+        brandId: targetBrandId
+      });
+
+      // Landing page transfer not implemented yet
+      // Landing pages will need to be recreated for the new user if needed
+
+      let message;
+      if (targetBrandId === null) {
+        message = `Guide transferred to user ${targetUserId}'s Personal account`;
+      } else {
+        const brand = await storage.getBrand(targetBrandId);
+        message = `Guide transferred to ${brand?.name || 'Brand'} account (User: ${targetUserId})`;
+      }
+
+      res.json({ 
+        guide: updatedGuide, 
+        message
+      });
+    } catch (error) {
+      console.error("Error transferring guide (admin):", error);
+      res.status(500).json({ message: "Failed to transfer guide" });
     }
   });
 

@@ -38,7 +38,10 @@ import {
   Upload,
   Globe,
   EyeOff,
-  BookOpen
+  BookOpen,
+  Building2,
+  User,
+  ArrowRightLeft
 } from "lucide-react";
 
 interface EditableElement {
@@ -172,6 +175,153 @@ function PublishControls({ guide }: { guide: any }) {
         </>
       )}
     </div>
+  );
+}
+
+// TransferControls Component for guide account transfers
+function TransferControls({ guide }: { guide: any }) {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [showTransferDialog, setShowTransferDialog] = useState(false);
+  const [targetBrandId, setTargetBrandId] = useState<string>("");
+
+  // Get user's brands for transfer options
+  const { data: brands = [] } = useQuery({
+    queryKey: ["/api/brands"],
+  });
+
+  const transferMutation = useMutation({
+    mutationFn: async (data: { targetBrandId: number | null }) => {
+      const response = await apiRequest(`/api/guides/${guide.id}/transfer`, "PATCH", data);
+      return response;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/guides", guide.id] });
+      queryClient.invalidateQueries({ queryKey: ["/api/guides"] });
+      setShowTransferDialog(false);
+      
+      toast({
+        title: "Transfer Complete",
+        description: data.message,
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Transfer Failed",
+        description: "Failed to transfer guide",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleTransfer = () => {
+    const targetId = targetBrandId === "personal" ? null : parseInt(targetBrandId);
+    transferMutation.mutate({ targetBrandId: targetId });
+  };
+
+  const getCurrentAccount = () => {
+    if (!guide.brandId) return "Personal Account";
+    const brand = brands.find((b: any) => b.id === guide.brandId);
+    return brand ? brand.name : "Unknown Brand";
+  };
+
+  const getAvailableTargets = () => {
+    const options = [
+      { value: "personal", label: "Personal Account", icon: User }
+    ];
+    
+    // Add brand options (excluding current brand)
+    brands.forEach((brand: any) => {
+      if (brand.id !== guide.brandId) {
+        options.push({
+          value: brand.id.toString(),
+          label: brand.name,
+          icon: Building2
+        });
+      }
+    });
+    
+    return options;
+  };
+
+  return (
+    <>
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={() => setShowTransferDialog(true)}
+        className="flex items-center gap-2"
+      >
+        <ArrowRightLeft className="w-4 h-4" />
+        Transfer
+      </Button>
+
+      {showTransferDialog && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <h3 className="text-lg font-semibold mb-4">Transfer Guide</h3>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="text-sm font-medium text-gray-700 mb-2 block">
+                  Current Account
+                </label>
+                <div className="flex items-center gap-2 p-3 bg-gray-50 rounded-lg">
+                  {guide.brandId ? (
+                    <Building2 className="w-4 h-4 text-blue-600" />
+                  ) : (
+                    <User className="w-4 h-4 text-green-600" />
+                  )}
+                  <span className="font-medium">{getCurrentAccount()}</span>
+                </div>
+              </div>
+
+              <div>
+                <label className="text-sm font-medium text-gray-700 mb-2 block">
+                  Transfer To
+                </label>
+                <Select value={targetBrandId} onValueChange={setTargetBrandId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select destination account" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {getAvailableTargets().map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        <div className="flex items-center gap-2">
+                          <option.icon className="w-4 h-4" />
+                          {option.label}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="text-sm text-gray-600 bg-blue-50 p-3 rounded-lg">
+                <strong>Note:</strong> Transferring will move this guide and its analytics to the selected account. 
+                Landing pages may need to be recreated.
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3 mt-6">
+              <Button
+                variant="outline"
+                onClick={() => setShowTransferDialog(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleTransfer}
+                disabled={!targetBrandId || transferMutation.isPending}
+                className="bg-blue-600 hover:bg-blue-700"
+              >
+                {transferMutation.isPending ? "Transferring..." : "Transfer Guide"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
 
@@ -1403,6 +1553,7 @@ export default function GuideEditorEnhanced() {
                   </div>
                   <div className="flex items-center gap-3">
                     <PublishControls guide={guide} />
+                    <TransferControls guide={guide} />
                     <Badge variant="secondary" className="bg-blue-100 text-blue-700">
                       Preview Mode
                     </Badge>
