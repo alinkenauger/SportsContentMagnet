@@ -290,7 +290,7 @@ Changelog:
   * **CLEAN SEPARATION**: Removed knowledge base addition from default account level to prevent messy, contradictory knowledge bases
 - July 06, 2025. Simplified pricing strategy from storage billing to lead/visit limits:
   * **ABANDONED COMPLEX STORAGE BILLING**: Removed sophisticated storage cost tracking system as actual usage is minimal (~$3/month per heavy user)
-  * **SIMPLIFIED PACKAGE STRUCTURE**: Free (50 leads/500 visits, VidMagnet branded), Personal ($24.95, unlimited leads/visits, no branding), Business ($33/brand, minimum 3 brands)
+  * **SIMPLIFIED PACKAGE STRUCTURE**: Free (50 leads/500 visits, VidMagnet branded), Personal ($24.95, unlimited leads/visits, custom branding), Business ($33/brand, minimum 3 brands, full white-labeling)
   * **UNLIMITED GUIDE CREATION**: No artificial limits on guide creation across all tiers - focus on lead capture limits instead of content creation limits
   * **CLEAR VALUE PROGRESSION**: Free trial → remove branding + unlimited leads → multiple brands + advanced features
   * **USER-FRIENDLY APPROACH**: Storage costs absorbed into pricing rather than nickel-and-diming users over negligible infrastructure costs
