@@ -1725,24 +1725,29 @@ export default function GuideEditorEnhanced() {
                       • Hover over elements to see drag handles
                       • Drag elements to reorder them
                       • Click the edit icon to modify content
-                      • Drop zones appear between elements
+                      • Use the larger drop zones between elements to place new content
                     </p>
                   </div>
 
                   {/* Drop zone at top */}
                   <div
-                    className={`transition-all duration-200 ${
+                    className={`transition-all duration-200 cursor-pointer group ${
                       dragOverIndex === 0 
                         ? 'h-16 border-2 border-dashed border-primary bg-primary/10 rounded-lg flex items-center justify-center' 
-                        : 'h-2'
+                        : 'h-8 border border-dashed border-gray-200 hover:border-primary/40 hover:bg-gray-50 rounded-lg flex items-center justify-center'
                     }`}
                     onDragOver={(e) => handleElementDragOver(e, 0)}
                     onDrop={(e) => handleCanvasDrop(e, 0)}
                   >
-                    {dragOverIndex === 0 && (
+                    {dragOverIndex === 0 ? (
                       <div className="flex items-center gap-2 text-primary font-medium">
                         <Plus className="h-4 w-4" />
                         <span>Drop Element Here</span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2 text-gray-400 group-hover:text-primary/60 transition-colors">
+                        <Plus className="h-3 w-3" />
+                        <span className="text-xs">Drop Zone</span>
                       </div>
                     )}
                   </div>
@@ -1756,18 +1761,23 @@ export default function GuideEditorEnhanced() {
                         
                         {/* Drop zone between elements */}
                         <div
-                          className={`transition-all duration-200 ${
+                          className={`transition-all duration-200 cursor-pointer group my-2 ${
                             dragOverIndex === index + 1 
                               ? 'h-16 border-2 border-dashed border-primary bg-primary/10 rounded-lg flex items-center justify-center' 
-                              : 'h-2'
+                              : 'h-8 border border-dashed border-gray-200 hover:border-primary/40 hover:bg-gray-50 rounded-lg flex items-center justify-center'
                           }`}
                           onDragOver={(e) => handleElementDragOver(e, index + 1)}
                           onDrop={(e) => handleCanvasDrop(e, index + 1)}
                         >
-                          {dragOverIndex === index + 1 && (
+                          {dragOverIndex === index + 1 ? (
                             <div className="flex items-center gap-2 text-primary font-medium">
                               <Plus className="h-4 w-4" />
                               <span>Drop Element Here</span>
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-2 text-gray-400 group-hover:text-primary/60 transition-colors">
+                              <Plus className="h-3 w-3" />
+                              <span className="text-xs">Drop Zone</span>
                             </div>
                           )}
                         </div>
