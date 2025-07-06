@@ -187,9 +187,52 @@ export default function SalesPage() {
             <span className="block text-gray-900 mt-2">From The Same Traffic...</span>
           </h1>
           
-          <p className="text-2xl md:text-3xl font-bold text-gray-700 mb-6">
+          <p className="text-2xl md:text-3xl font-bold text-gray-700 mb-8">
             ... and instantly create your high converting funnels for you.
           </p>
+          
+          {/* Demo Video Section */}
+          <div className="max-w-5xl mx-auto mb-12">
+            <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-2xl p-8">
+              <div className="text-center mb-6">
+                <h3 className="text-2xl font-bold text-gray-900 mb-2">See ConvertMag.net In Action</h3>
+                <p className="text-lg text-gray-600">Watch how easy it is to transform any content into high-converting lead magnets</p>
+              </div>
+              
+              <div className="relative bg-black rounded-xl overflow-hidden shadow-2xl">
+                <div className="aspect-video bg-gray-900 flex items-center justify-center">
+                  <div className="text-center">
+                    <div className="w-24 h-24 bg-white bg-opacity-20 rounded-full flex items-center justify-center mx-auto mb-4 cursor-pointer hover:bg-opacity-30 transition-all duration-300">
+                      <Play className="h-12 w-12 text-white ml-1" />
+                    </div>
+                    <h4 className="text-white text-xl font-bold mb-2">ConvertMag.net Demo</h4>
+                    <p className="text-gray-300 text-sm">Click to watch how to create lead magnets in 5 minutes</p>
+                  </div>
+                </div>
+                
+                {/* Video placeholder - replace with actual video when available */}
+                <div className="absolute inset-0 bg-gradient-to-r from-blue-600/10 to-purple-600/10"></div>
+              </div>
+              
+              <div className="grid md:grid-cols-3 gap-4 mt-6 text-center">
+                <div className="bg-white rounded-lg p-4 shadow-sm">
+                  <div className="text-2xl font-bold text-blue-600 mb-1">Step 1</div>
+                  <div className="text-sm font-semibold text-gray-800">Upload or Share Content</div>
+                  <div className="text-xs text-gray-600">Add your video, audio, or document</div>
+                </div>
+                <div className="bg-white rounded-lg p-4 shadow-sm">
+                  <div className="text-2xl font-bold text-green-600 mb-1">Step 2</div>
+                  <div className="text-sm font-semibold text-gray-800">AI Analyzes</div>
+                  <div className="text-xs text-gray-600">Extract key insights automatically</div>
+                </div>
+                <div className="bg-white rounded-lg p-4 shadow-sm">
+                  <div className="text-2xl font-bold text-purple-600 mb-1">Step 3</div>
+                  <div className="text-sm font-semibold text-gray-800">Generate & Deploy</div>
+                  <div className="text-xs text-gray-600">Get your complete funnel in minutes</div>
+                </div>
+              </div>
+            </div>
+          </div>
           
           <div className="bg-yellow-100 border-l-4 border-yellow-500 p-6 rounded-r-lg max-w-4xl mx-auto mb-8 text-left">
             <p className="text-xl font-bold text-gray-900 mb-4">
