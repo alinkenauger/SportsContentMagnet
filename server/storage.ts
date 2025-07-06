@@ -459,6 +459,11 @@ export class DatabaseStorage implements IStorage {
     return landingPage;
   }
 
+  async getLandingPageByGuideId(guideId: number): Promise<LandingPage | undefined> {
+    const [landingPage] = await db.select().from(landingPages).where(eq(landingPages.guideId, guideId));
+    return landingPage;
+  }
+
   async getLandingPagesByUser(userId: string): Promise<LandingPage[]> {
     return await db
       .select()

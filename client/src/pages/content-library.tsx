@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Search, Filter, Plus, Book, Grid, List, Eye, Users, ExternalLink, Edit, BarChart3, Download } from "lucide-react";
+import { Search, Filter, Plus, Book, Grid, List, Eye, Users, ExternalLink, Edit, BarChart3, Download, Layout } from "lucide-react";
 import { Guide } from "@shared/schema";
 
 const categories = [
@@ -80,6 +80,28 @@ export default function ContentLibrary() {
 
   const handleEditGuide = (guide: Guide) => {
     navigate(`/guide-editor/${guide.id}`);
+  };
+
+  const handleEditLandingPage = async (guide: Guide) => {
+    try {
+      // Fetch the landing page custom URL
+      const response = await fetch(`/api/guides/${guide.id}/landing-page-url`, {
+        credentials: 'include'
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to get landing page URL');
+      }
+      
+      const data = await response.json();
+      navigate(`/landing-editor/${data.customUrl}`);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Could not load landing page editor",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleViewLanding = async (guide: Guide) => {
@@ -467,6 +489,15 @@ export default function ContentLibrary() {
                                 title="Edit Guide"
                               >
                                 <Edit className="w-4 h-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleEditLandingPage(guide)}
+                                className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                title="Edit Landing Page"
+                              >
+                                <Layout className="w-4 h-4" />
                               </Button>
                               <Button
                                 variant="ghost"

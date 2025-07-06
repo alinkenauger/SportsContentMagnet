@@ -20,6 +20,7 @@ import GuideView from "@/pages/guide-view";
 import Library from "@/pages/library";
 import PublicLibrary from "@/pages/public-library";
 import GuideEditorEnhanced from "@/pages/guide-editor-enhanced";
+import LandingPageEditor from "@/pages/landing-page-editor";
 import AdminDashboard from "@/pages/admin";
 import TranscriptionTest from "@/pages/transcription-test";
 import StorageDashboard from "@/pages/storage-dashboard";
@@ -38,6 +39,7 @@ function Router() {
           <Route path="/create" component={CreateGuide} />
           <Route path="/content-library" component={ContentLibrary} />
           <Route path="/guide-editor/:guideId" component={GuideEditorEnhanced} />
+          <Route path="/landing-editor/:customUrl" component={LandingPageEditor} />
           <Route path="/analytics" component={Analytics} />
           <Route path="/leads" component={Leads} />
           <Route path="/branding" component={Branding} />
