@@ -481,8 +481,8 @@ export default function SalesPage() {
                     <div className="text-red-600 font-semibold text-center">$200-400 per page</div>
                   </div>
                   <div className="bg-white rounded-lg p-4 shadow-sm">
-                    <div className="font-bold text-gray-800">Funnel Integration</div>
-                    <div className="text-red-600 font-semibold">$500-800 per setup</div>
+                    <div className="font-bold text-gray-800 text-center">Funnel Integration</div>
+                    <div className="text-red-600 font-semibold text-center">$500-800 per setup</div>
                   </div>
                   <div className="bg-red-600 text-white rounded-lg p-4 text-center">
                     <div className="font-bold text-xl">Total: $1000-1700</div>
