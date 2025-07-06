@@ -34,7 +34,8 @@ import {
   Layout,
   Play,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Upload
 } from "lucide-react";
 
 interface EditableElement {
@@ -811,22 +812,74 @@ export default function GuideEditorEnhanced() {
 
       case 'image':
         return isActive ? (
-          <div className="space-y-2">
-            <Input
-              placeholder="Image URL"
-              value={element.content.src || ''}
-              onChange={(e) => updateElement(element.id, { ...element.content, src: e.target.value })}
-            />
-            <Input
-              placeholder="Alt text"
-              value={element.content.alt || ''}
-              onChange={(e) => updateElement(element.id, { ...element.content, alt: e.target.value })}
-            />
-            <Input
-              placeholder="Caption (optional)"
-              value={element.content.caption || ''}
-              onChange={(e) => updateElement(element.id, { ...element.content, caption: e.target.value })}
-            />
+          <div className="space-y-4">
+            {/* File Upload Section */}
+            <div className="space-y-2">
+              <label htmlFor={`image-upload-${element.id}`} className="text-sm font-medium block">
+                Upload Image
+              </label>
+              <div className="flex gap-2">
+                <input
+                  id={`image-upload-${element.id}`}
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      const reader = new FileReader();
+                      reader.onload = (event) => {
+                        updateElement(element.id, {
+                          ...element.content,
+                          src: event.target?.result as string,
+                          alt: element.content.alt || file.name
+                        });
+                      };
+                      reader.readAsDataURL(file);
+                    }
+                  }}
+                  className="flex-1 text-sm border rounded-md px-3 py-2 file:mr-3 file:py-1 file:px-3 file:rounded file:border-0 file:bg-primary/10 file:text-primary hover:file:bg-primary/20"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => document.getElementById(`image-upload-${element.id}`)?.click()}
+                >
+                  <Upload className="h-4 w-4 mr-2" />
+                  Browse
+                </Button>
+              </div>
+            </div>
+
+            {/* URL Input as Alternative */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium block">Or enter image URL</label>
+              <Input
+                placeholder="https://example.com/image.jpg"
+                value={element.content.src || ''}
+                onChange={(e) => updateElement(element.id, { ...element.content, src: e.target.value })}
+              />
+            </div>
+
+            {/* Alt Text */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium block">Alt text</label>
+              <Input
+                placeholder="Describe the image for accessibility"
+                value={element.content.alt || ''}
+                onChange={(e) => updateElement(element.id, { ...element.content, alt: e.target.value })}
+              />
+            </div>
+
+            {/* Caption */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium block">Caption (optional)</label>
+              <Input
+                placeholder="Add a caption for the image"
+                value={element.content.caption || ''}
+                onChange={(e) => updateElement(element.id, { ...element.content, caption: e.target.value })}
+              />
+            </div>
           </div>
         ) : element.content.src ? (
           <div className="text-center">
@@ -846,10 +899,40 @@ export default function GuideEditorEnhanced() {
           <div 
             className="border-2 border-dashed border-muted-foreground/30 rounded-lg p-8 text-center cursor-pointer hover:border-primary/50 transition-colors"
             onClick={() => setIsEditing(element.id)}
+            onDragOver={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              e.currentTarget.classList.add('border-primary', 'bg-primary/5');
+            }}
+            onDragLeave={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              e.currentTarget.classList.remove('border-primary', 'bg-primary/5');
+            }}
+            onDrop={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              e.currentTarget.classList.remove('border-primary', 'bg-primary/5');
+              
+              const files = Array.from(e.dataTransfer.files);
+              const imageFile = files.find(file => file.type.startsWith('image/'));
+              
+              if (imageFile) {
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                  updateElement(element.id, {
+                    ...element.content,
+                    src: event.target?.result as string,
+                    alt: element.content.alt || imageFile.name
+                  });
+                };
+                reader.readAsDataURL(imageFile);
+              }
+            }}
           >
             <Image className="h-12 w-12 mx-auto mb-2 text-muted-foreground/50" />
-            <p className="text-sm font-medium">Click to add image</p>
-            <p className="text-xs text-muted-foreground">Enter image URL and details</p>
+            <p className="text-sm font-medium">Drop image here or click to configure</p>
+            <p className="text-xs text-muted-foreground">Supports JPG, PNG, GIF, WebP</p>
           </div>
         );
 
