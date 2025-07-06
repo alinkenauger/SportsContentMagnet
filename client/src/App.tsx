@@ -22,6 +22,8 @@ import PublicLibrary from "@/pages/public-library";
 import GuideEditorEnhanced from "@/pages/guide-editor-enhanced";
 import AdminDashboard from "@/pages/admin";
 import TranscriptionTest from "@/pages/transcription-test";
+import StorageDashboard from "@/pages/storage-dashboard";
+import KnowledgeBaseSettings from "@/pages/knowledge-base-settings";
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -40,6 +42,8 @@ function Router() {
           <Route path="/leads" component={Leads} />
           <Route path="/branding" component={Branding} />
           <Route path="/settings" component={Settings} />
+          <Route path="/storage" component={StorageDashboard} />
+          <Route path="/knowledge-base" component={KnowledgeBaseSettings} />
           <Route path="/admin" component={AdminDashboard} />
           <Route path="/test-transcription" component={TranscriptionTest} />
         </>

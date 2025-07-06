@@ -36,6 +36,10 @@ export const users = pgTable("users", {
   profileImageUrl: varchar("profile_image_url"),
   currentBrandId: integer("current_brand_id"), // Reference to active brand
   role: varchar("role", { length: 50 }).default("user"), // 'user', 'admin'
+  subscriptionTier: varchar("subscription_tier").default("free"), // 'free', 'basic', 'pro', 'enterprise'
+  storageQuotaGB: decimal("storage_quota_gb", { precision: 10, scale: 2 }).default("1.0"), // GB storage limit
+  storageUsedMB: decimal("storage_used_mb", { precision: 12, scale: 2 }).default("0"), // MB currently used
+  monthlyStorageCostUSD: decimal("monthly_storage_cost_usd", { precision: 8, scale: 2 }).default("0"), // Monthly storage bill
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -237,11 +241,38 @@ export const trainingSettings = pgTable("training_settings", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Knowledge Base Collections - organize knowledge bases into groups
+export const knowledgebaseCollections = pgTable("knowledgebase_collections", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").references(() => users.id).notNull(),
+  brandId: integer("brand_id").references(() => brands.id), // null = global user-level, non-null = brand-specific
+  name: varchar("name").notNull(),
+  description: text("description"),
+  color: varchar("color").default("#3B82F6"), // For UI categorization
+  isDefault: boolean("is_default").default(false), // One default collection per user/brand
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Knowledge Base Usage Settings - control which collections to use for AI
+export const knowledgebaseUsageSettings = pgTable("knowledgebase_usage_settings", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").references(() => users.id).notNull(),
+  brandId: integer("brand_id").references(() => brands.id), // null = global user-level, non-null = brand-specific
+  useKnowledgeBase: boolean("use_knowledge_base").default(true), // Global on/off toggle
+  selectedCollectionIds: jsonb("selected_collection_ids").default([]), // Array of collection IDs to use
+  inheritFromGlobal: boolean("inherit_from_global").default(true), // For brands - whether to also use global collections
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Knowledgebase entries - global at user level, brands inherit unless they create their own
 export const knowledgebaseEntries = pgTable("knowledgebase_entries", {
   id: serial("id").primaryKey(),
   userId: varchar("user_id").references(() => users.id).notNull(),
   brandId: integer("brand_id").references(() => brands.id), // null = global user-level, non-null = brand-specific
+  collectionId: integer("collection_id").references(() => knowledgebaseCollections.id), // Optional grouping
   title: varchar("title").notNull(),
   content: text("content").notNull(),
   contentType: varchar("content_type").notNull(), // 'text', 'link', 'transcription'
@@ -290,6 +321,67 @@ export const contentVariants = pgTable("content_variants", {
   personalizedContent: jsonb("personalized_content").notNull(), // modified guide content
   generationPrompt: text("generation_prompt"), // prompt used to generate this variant
   performanceMetrics: jsonb("performance_metrics").default({}), // engagement, conversion rates
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Storage Usage Tracking
+export const storageUsage = pgTable("storage_usage", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
+  fileName: varchar("file_name").notNull(),
+  fileType: varchar("file_type").notNull(), // 'video', 'audio', 'pdf', 'image'
+  fileSizeMB: decimal("file_size_mb", { precision: 12, scale: 2 }).notNull(),
+  fileUrl: varchar("file_url"),
+  storageProvider: varchar("storage_provider").default("replit"), // 'replit', 's3', 'user_provided'
+  storageCostUSD: decimal("storage_cost_usd", { precision: 8, scale: 4 }).default("0"),
+  processedAt: timestamp("processed_at"), // When file was processed (transcript extracted, etc.)
+  deletedAt: timestamp("deleted_at"), // When file was deleted to save costs
+  retentionDays: integer("retention_days").default(30), // How long to keep the file
+  guideId: integer("guide_id").references(() => guides.id, { onDelete: "cascade" }),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Storage Billing Records
+export const storageBilling = pgTable("storage_billing", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
+  billingMonth: varchar("billing_month").notNull(), // 'YYYY-MM'
+  totalStorageUsedMB: decimal("total_storage_used_mb", { precision: 12, scale: 2 }).notNull(),
+  totalCostUSD: decimal("total_cost_usd", { precision: 8, scale: 2 }).notNull(),
+  stripeChargeId: varchar("stripe_charge_id"), // If charged via Stripe
+  status: varchar("status").default("pending"), // 'pending', 'charged', 'failed'
+  chargedAt: timestamp("charged_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Subscription Tiers and Storage Quotas
+export const subscriptionTiers = pgTable("subscription_tiers", {
+  id: serial("id").primaryKey(),
+  name: varchar("name").notNull(), // 'free', 'basic', 'pro', 'enterprise'
+  displayName: varchar("display_name").notNull(),
+  monthlyPriceUSD: decimal("monthly_price_usd", { precision: 8, scale: 2 }).notNull(),
+  storageQuotaGB: decimal("storage_quota_gb", { precision: 10, scale: 2 }).notNull(),
+  storageOveragePricePerGB: decimal("storage_overage_price_per_gb", { precision: 6, scale: 4 }).notNull(),
+  maxFileSizeMB: decimal("max_file_size_mb", { precision: 10, scale: 2 }).notNull(),
+  maxGuidesPerMonth: integer("max_guides_per_month").default(10),
+  retentionDays: integer("retention_days").default(30), // How long files are kept
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// File Cleanup Jobs
+export const fileCleanupJobs = pgTable("file_cleanup_jobs", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
+  storageUsageId: integer("storage_usage_id").references(() => storageUsage.id, { onDelete: "cascade" }).notNull(),
+  scheduledFor: timestamp("scheduled_for").notNull(),
+  status: varchar("status").default("pending"), // 'pending', 'completed', 'failed'
+  completedAt: timestamp("completed_at"),
+  errorMessage: text("error_message"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -488,9 +580,25 @@ export const insertMediaAssetSchema = createInsertSchema(mediaAssets).omit({
   updatedAt: true,
 });
 
+export const insertKnowledgebaseCollectionSchema = createInsertSchema(knowledgebaseCollections).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertKnowledgebaseUsageSettingsSchema = createInsertSchema(knowledgebaseUsageSettings).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 // Types
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
+export type KnowledgebaseCollection = typeof knowledgebaseCollections.$inferSelect;
+export type InsertKnowledgebaseCollection = z.infer<typeof insertKnowledgebaseCollectionSchema>;
+export type KnowledgebaseUsageSettings = typeof knowledgebaseUsageSettings.$inferSelect;
+export type InsertKnowledgebaseUsageSettings = z.infer<typeof insertKnowledgebaseUsageSettingsSchema>;
 export type Guide = typeof guides.$inferSelect;
 export type InsertGuide = z.infer<typeof insertGuideSchema>;
 export type LandingPage = typeof landingPages.$inferSelect;
@@ -521,3 +629,13 @@ export type PromptTemplate = typeof promptTemplates.$inferSelect;
 export type InsertPromptTemplate = z.infer<typeof insertPromptTemplateSchema>;
 export type MediaAsset = typeof mediaAssets.$inferSelect;
 export type InsertMediaAsset = z.infer<typeof insertMediaAssetSchema>;
+
+// Storage Management Types
+export type StorageUsage = typeof storageUsage.$inferSelect;
+export type InsertStorageUsage = typeof storageUsage.$inferInsert;
+export type StorageBilling = typeof storageBilling.$inferSelect;
+export type InsertStorageBilling = typeof storageBilling.$inferInsert;
+export type SubscriptionTier = typeof subscriptionTiers.$inferSelect;
+export type InsertSubscriptionTier = typeof subscriptionTiers.$inferInsert;
+export type FileCleanupJob = typeof fileCleanupJobs.$inferSelect;
+export type InsertFileCleanupJob = typeof fileCleanupJobs.$inferInsert;

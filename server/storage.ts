@@ -9,6 +9,8 @@ import {
   brandingSettings,
   trainingSettings,
   knowledgebaseEntries,
+  knowledgebaseCollections,
+  knowledgebaseUsageSettings,
   googleConnections,
   promptTemplates,
   mediaAssets,
@@ -32,6 +34,10 @@ import {
   type InsertTrainingSettings,
   type KnowledgebaseEntry,
   type InsertKnowledgebaseEntry,
+  type KnowledgebaseCollection,
+  type InsertKnowledgebaseCollection,
+  type KnowledgebaseUsageSettings,
+  type InsertKnowledgebaseUsageSettings,
   type GoogleConnection,
   type InsertGoogleConnection,
   type PromptTemplate,
@@ -122,9 +128,20 @@ export interface IStorage {
   getTrainingSettings(userId: string): Promise<TrainingSettings | undefined>;
   upsertTrainingSettings(settings: InsertTrainingSettings): Promise<TrainingSettings>;
 
-  // Knowledgebase operations with global inheritance
+  // Knowledge Base Collections operations
+  createKnowledgebaseCollection(collection: InsertKnowledgebaseCollection): Promise<KnowledgebaseCollection>;
+  getKnowledgebaseCollections(userId: string, brandId?: number | null): Promise<KnowledgebaseCollection[]>;
+  updateKnowledgebaseCollection(id: number, collection: Partial<InsertKnowledgebaseCollection>): Promise<KnowledgebaseCollection>;
+  deleteKnowledgebaseCollection(id: number): Promise<void>;
+  
+  // Knowledge Base Usage Settings operations
+  getKnowledgebaseUsageSettings(userId: string, brandId?: number | null): Promise<KnowledgebaseUsageSettings | undefined>;
+  upsertKnowledgebaseUsageSettings(settings: InsertKnowledgebaseUsageSettings): Promise<KnowledgebaseUsageSettings>;
+  
+  // Enhanced Knowledgebase operations with collections support
   createKnowledgebaseEntry(entry: InsertKnowledgebaseEntry): Promise<KnowledgebaseEntry>;
-  getKnowledgebaseEntries(userId: string, brandId?: number | null): Promise<KnowledgebaseEntry[]>;
+  getKnowledgebaseEntries(userId: string, brandId?: number | null, collectionIds?: number[]): Promise<KnowledgebaseEntry[]>;
+  getActiveKnowledgebaseEntries(userId: string, brandId?: number | null): Promise<KnowledgebaseEntry[]>; // Respects usage settings
   updateKnowledgebaseEntry(id: number, entry: Partial<InsertKnowledgebaseEntry>): Promise<KnowledgebaseEntry>;
   deleteKnowledgebaseEntry(id: number): Promise<void>;
   searchKnowledgebaseEntries(userId: string, query?: string, brandId?: number | null): Promise<KnowledgebaseEntry[]>;
