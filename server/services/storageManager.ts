@@ -269,50 +269,90 @@ export class StorageCostManager {
   }
 }
 
-// Default subscription tiers
+// Subscription tiers optimized for 90%+ margin and user growth
 export const DEFAULT_SUBSCRIPTION_TIERS = [
   {
     name: 'free',
-    displayName: 'Free',
+    displayName: 'Free (VidMagnet Branded)',
     monthlyPriceUSD: 0,
-    storageQuotaGB: 1, // 1GB free
-    storageOveragePricePerGB: 0.05, // $0.05/GB overage
+    storageQuotaGB: 0.5, // 500MB free quota
+    storageOveragePricePerGB: 0.25, // $0.25/GB pay-per-use (90.8% margin)
     maxFileSizeMB: 100, // 100MB max file
-    maxGuidesPerMonth: 5,
-    retentionDays: 7, // Delete files after 7 days
+    maxGuidesPerMonth: 1, // 1 funnel per month
+    maxLeadsPerMonth: 50, // 50 leads limit
+    maxVisitsPerMonth: 500, // 500 visits limit
+    retentionDays: 3, // Delete files after 3 days (rapid cleanup)
+    hasBranding: true, // VidMagnet branded
+    hasCustomUrl: false, // Must use VidMagnet links
+    hasCustomDomain: false,
+    hasPixelTracking: false,
     isActive: true
   },
   {
-    name: 'basic',
-    displayName: 'Basic',
-    monthlyPriceUSD: 29,
-    storageQuotaGB: 10, // 10GB included
-    storageOveragePricePerGB: 0.03, // $0.03/GB overage
-    maxFileSizeMB: 500, // 500MB max file
+    name: 'personal',
+    displayName: 'Personal',
+    monthlyPriceUSD: 24.95,
+    storageQuotaGB: 5, // 5GB included
+    storageOveragePricePerGB: 0.15, // $0.15/GB overage (93.5% margin)
+    maxFileSizeMB: 250, // 250MB max file
     maxGuidesPerMonth: 25,
-    retentionDays: 30, // Keep files for 30 days
+    maxLeadsPerMonth: 1000,
+    maxVisitsPerMonth: 10000,
+    retentionDays: 14, // Keep files for 2 weeks
+    hasBranding: false, // No VidMagnet branding
+    hasCustomUrl: true, // Custom URLs allowed
+    hasCustomDomain: false, // No custom domains
+    hasPixelTracking: false, // No pixel tracking
+    maxBrands: 1, // Single brand only
+    maxTeamMembers: 1,
     isActive: true
   },
   {
-    name: 'pro',
-    displayName: 'Professional',
-    monthlyPriceUSD: 99,
-    storageQuotaGB: 100, // 100GB included
-    storageOveragePricePerGB: 0.02, // $0.02/GB overage  
-    maxFileSizeMB: 2000, // 2GB max file
-    maxGuidesPerMonth: 100,
-    retentionDays: 90, // Keep files for 90 days
+    name: 'business',
+    displayName: 'Business (Per Brand)',
+    monthlyPriceUSD: 33, // $33 per brand
+    minimumBrands: 3, // $99 minimum monthly
+    storageQuotaGB: 25, // 25GB per brand
+    storageOveragePricePerGB: 0.10, // $0.10/GB overage (95.7% margin)
+    maxFileSizeMB: 1000, // 1GB max file
+    maxGuidesPerMonth: 100, // Per brand
+    maxLeadsPerMonth: 5000, // Per brand
+    maxVisitsPerMonth: 50000, // Per brand
+    retentionDays: 30, // Keep files for 1 month
+    hasBranding: false,
+    hasCustomUrl: true,
+    hasCustomDomain: true, // Custom domain per brand
+    hasPixelTracking: true, // Custom code & pixel tracking
+    maxBrands: 10, // Up to 10 brands
+    maxTeamMembers: 2, // 2 team members per brand
+    hasTemplateSharing: true, // Share templates across brands
+    hasBusinessBilling: true, // Each business can pay separately
     isActive: true
   },
   {
-    name: 'enterprise',
-    displayName: 'Enterprise',
-    monthlyPriceUSD: 299,
-    storageQuotaGB: 1000, // 1TB included
-    storageOveragePricePerGB: 0.01, // $0.01/GB overage
-    maxFileSizeMB: 10000, // 10GB max file
-    maxGuidesPerMonth: 1000,
-    retentionDays: 365, // Keep files for 1 year
+    name: 'agency',
+    displayName: 'Agency (White-Label)',
+    monthlyPriceUSD: 247,
+    storageQuotaGB: 200, // 200GB included
+    storageOveragePricePerGB: 0.05, // $0.05/GB overage (97.8% margin)
+    maxFileSizeMB: 5000, // 5GB max file
+    maxGuidesPerMonth: 1000, // Unlimited guides
+    maxLeadsPerMonth: 50000, // 50k leads total
+    maxVisitsPerMonth: 500000, // 500k visits total
+    retentionDays: 90, // Keep files for 3 months
+    hasBranding: false, // Fully white-labeled
+    hasCustomUrl: true,
+    hasCustomDomain: true,
+    hasPixelTracking: true,
+    maxBrands: 7, // Up to 7 client brands
+    maxTeamMembers: 5, // Base team members
+    hasTemplateSharing: true,
+    hasWhiteLabel: true, // Complete white-labeling
+    hasRevenueSharing: true, // 30% to VidMagnet, 70% to agency
+    hasAffiliateProgram: true, // 50% commission on referrals
+    hasClientAccountAccess: true, // Seamless client access
+    hasUpchargeCapability: true, // Upcharge on maintenance, storage, services
+    hasPayPerLeadBilling: true, // Pay-per-lead capability
     isActive: true
   }
 ];
