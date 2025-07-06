@@ -38,7 +38,6 @@ function Router() {
       {isLoading || !isAuthenticated ? (
         <>
           <Route path="/" component={Landing} />
-          <Route path="/sales" component={SalesPage} />
           <Route path="/reset-password" component={ResetPassword} />
         </>
       ) : (
@@ -62,6 +61,7 @@ function Router() {
       )}
       
       {/* Public routes for landing and delivery pages */}
+      <Route path="/sales" component={SalesPage} />
       <Route path="/landing/:customUrl" component={GuideLanding} />
       <Route path="/delivery/:customUrl/:leadId" component={GuideDelivery} />
       <Route path="/guide/:guideId" component={GuideView} />
