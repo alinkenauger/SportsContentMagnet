@@ -187,9 +187,86 @@ export default function SalesPage() {
             <span className="block text-gray-900 mt-2">From The Same Traffic...</span>
           </h1>
           
-          <p className="text-2xl md:text-3xl font-bold text-gray-700 mb-8">
+          <p className="text-2xl md:text-3xl font-bold text-gray-700 mb-12">
             ... and instantly create your high converting funnels for you.
           </p>
+          
+          {/* Large Video Player */}
+          <div className="max-w-5xl mx-auto mb-16">
+            <div className="relative bg-black rounded-2xl overflow-hidden shadow-2xl border-4 border-blue-200">
+              <div className="aspect-video bg-gradient-to-br from-gray-900 to-black flex items-center justify-center">
+                <div className="text-center">
+                  <div className="w-32 h-32 bg-blue-600 bg-opacity-20 rounded-full flex items-center justify-center mx-auto mb-6 cursor-pointer hover:bg-opacity-30 transition-all duration-500 backdrop-blur-sm border-2 border-blue-400">
+                    <Play className="h-16 w-16 text-white ml-2" />
+                  </div>
+                  <h3 className="text-white text-3xl font-bold mb-3">Watch ConvertMag.net Create 10X Results</h3>
+                  <p className="text-blue-200 text-lg mb-4">See the complete transformation process in under 3 minutes</p>
+                  <div className="flex items-center justify-center space-x-8 text-sm text-gray-300">
+                    <div className="flex items-center">
+                      <div className="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
+                      Live Demo
+                    </div>
+                    <div className="flex items-center">
+                      <div className="w-2 h-2 bg-blue-500 rounded-full mr-2"></div>
+                      3:24 Duration
+                    </div>
+                    <div className="flex items-center">
+                      <div className="w-2 h-2 bg-purple-500 rounded-full mr-2"></div>
+                      Real Results
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Video Controls Bar */}
+              <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black to-transparent p-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-4">
+                    <button className="text-white hover:text-blue-400 transition-colors">
+                      <Play className="h-6 w-6" />
+                    </button>
+                    <div className="text-white text-sm">0:00 / 3:24</div>
+                  </div>
+                  <div className="flex items-center space-x-4">
+                    <button className="text-white hover:text-blue-400 transition-colors">
+                      <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 14.142M8.464 15.536a5 5 0 01-7.072 0" />
+                      </svg>
+                    </button>
+                    <button className="text-white hover:text-blue-400 transition-colors">
+                      <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V6a2 2 0 012-2h2M4 16v2a2 2 0 002 2h2M16 4h2a2 2 0 012 2v2M16 20h2a2 2 0 002-2v-2" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+                <div className="mt-2 bg-gray-600 rounded-full h-1">
+                  <div className="bg-blue-500 h-1 rounded-full" style={{ width: '0%' }}></div>
+                </div>
+              </div>
+            </div>
+            
+            {/* Video Description */}
+            <div className="mt-6 text-center">
+              <p className="text-lg text-gray-600 mb-4">
+                Watch the complete process: YouTube video → Landing page + Interactive guide in under 5 minutes
+              </p>
+              <div className="flex justify-center space-x-6 text-sm text-gray-500">
+                <div className="flex items-center">
+                  <Check className="h-4 w-4 text-green-500 mr-2" />
+                  No editing required
+                </div>
+                <div className="flex items-center">
+                  <Check className="h-4 w-4 text-green-500 mr-2" />
+                  Fully automated
+                </div>
+                <div className="flex items-center">
+                  <Check className="h-4 w-4 text-green-500 mr-2" />
+                  18% conversion rate
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 
