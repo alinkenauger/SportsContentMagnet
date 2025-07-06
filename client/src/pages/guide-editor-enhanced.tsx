@@ -444,6 +444,10 @@ export default function GuideEditorEnhanced() {
   };
 
   const updateElement = (id: string, content: any) => {
+    console.log('updateElement called for:', id, 'with content:', content);
+    if (content.src && content.src.startsWith('data:image/')) {
+      console.log('Updating element with image data, length:', content.src.length);
+    }
     setElements(elements.map(el => 
       el.id === id ? { ...el, content } : el
     ));
@@ -853,9 +857,11 @@ export default function GuideEditorEnhanced() {
                     if (file) {
                       const reader = new FileReader();
                       reader.onload = (event) => {
+                        const imageData = event.target?.result as string;
+                        console.log('Image uploaded successfully:', file.name, 'Data length:', imageData.length);
                         updateElement(element.id, {
                           ...element.content,
-                          src: event.target?.result as string,
+                          src: imageData,
                           alt: element.content.alt || file.name
                         });
                       };
@@ -914,11 +920,13 @@ export default function GuideEditorEnhanced() {
               className="max-w-full h-auto rounded-lg mx-auto cursor-pointer"
               onClick={() => setIsEditing(element.id)}
               onError={(e) => {
-                console.error('Image failed to load:', element.content.src);
+                console.error('Image failed to load:', element.content.src?.substring(0, 100) + '...');
+                console.error('Element content:', element.content);
                 console.error('Error details:', e);
               }}
               onLoad={() => {
-                console.log('Image loaded successfully:', element.content.src);
+                console.log('Image loaded successfully:', element.content.src?.substring(0, 100) + '...');
+                console.log('Element content:', element.content);
               }}
             />
             {element.content.caption && (
@@ -952,9 +960,11 @@ export default function GuideEditorEnhanced() {
               if (imageFile) {
                 const reader = new FileReader();
                 reader.onload = (event) => {
+                  const imageData = event.target?.result as string;
+                  console.log('Image dropped successfully:', imageFile.name, 'Data length:', imageData.length);
                   updateElement(element.id, {
                     ...element.content,
-                    src: event.target?.result as string,
+                    src: imageData,
                     alt: element.content.alt || imageFile.name
                   });
                 };
@@ -1300,6 +1310,23 @@ export default function GuideEditorEnhanced() {
             {/* Main Guide Content Area */}
             <div className="px-8 py-8">
               <div className="max-w-4xl mx-auto">
+                {/* YouTube Video Player */}
+                {guide?.youtubeVideoId && (
+                  <div className="mb-8 bg-white rounded-xl shadow-sm p-6">
+                    <h3 className="text-lg font-semibold mb-4 text-slate-800">Source Video</h3>
+                    <div className="aspect-video bg-black rounded-lg overflow-hidden">
+                      <iframe
+                        id="youtube-player"
+                        src={`https://www.youtube.com/embed/${guide.youtubeVideoId}?enablejsapi=1`}
+                        title="YouTube video player"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                        allowFullScreen
+                        className="w-full h-full"
+                      />
+                    </div>
+                  </div>
+                )}
+                
                 {/* Guide Content Card - Matches guide-view.tsx exactly */}
                 <div className="bg-white rounded-xl shadow-sm p-8 space-y-2">
               {elements.filter(el => !el.parentId).length === 0 ? (
