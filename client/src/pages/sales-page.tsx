@@ -890,28 +890,28 @@ export default function SalesPage() {
 
                 {/* Equal Sign */}
                 <div className="flex items-center justify-center">
-                  <div className="text-8xl font-black text-blue-600 bg-blue-50 rounded-full w-28 h-28 flex items-center justify-center shadow-lg">
-                    =
+                  <div className="w-16 h-16 bg-blue-500 rounded-full flex items-center justify-center shadow-lg">
+                    <span className="text-white font-bold text-2xl">=</span>
                   </div>
                 </div>
                 
-                {/* Combined Output - Vertical Stack */}
+                {/* Combined Output - Horizontal Layout */}
                 <div className="text-center lg:w-1/2">
                   <h3 className="text-2xl font-bold text-gray-800 mb-6">High-Converting Landing Page + Interactive Guide</h3>
-                  <div className="flex flex-col items-center justify-center gap-8">
+                  <div className="flex items-center justify-center gap-6">
                     {/* Landing Page */}
                     <div className="relative">
                       <img 
                         src="/attached_assets/CleanShot 2025-07-06 at 13.58.18@2x_1751825245756.png" 
                         alt="Golf Landing Page" 
-                        className="w-full max-w-[500px] mx-auto rounded-xl shadow-xl border border-gray-200"
+                        className="w-full max-w-[300px] mx-auto rounded-xl shadow-xl border border-gray-200"
                       />
                     </div>
                     
                     {/* Plus Sign */}
                     <div className="flex items-center justify-center">
-                      <div className="w-20 h-20 bg-green-500 rounded-full flex items-center justify-center shadow-lg">
-                        <span className="text-white font-bold text-4xl">+</span>
+                      <div className="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center shadow-lg">
+                        <span className="text-white font-bold text-2xl">+</span>
                       </div>
                     </div>
                     
@@ -920,7 +920,7 @@ export default function SalesPage() {
                       <img 
                         src="/attached_assets/CleanShot 2025-07-06 at 13.59.43_1751825178398.gif" 
                         alt="Interactive Golf Practice Guide" 
-                        className="w-full max-w-[500px] mx-auto rounded-xl shadow-xl border border-gray-200"
+                        className="w-full max-w-[300px] mx-auto rounded-xl shadow-xl border border-gray-200"
                       />
                     </div>
                   </div>
