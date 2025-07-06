@@ -417,6 +417,155 @@ export default function SalesPage() {
         </div>
       </section>
 
+      {/* Customization & Editing Section */}
+      <section className="bg-gradient-to-r from-purple-50 to-blue-50 py-16">
+        <div className="container mx-auto px-4">
+          <div className="max-w-4xl mx-auto">
+            <div className="text-center mb-12">
+              <h2 className="text-3xl font-bold mb-4">Complete Customization Control</h2>
+              <p className="text-xl text-gray-600">
+                Not only can you adapt the structure of your guide with our AI training styles, but you can also create 100% customized structures through our AI Prompting system.
+              </p>
+            </div>
+            
+            <div className="grid md:grid-cols-2 gap-8 mb-12">
+              <Card className="border-0 shadow-lg">
+                <CardHeader>
+                  <CardTitle className="text-xl flex items-center">
+                    <Zap className="h-6 w-6 mr-3 text-purple-600" />
+                    AI Prompting System
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-gray-600">
+                    Create 100% customized guide structures through our advanced AI prompting system. Tell our AI exactly what you want and watch it create the perfect format for your content.
+                  </p>
+                </CardContent>
+              </Card>
+              
+              <Card className="border-0 shadow-lg">
+                <CardHeader>
+                  <CardTitle className="text-xl flex items-center">
+                    <Target className="h-6 w-6 mr-3 text-blue-600" />
+                    Drag & Drop Editor
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-gray-600">
+                    Once a guide and landing page is made, if you need to tweak it, each has a complete drag and drop editor, branding adjustments, and more so you can tweak, add to, or remove what you wish.
+                  </p>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Library Feature Section */}
+      <section className="bg-white py-16">
+        <div className="container mx-auto px-4">
+          <div className="max-w-4xl mx-auto">
+            <div className="text-center mb-12">
+              <h2 className="text-3xl font-bold mb-4">The Library Feature</h2>
+              <p className="text-xl text-gray-600 mb-6">
+                Turn on the "Library" feature when you create a new guide, and create the lead magnet that keeps on giving.
+              </p>
+              <p className="text-lg text-gray-700">
+                The Library is an accessible, searchable library of all past and future guides you'd like added. As leads opt in, they also get access to the Library feature, which includes an email notification when new guides are added, making ConvertMag.net an ongoing nurturing and value system.
+              </p>
+            </div>
+            
+            <div className="grid md:grid-cols-3 gap-8 mb-12">
+              <Card className="border-2 border-green-500 shadow-xl">
+                <CardHeader>
+                  <CardTitle className="text-lg flex items-center">
+                    <Users className="h-5 w-5 mr-2 text-green-600" />
+                    Forever Cookbook
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-gray-600 text-sm">
+                    For cooking channels that automatically turn your YouTube videos into follow along ingredient lists and/or recipe guides.
+                  </p>
+                </CardContent>
+              </Card>
+              
+              <Card className="border-2 border-blue-500 shadow-xl">
+                <CardHeader>
+                  <CardTitle className="text-lg flex items-center">
+                    <TrendingUp className="h-5 w-5 mr-2 text-blue-600" />
+                    Fitness Database
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-gray-600 text-sm">
+                    A database of fitness workouts or exercises with sets, reps, and more, updated weekly, each with a CTA for private coaching access.
+                  </p>
+                </CardContent>
+              </Card>
+              
+              <Card className="border-2 border-purple-500 shadow-xl">
+                <CardHeader>
+                  <CardTitle className="text-lg flex items-center">
+                    <Shield className="h-5 w-5 mr-2 text-purple-600" />
+                    SOP Database
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-gray-600 text-sm">
+                    An implementable "SOP" database for the business space, that allows for instant implementation across your viewers' businesses that is step by step, simple.
+                  </p>
+                </CardContent>
+              </Card>
+            </div>
+            
+            <div className="bg-gradient-to-r from-green-50 to-blue-50 rounded-2xl p-8 text-center">
+              <h3 className="text-2xl font-bold mb-4">You Have Full Control</h3>
+              <p className="text-lg text-gray-700">
+                You have complete control over the library, what shows, and how it's organized. Create an ongoing value system that keeps leads engaged and coming back for more.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Special Offers & Content Types Section */}
+      <section className="bg-gradient-to-r from-orange-50 to-red-50 py-16">
+        <div className="container mx-auto px-4">
+          <div className="max-w-4xl mx-auto">
+            <div className="grid md:grid-cols-2 gap-8 mb-12">
+              <Card className="border-0 shadow-lg">
+                <CardHeader>
+                  <CardTitle className="text-xl flex items-center">
+                    <Crown className="h-6 w-6 mr-3 text-orange-600" />
+                    Special One Time Offers
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-gray-600">
+                    Quickly add or switch out Special One Time Offers within your guide in a few clicks! Maximize your revenue with targeted upsells and special promotions.
+                  </p>
+                </CardContent>
+              </Card>
+              
+              <Card className="border-0 shadow-lg">
+                <CardHeader>
+                  <CardTitle className="text-xl flex items-center">
+                    <Video className="h-6 w-6 mr-3 text-red-600" />
+                    ALL Content Types
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-gray-600">
+                    Works on ALL CONTENT TYPES, not just video. Transform any audio, stream, post, blog, book, or document into high-converting lead magnets.
+                  </p>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Features Section */}
       <section className="container mx-auto px-4 py-16">
         <div className="text-center mb-12">
