@@ -1,8 +1,8 @@
-# VidMagnet - Video-to-Lead-Magnet SAAS for Content Creators
+# ConvertMag.net - Transform Any Content into Lead Magnets
 
 ## Overview
 
-VidMagnet is a comprehensive SAAS application that transforms YouTube videos into high-converting lead magnets for content creators across multiple niches including fitness, sports, how-to skill teaching, cooking, and coding. The platform automatically extracts video content, transcribes it, uses AI to analyze expertise and insights, and generates branded practice guides with customizable landing pages for lead capture with optional SMS collection and legal compliance features.
+ConvertMag.net is a comprehensive SAAS application that transforms ANY video, audio, stream, post, blog, or book into high-converting lead magnets for content creators across multiple niches including fitness, sports, how-to skill teaching, cooking, and coding. The platform automatically extracts video content, transcribes it, uses AI to analyze expertise and insights, and generates branded practice guides with customizable landing pages for lead capture with optional SMS collection and legal compliance features.
 
 ## System Architecture
 
@@ -108,7 +108,9 @@ VidMagnet is a comprehensive SAAS application that transforms YouTube videos int
 ```
 Changelog:
 - July 06, 2025. Built complete signup system with email notifications and CRM integration:
-  * Created comprehensive sales page with professional design and signup forms
+  * Created comprehensive sales page with professional design and compelling problem statement
+  * Added powerful messaging about lead magnets dying and ConvertMag.net as the solution
+  * Updated all branding from VidMagnet to ConvertMag.net throughout the application
   * Implemented full authentication system with password reset, email verification
   * Added email notification service supporting both SendGrid and High Level options
   * Built High Level CRM integration for automatic lead capture and marketing

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -62,7 +62,7 @@ const testimonials = [
   {
     name: "Sarah Johnson",
     role: "Fitness Coach",
-    content: "VidMagnet helped me turn my workout videos into a consistent lead generation system. I now capture 50+ leads per week!",
+    content: "ConvertMag.net helped me turn my workout videos into a consistent lead generation system. I now capture 50+ leads per week!",
     rating: 5
   },
   {
@@ -89,7 +89,7 @@ const pricingPlans = [
       "500 landing page visits",
       "Basic guide templates",
       "Email support",
-      "VidMagnet branding"
+      "ConvertMag.net branding"
     ],
     popular: false,
     cta: "Start Free Now"
@@ -131,6 +131,10 @@ export default function SalesPage() {
   const [isSignUpOpen, setIsSignUpOpen] = useState(false);
   const [showVideoDemo, setShowVideoDemo] = useState(false);
 
+  useEffect(() => {
+    document.title = "ConvertMag.net - Transform Any Content into Lead Magnets";
+  }, []);
+
   const form = useForm<SignUpData>({
     resolver: zodResolver(signUpSchema),
     defaultValues: {
@@ -149,7 +153,7 @@ export default function SalesPage() {
     },
     onSuccess: () => {
       toast({
-        title: "Welcome to VidMagnet!",
+        title: "Welcome to ConvertMag.net!",
         description: "Check your email for login instructions and getting started guide.",
       });
       setIsSignUpOpen(false);
@@ -199,7 +203,7 @@ export default function SalesPage() {
                 <DialogHeader>
                   <DialogTitle>Start Your Free Account</DialogTitle>
                   <DialogDescription>
-                    Get started with VidMagnet in less than 60 seconds
+                    Get started with ConvertMag.net in less than 60 seconds
                   </DialogDescription>
                 </DialogHeader>
                 
@@ -319,12 +323,106 @@ export default function SalesPage() {
         </div>
       </section>
 
+      {/* Problem Statement Section */}
+      <section className="bg-gradient-to-r from-red-50 to-orange-50 py-16">
+        <div className="container mx-auto px-4">
+          <div className="max-w-4xl mx-auto text-center">
+            <h2 className="text-4xl font-bold mb-6 text-gray-900">
+              Lead Magnets Are Dying a Fast Death
+            </h2>
+            <p className="text-xl text-gray-700 mb-8">
+              There's only two types that work well: <strong>Personal support</strong> (customized to their needs) and <strong>laser-precise focused support</strong> (like a guide specifically made for the content and goal the viewer is watching in the moment).
+            </p>
+            
+            <div className="bg-white rounded-2xl shadow-xl p-8 mb-8">
+              <h3 className="text-2xl font-bold mb-4 text-blue-600">
+                ConvertMag.net Does BOTH
+              </h3>
+              <p className="text-lg text-gray-700 mb-6">
+                Turn ANY video, audio, stream, post, blog, or book instantly into a custom made, beautiful lead magnet with a 2,000,000+ lead tested landing page design, automated delivery, tracking, follow up and more.
+              </p>
+              <p className="text-lg text-gray-700">
+                Turn your lead magnet into an evergreen, flowing, high converting system that offers new content every time you post to social media, making personalized, in the moment solutions for the people who are focused on you and your content in the moment.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* AI Solution Section */}
+      <section className="bg-white py-16">
+        <div className="container mx-auto px-4">
+          <div className="max-w-4xl mx-auto">
+            <div className="text-center mb-12">
+              <h2 className="text-3xl font-bold mb-4">Our AI Is Custom Designed for You</h2>
+              <p className="text-xl text-gray-600">
+                It doesn't just rewrite or scramble content like other tools. It becomes an extension of you.
+              </p>
+            </div>
+            
+            <div className="grid md:grid-cols-2 gap-8 mb-12">
+              <Card className="border-0 shadow-lg">
+                <CardHeader>
+                  <CardTitle className="text-xl flex items-center">
+                    <Target className="h-6 w-6 mr-3 text-blue-600" />
+                    Beautiful, Detailed Content
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-gray-600">
+                    With templated brand guides (or make your own) - you can instantly create "Convert Magnets" that offer step-by-step instruction, deeper detailed analysis that goes far beyond the video or post they've consumed.
+                  </p>
+                </CardContent>
+              </Card>
+              
+              <Card className="border-0 shadow-lg">
+                <CardHeader>
+                  <CardTitle className="text-xl flex items-center">
+                    <TrendingUp className="h-6 w-6 mr-3 text-green-600" />
+                    Complete SOPs & Next Steps
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-gray-600">
+                    Create complete SOPs to hand team members, and even "Next step" guides of what to do, work on, or implement AFTER the result of the content they just consumed is completed.
+                  </p>
+                </CardContent>
+              </Card>
+            </div>
+            
+            <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-2xl p-8 mb-8">
+              <h3 className="text-2xl font-bold mb-4 text-center">Gets Smarter as You Use It</h3>
+              <p className="text-lg text-gray-700 text-center mb-6">
+                As you create convert guides, the video scripts and guides are added to your knowledge base, allowing the AI to continue to get to know you, your brand, the solutions to problems, and more, getting better as you use it.
+              </p>
+              <p className="text-lg text-gray-700 text-center">
+                You also can provide your own videos, books, guides, social posts, call recordings, or audio messages/streams to train our AI to think just like you.
+              </p>
+            </div>
+            
+            <Card className="border-2 border-green-500 shadow-xl">
+              <CardHeader>
+                <CardTitle className="text-xl flex items-center justify-center">
+                  <Zap className="h-6 w-6 mr-3 text-green-600" />
+                  Special for Fitness & Sports Training
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-gray-600 text-center text-lg">
+                  Offer Workouts or Sports Training? Our tool will even provide recommended workouts with sets and reps, even if your content doesn't based on your past content and training.
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </section>
+
       {/* Features Section */}
       <section className="container mx-auto px-4 py-16">
         <div className="text-center mb-12">
           <h2 className="text-3xl font-bold mb-4">Everything You Need to Succeed</h2>
           <p className="text-gray-600 max-w-2xl mx-auto">
-            VidMagnet combines AI-powered content analysis with professional lead generation tools
+            ConvertMag.net combines AI-powered content analysis with professional lead generation tools
           </p>
         </div>
         
@@ -463,7 +561,7 @@ export default function SalesPage() {
         <div className="container mx-auto px-4">
           <div className="grid md:grid-cols-4 gap-8">
             <div>
-              <h3 className="text-xl font-bold mb-4">VidMagnet</h3>
+              <h3 className="text-xl font-bold mb-4">ConvertMag.net</h3>
               <p className="text-gray-400">
                 Transform your videos into high-converting lead magnets with AI-powered analysis.
               </p>
@@ -498,7 +596,7 @@ export default function SalesPage() {
           </div>
           
           <div className="border-t border-gray-800 mt-8 pt-8 text-center text-gray-400">
-            <p>&copy; 2025 VidMagnet. All rights reserved.</p>
+            <p>&copy; 2025 ConvertMag.net. All rights reserved.</p>
           </div>
         </div>
       </footer>
