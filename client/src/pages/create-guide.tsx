@@ -12,7 +12,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Sparkles, Youtube, FileText, Settings, Zap, Info, Mic, Upload } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Sparkles, Youtube, FileText, Settings, Zap, Info, Mic, Upload, X } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 
 export default function CreateGuide() {
@@ -28,6 +29,13 @@ export default function CreateGuide() {
   const [manualTitle, setManualTitle] = useState("");
   const [selectedTemplate, setSelectedTemplate] = useState<string>("full_report");
   const [showCustomTemplate, setShowCustomTemplate] = useState(false);
+  const [customTemplate, setCustomTemplate] = useState({
+    name: "",
+    description: "",
+    analysisPrompt: "",
+    guidePrompt: "",
+    personalizationPrompt: ""
+  });
   const [customSettings, setCustomSettings] = useState({
     category: "",
     customInstructions: "",
@@ -329,15 +337,29 @@ export default function CreateGuide() {
                 </div>
 
                 <div>
-                  <Label htmlFor="custom-instructions">Custom Instructions</Label>
-                  <Textarea
-                    id="custom-instructions"
-                    value={customSettings.customInstructions}
-                    onChange={(e) => setCustomSettings(prev => ({ ...prev, customInstructions: e.target.value }))}
-                    placeholder="Any specific instructions for the AI to focus on..."
-                    className="mt-1"
-                    rows={3}
-                  />
+                  <Label htmlFor="focus-area">What Should the Guide Focus On? (Optional)</Label>
+                  <Select 
+                    value={customSettings.customInstructions} 
+                    onValueChange={(value) => setCustomSettings(prev => ({ ...prev, customInstructions: value }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Choose what to emphasize (or leave blank for balanced guide)" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="balanced">Balanced - Cover everything equally</SelectItem>
+                      <SelectItem value="Focus on technique and form correction">Technique & Form - Perfect the fundamentals</SelectItem>
+                      <SelectItem value="Focus on drills and practice exercises">Drills & Practice - Actionable training exercises</SelectItem>
+                      <SelectItem value="Focus on strategy and mental game">Strategy & Mental Game - Tactical thinking</SelectItem>
+                      <SelectItem value="Focus on common mistakes and how to fix them">Common Mistakes - Problem solving approach</SelectItem>
+                      <SelectItem value="Focus on conditioning and fitness elements">Conditioning & Fitness - Physical preparation</SelectItem>
+                      <SelectItem value="Focus on beginner-friendly explanations">Beginner-Friendly - Simple, clear explanations</SelectItem>
+                      <SelectItem value="Focus on advanced techniques and concepts">Advanced Techniques - Expert-level insights</SelectItem>
+                      <SelectItem value="Focus on equipment and setup recommendations">Equipment & Setup - Gear and environment</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    💡 This helps the AI know what aspects of your video to emphasize in the practice guide. If unsure, leave it blank for a balanced approach.
+                  </p>
                 </div>
 
                 {/* SMS Collection Settings */}
@@ -545,6 +567,130 @@ export default function CreateGuide() {
         currentStep={currentStep}
         progress={progress}
       />
+
+      {/* Custom Template Dialog */}
+      <Dialog open={showCustomTemplate} onOpenChange={setShowCustomTemplate}>
+        <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center space-x-2">
+              <Sparkles className="w-5 h-5 text-primary" />
+              <span>Create Custom Template</span>
+            </DialogTitle>
+            <DialogDescription>
+              Advanced users can create custom templates with specific AI prompts. This requires understanding of AI prompt engineering.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+              <div className="flex">
+                <Info className="w-5 h-5 text-amber-600 mr-2 flex-shrink-0 mt-0.5" />
+                <div>
+                  <h4 className="text-sm font-medium text-amber-800">For Advanced Users Only</h4>
+                  <p className="text-xs text-amber-700 mt-1">
+                    Custom templates require knowledge of AI prompt engineering. For most users, we recommend using the pre-built templates which are optimized for best results.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 gap-4">
+              <div>
+                <Label htmlFor="template-name">Template Name</Label>
+                <Input
+                  id="template-name"
+                  value={customTemplate.name}
+                  onChange={(e) => setCustomTemplate(prev => ({ ...prev, name: e.target.value }))}
+                  placeholder="e.g., Advanced Basketball Drills"
+                  className="mt-1"
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="template-description">Description</Label>
+                <Textarea
+                  id="template-description"
+                  value={customTemplate.description}
+                  onChange={(e) => setCustomTemplate(prev => ({ ...prev, description: e.target.value }))}
+                  placeholder="Describe what this template focuses on..."
+                  className="mt-1"
+                  rows={2}
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="analysis-prompt">Analysis Prompt</Label>
+                <Textarea
+                  id="analysis-prompt"
+                  value={customTemplate.analysisPrompt}
+                  onChange={(e) => setCustomTemplate(prev => ({ ...prev, analysisPrompt: e.target.value }))}
+                  placeholder="Instructions for how AI should analyze the video content..."
+                  className="mt-1"
+                  rows={3}
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="guide-prompt">Guide Generation Prompt</Label>
+                <Textarea
+                  id="guide-prompt"
+                  value={customTemplate.guidePrompt}
+                  onChange={(e) => setCustomTemplate(prev => ({ ...prev, guidePrompt: e.target.value }))}
+                  placeholder="Instructions for how AI should structure the practice guide..."
+                  className="mt-1"
+                  rows={3}
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="personalization-prompt">Personalization Prompt</Label>
+                <Textarea
+                  id="personalization-prompt"
+                  value={customTemplate.personalizationPrompt}
+                  onChange={(e) => setCustomTemplate(prev => ({ ...prev, personalizationPrompt: e.target.value }))}
+                  placeholder="Instructions for how AI should personalize content for different audiences..."
+                  className="mt-1"
+                  rows={3}
+                />
+              </div>
+            </div>
+
+            <div className="flex space-x-3 pt-4">
+              <Button
+                onClick={() => {
+                  // Use the custom template
+                  setSelectedTemplate("custom");
+                  setShowCustomTemplate(false);
+                  toast({
+                    title: "Custom Template Created",
+                    description: "Your custom template is now selected and ready to use.",
+                  });
+                }}
+                disabled={!customTemplate.name || !customTemplate.analysisPrompt || !customTemplate.guidePrompt}
+                className="flex-1"
+              >
+                Use This Template
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowCustomTemplate(false);
+                  setCustomTemplate({
+                    name: "",
+                    description: "",
+                    analysisPrompt: "",
+                    guidePrompt: "",
+                    personalizationPrompt: ""
+                  });
+                }}
+                className="flex-1"
+              >
+                Cancel
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
