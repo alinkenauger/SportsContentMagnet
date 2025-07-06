@@ -109,11 +109,13 @@ VidMagnet is a comprehensive SAAS application that transforms YouTube videos int
 Changelog:
 - July 06, 2025. Added complete branding customization system for brand accounts:
   * Implemented full logo upload functionality with file validation (5MB limit, image types only)
+  * Added favicon upload with automatic resizing to 32x32px using Sharp image processing
   * Created useBranding hook for consistent branding across all components
   * Updated sidebar and main landing page to display custom logos instead of "VidMagnet"
   * Added comprehensive color customization with preset themes and custom color pickers
-  * Logo uploads are stored in public/uploads/logos with unique filenames
+  * Logo uploads automatically resized to 200x200px with transparent background preservation
   * Custom company names replace "VidMagnet" throughout the application
+  * Fixed database unique constraint for proper branding settings storage
 - July 06, 2025. Enhanced drag-and-drop interface for improved usability:
   * Increased drop zones from 8px to 32px height (4x larger) for easier targeting
   * Added always-visible drop zone indicators with "Drop Zone" text and hover effects

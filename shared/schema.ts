@@ -115,7 +115,7 @@ export const mediaAssets = pgTable("media_assets", {
 // Branding settings for each brand
 export const brandingSettings = pgTable("branding_settings", {
   id: serial("id").primaryKey(),
-  userId: varchar("user_id").references(() => users.id).notNull(),
+  userId: varchar("user_id").references(() => users.id).notNull().unique(),
   brandId: integer("brand_id").references(() => brands.id), // nullable for migration
   logoUrl: varchar("logo_url"),
   faviconUrl: varchar("favicon_url"),
