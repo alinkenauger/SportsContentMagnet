@@ -13,7 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { Sparkles, Youtube, FileText, Settings, Zap, Info, Mic, Upload, X } from "lucide-react";
+import { Sparkles, Youtube, FileText, Settings, Zap, Info, Mic, Upload, X, Link, Radio, File } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 
 export default function CreateGuide() {
@@ -24,9 +24,12 @@ export default function CreateGuide() {
   // Check if user has a current brand set (not using default account)
   const currentBrand = brands.find(brand => brand.isDefault) || null;
   const [youtubeUrl, setYoutubeUrl] = useState("");
-  const [inputMethod, setInputMethod] = useState<"youtube" | "manual">("youtube");
+  const [inputMethod, setInputMethod] = useState<"youtube" | "manual" | "pdf" | "audio" | "link" | "stream">("youtube");
   const [manualTranscript, setManualTranscript] = useState("");
   const [manualTitle, setManualTitle] = useState("");
+  const [contentUrl, setContentUrl] = useState("");
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const [contentTitle, setContentTitle] = useState("");
   const [selectedTemplate, setSelectedTemplate] = useState<string>("full_report");
   const [showCustomTemplate, setShowCustomTemplate] = useState(false);
   const [customTemplate, setCustomTemplate] = useState({
@@ -57,7 +60,26 @@ export default function CreateGuide() {
   const [currentStep, setCurrentStep] = useState("");
   const [progress, setProgress] = useState(0);
 
+  // Validation function for all input methods
+  const isValidInput = () => {
+    switch (inputMethod) {
+      case "youtube":
+        return youtubeUrl.trim().length > 0;
+      case "manual":
+        return manualTitle.trim().length > 0 && manualTranscript.trim().length > 0;
+      case "pdf":
+      case "audio":
+        return uploadedFile !== null;
+      case "link":
+      case "stream":
+        return contentUrl.trim().length > 0;
+      default:
+        return false;
+    }
+  };
+
   const handleCreateGuide = async () => {
+    // Comprehensive validation for all input methods
     if (inputMethod === "youtube" && !youtubeUrl.trim()) {
       toast({
         title: "Error",
@@ -70,7 +92,43 @@ export default function CreateGuide() {
     if (inputMethod === "manual" && (!manualTitle.trim() || !manualTranscript.trim())) {
       toast({
         title: "Error",
-        description: "Please enter both video title and transcript",
+        description: "Please enter both content title and transcript",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (inputMethod === "pdf" && !uploadedFile) {
+      toast({
+        title: "Error",
+        description: "Please upload a PDF file",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (inputMethod === "audio" && !uploadedFile) {
+      toast({
+        title: "Error",
+        description: "Please upload an audio file",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (inputMethod === "link" && !contentUrl.trim()) {
+      toast({
+        title: "Error",
+        description: "Please enter a web page URL",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (inputMethod === "stream" && !contentUrl.trim()) {
+      toast({
+        title: "Error",
+        description: "Please enter a streaming URL",
         variant: "destructive",
       });
       return;
@@ -108,20 +166,57 @@ export default function CreateGuide() {
         );
       }
 
-      // Actually create the guide
-      const requestData = inputMethod === "youtube" ? {
-        youtubeUrl,
-        selectedTemplate,
-        ...customSettings
-      } : {
-        manualTranscript: manualTranscript,
-        manualTitle: manualTitle,
-        inputMethod: "manual",
-        selectedTemplate,
-        ...customSettings
-      };
+      // Actually create the guide - handle different input methods
+      let response;
       
-      const response = await apiRequest("POST", "/api/guides", requestData);
+      if (inputMethod === "pdf" || inputMethod === "audio") {
+        // Use FormData for file uploads
+        const formData = new FormData();
+        formData.append('inputMethod', inputMethod);
+        formData.append('selectedTemplate', selectedTemplate);
+        if (uploadedFile) {
+          formData.append('file', uploadedFile);
+        }
+        if (contentTitle) {
+          formData.append('title', contentTitle);
+        }
+        
+        // Add custom settings to FormData
+        Object.entries(customSettings).forEach(([key, value]) => {
+          formData.append(key, value.toString());
+        });
+        
+        response = await fetch('/api/guides', {
+          method: 'POST',
+          body: formData,
+        });
+        
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+      } else {
+        // Use JSON for YouTube, manual, link, and stream methods
+        const requestData: any = {
+          inputMethod,
+          selectedTemplate,
+          ...customSettings
+        };
+        
+        if (inputMethod === "youtube") {
+          requestData.youtubeUrl = youtubeUrl;
+        } else if (inputMethod === "manual") {
+          requestData.manualTranscript = manualTranscript;
+          requestData.manualTitle = manualTitle;
+        } else if (inputMethod === "link") {
+          requestData.contentUrl = contentUrl;
+          requestData.title = contentTitle || "Web Content";
+        } else if (inputMethod === "stream") {
+          requestData.contentUrl = contentUrl;
+          requestData.title = contentTitle || "Stream Content";
+        }
+        
+        response = await apiRequest("POST", "/api/guides", requestData);
+      }
       
       const result = await response.json();
       
@@ -132,6 +227,11 @@ export default function CreateGuide() {
       
       // Reset form
       setYoutubeUrl("");
+      setManualTranscript("");
+      setManualTitle("");
+      setContentUrl("");
+      setUploadedFile(null);
+      setContentTitle("");
       setCustomSettings({
         category: "",
         customInstructions: "",
@@ -193,24 +293,59 @@ export default function CreateGuide() {
               <CardHeader>
                 <CardTitle className="flex items-center space-x-2">
                   <Youtube className="w-5 h-5 text-red-500" />
-                  <span>Step 1: Video Source</span>
+                  <span>Step 1: Content Source</span>
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
-                  <Label>Input Method</Label>
-                  <Select value={inputMethod} onValueChange={(value: "youtube" | "manual") => setInputMethod(value)}>
+                  <Label>Content Source</Label>
+                  <Select value={inputMethod} onValueChange={(value: "youtube" | "manual" | "pdf" | "audio" | "link" | "stream") => setInputMethod(value)}>
                     <SelectTrigger className="mt-1">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="youtube">YouTube URL (may have transcription issues)</SelectItem>
-                      <SelectItem value="manual">Manual Transcript Upload</SelectItem>
+                      <SelectItem value="youtube">
+                        <div className="flex items-center space-x-2">
+                          <Youtube className="w-4 h-4 text-red-500" />
+                          <span>YouTube Video</span>
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="pdf">
+                        <div className="flex items-center space-x-2">
+                          <File className="w-4 h-4 text-red-500" />
+                          <span>PDF Document</span>
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="audio">
+                        <div className="flex items-center space-x-2">
+                          <Mic className="w-4 h-4 text-green-500" />
+                          <span>Audio File</span>
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="link">
+                        <div className="flex items-center space-x-2">
+                          <Link className="w-4 h-4 text-blue-500" />
+                          <span>Web Page</span>
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="stream">
+                        <div className="flex items-center space-x-2">
+                          <Radio className="w-4 h-4 text-purple-500" />
+                          <span>Streaming Link</span>
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="manual">
+                        <div className="flex items-center space-x-2">
+                          <FileText className="w-4 h-4 text-gray-500" />
+                          <span>Manual Transcript</span>
+                        </div>
+                      </SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
 
-                {inputMethod === "youtube" ? (
+                {/* Render appropriate input fields based on selected method */}
+                {inputMethod === "youtube" && (
                   <div>
                     <Label htmlFor="youtube-url">YouTube URL</Label>
                     <Input
@@ -221,34 +356,172 @@ export default function CreateGuide() {
                       className="mt-1"
                     />
                     <p className="text-sm text-muted-foreground mt-1">
-                      ⚠️ Note: Most modern YouTube videos are protected by anti-bot measures and cannot be transcribed automatically.
+                      ✅ We'll extract the audio and transcribe it automatically using advanced AI
                     </p>
                   </div>
-                ) : (
+                )}
+
+                {inputMethod === "pdf" && (
                   <div className="space-y-4">
                     <div>
-                      <Label htmlFor="manual-title">Video Title</Label>
+                      <Label htmlFor="pdf-upload">Upload PDF Document</Label>
+                      <div className="mt-1 border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-gray-400 transition-colors">
+                        <input
+                          type="file"
+                          id="pdf-upload"
+                          accept=".pdf"
+                          onChange={(e) => setUploadedFile(e.target.files?.[0] || null)}
+                          className="hidden"
+                        />
+                        <label htmlFor="pdf-upload" className="cursor-pointer flex flex-col items-center space-y-2">
+                          <File className="w-8 h-8 text-gray-400" />
+                          <span className="text-sm text-gray-600">
+                            {uploadedFile ? uploadedFile.name : "Click to upload PDF or drag and drop"}
+                          </span>
+                          <span className="text-xs text-gray-500">Supports PDF files up to 100MB</span>
+                        </label>
+                      </div>
+                    </div>
+                    {uploadedFile && (
+                      <div>
+                        <Label htmlFor="content-title">Document Title (Optional)</Label>
+                        <Input
+                          id="content-title"
+                          value={contentTitle}
+                          onChange={(e) => setContentTitle(e.target.value)}
+                          placeholder="Enter a title for this document..."
+                          className="mt-1"
+                        />
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {inputMethod === "audio" && (
+                  <div className="space-y-4">
+                    <div>
+                      <Label htmlFor="audio-upload">Upload Audio File</Label>
+                      <div className="mt-1 border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-gray-400 transition-colors">
+                        <input
+                          type="file"
+                          id="audio-upload"
+                          accept="audio/*,.mp3,.wav,.m4a,.aac,.ogg"
+                          onChange={(e) => setUploadedFile(e.target.files?.[0] || null)}
+                          className="hidden"
+                        />
+                        <label htmlFor="audio-upload" className="cursor-pointer flex flex-col items-center space-y-2">
+                          <Mic className="w-8 h-8 text-gray-400" />
+                          <span className="text-sm text-gray-600">
+                            {uploadedFile ? uploadedFile.name : "Click to upload audio or drag and drop"}
+                          </span>
+                          <span className="text-xs text-gray-500">Supports MP3, WAV, M4A, AAC, OGG files up to 100MB</span>
+                        </label>
+                      </div>
+                    </div>
+                    {uploadedFile && (
+                      <div>
+                        <Label htmlFor="content-title">Audio Title</Label>
+                        <Input
+                          id="content-title"
+                          value={contentTitle}
+                          onChange={(e) => setContentTitle(e.target.value)}
+                          placeholder="Enter a title for this audio..."
+                          className="mt-1"
+                        />
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {inputMethod === "link" && (
+                  <div className="space-y-4">
+                    <div>
+                      <Label htmlFor="web-url">Web Page URL</Label>
+                      <Input
+                        id="web-url"
+                        value={contentUrl}
+                        onChange={(e) => setContentUrl(e.target.value)}
+                        placeholder="https://example.com/article..."
+                        className="mt-1"
+                      />
+                      <p className="text-sm text-muted-foreground mt-1">
+                        We'll extract and analyze the text content from this web page
+                      </p>
+                    </div>
+                    <div>
+                      <Label htmlFor="content-title">Page Title (Optional)</Label>
+                      <Input
+                        id="content-title"
+                        value={contentTitle}
+                        onChange={(e) => setContentTitle(e.target.value)}
+                        placeholder="Enter a title for this content..."
+                        className="mt-1"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {inputMethod === "stream" && (
+                  <div className="space-y-4">
+                    <div>
+                      <Label htmlFor="stream-url">Streaming Link URL</Label>
+                      <Input
+                        id="stream-url"
+                        value={contentUrl}
+                        onChange={(e) => setContentUrl(e.target.value)}
+                        placeholder="https://example.com/stream.m3u8 or https://twitch.tv/..."
+                        className="mt-1"
+                      />
+                      <p className="text-sm text-muted-foreground mt-1">
+                        Supports live streams, recorded streams, and video streaming platforms
+                      </p>
+                    </div>
+                    <div>
+                      <Label htmlFor="content-title">Stream Title</Label>
+                      <Input
+                        id="content-title"
+                        value={contentTitle}
+                        onChange={(e) => setContentTitle(e.target.value)}
+                        placeholder="Enter a title for this stream..."
+                        className="mt-1"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {inputMethod === "manual" && (
+                  <div className="space-y-4">
+                    <div>
+                      <Label htmlFor="manual-title">Content Title</Label>
                       <Input
                         id="manual-title"
                         value={manualTitle}
                         onChange={(e) => setManualTitle(e.target.value)}
-                        placeholder="Enter the title of your video..."
+                        placeholder="Enter the title of your content..."
                         className="mt-1"
                       />
                     </div>
                     <div>
-                      <Label htmlFor="manual-transcript">Video Transcript</Label>
+                      <Label htmlFor="manual-transcript">Content Transcript</Label>
                       <Textarea
                         id="manual-transcript"
                         value={manualTranscript}
                         onChange={(e) => setManualTranscript(e.target.value)}
-                        placeholder="Paste the transcript of your video here..."
+                        placeholder="Paste the transcript or text content here..."
                         className="mt-1"
                         rows={8}
                       />
-                      <p className="text-sm text-muted-foreground mt-1">
-                        💡 Tip: You can get transcripts from YouTube manually by clicking the transcript button below the video.
-                      </p>
+                    </div>
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                      <div className="flex">
+                        <Info className="w-5 h-5 text-blue-600 mr-2 flex-shrink-0 mt-0.5" />
+                        <div>
+                          <h4 className="text-sm font-medium text-blue-800">💡 Tip</h4>
+                          <p className="text-xs text-blue-700 mt-1">
+                            You can get transcripts from YouTube manually by clicking the transcript button below the video.
+                          </p>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 )}
@@ -469,7 +742,7 @@ export default function CreateGuide() {
                   </p>
                   <Button 
                     onClick={handleCreateGuide}
-                    disabled={isProcessing || !youtubeUrl.trim()}
+                    disabled={isProcessing || !isValidInput()}
                     size="lg"
                     className="gradient-primary text-white"
                   >
