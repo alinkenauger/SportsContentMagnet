@@ -151,8 +151,6 @@ export default function EmailSettings() {
     updateTemplateMutation.mutate({
       type: editingTemplate,
       content: templateContent,
-      logoType,
-      textLogo: logoType === 'text' ? textLogo : undefined,
       enabled: true,
     });
   };
