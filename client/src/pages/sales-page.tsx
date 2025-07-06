@@ -177,27 +177,48 @@ export default function SalesPage() {
       {/* Hero Section */}
       <section className="container mx-auto px-4 pt-16 pb-24">
         <div className="text-center max-w-4xl mx-auto">
-          <Badge className="mb-4 bg-blue-100 text-blue-800">
-            AI-Powered Lead Generation
-          </Badge>
+          <div className="bg-red-600 text-white px-6 py-3 rounded-full mb-6 inline-block animate-pulse">
+            ⚠️ YOUR LEAD MAGNETS ARE DYING (AND YOUR COMPETITORS KNOW IT)
+          </div>
           
-          <h1 className="text-5xl md:text-6xl font-bold mb-6 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-            Turn ANY Content Into 
-            <span className="block">High-Converting Lead Magnets</span>
+          <h1 className="text-5xl md:text-7xl font-black mb-6 leading-tight">
+            <span className="text-gray-900">The Secret to </span>
+            <span className="bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">10X MORE LEADS</span>
+            <span className="block text-gray-900 mt-2">From The SAME Traffic</span>
           </h1>
           
-          <p className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto">
-            Unlike tools that just gate existing videos behind opt-ins, ConvertMag.net creates 100% fresh, valuable guides using AI-powered analysis. Turn videos, audio, blogs, or any content into educational lead magnets in minutes.
-          </p>
+          <div className="bg-yellow-100 border-l-4 border-yellow-500 p-6 rounded-r-lg max-w-4xl mx-auto mb-8 text-left">
+            <p className="text-xl font-bold text-gray-900 mb-4">
+              🔥 <strong>PROVEN RESULTS:</strong> One content creator's 2024 test revealed...
+            </p>
+            <div className="bg-white p-4 rounded-lg border-2 border-green-500">
+              <p className="text-2xl font-black text-center text-green-800">
+                5 Video-Specific Lead Magnets = Same Results as 25+ Category-Based Lead Magnets
+              </p>
+              <p className="text-center text-gray-600 mt-2 font-semibold">
+                That's a 10X improvement in lead generation efficiency
+              </p>
+            </div>
+          </div>
           
-          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-12">
-            <Dialog open={isSignUpOpen} onOpenChange={setIsSignUpOpen}>
-              <DialogTrigger asChild>
-                <Button size="lg" className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700">
-                  Start Free Today
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Button>
-              </DialogTrigger>
+          <h2 className="text-2xl md:text-3xl font-bold mb-8 text-gray-800 max-w-4xl mx-auto">
+            <span className="text-red-600">STOP Wasting Time</span> with Generic "Top 10 Tips" PDFs That Convert at 2%...
+            <br />
+            <span className="text-green-600">START Creating</span> Video-Specific Lead Magnets That Convert at 20%+
+          </h2>
+          
+          <div className="space-y-6 mb-12">
+            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+              <Dialog open={isSignUpOpen} onOpenChange={setIsSignUpOpen}>
+                <DialogTrigger asChild>
+                  <Button 
+                    size="lg" 
+                    className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white px-12 py-6 text-xl font-bold shadow-2xl transform hover:scale-105 transition-all duration-300"
+                  >
+                    🚀 GET 10X RESULTS NOW (FREE)
+                    <ArrowRight className="ml-2 h-5 w-5" />
+                  </Button>
+                </DialogTrigger>
               <DialogContent className="sm:max-w-md">
                 <DialogHeader>
                   <DialogTitle>Start Your Free Account</DialogTitle>
@@ -304,45 +325,236 @@ export default function SalesPage() {
                 </Form>
               </DialogContent>
             </Dialog>
+              
+              <Button 
+                variant="outline" 
+                size="lg"
+                className="border-2 border-blue-600 text-blue-600 hover:bg-blue-50 px-8 py-6 text-lg font-semibold"
+                onClick={() => setShowVideoDemo(true)}
+              >
+                <Play className="mr-2 h-5 w-5" />
+                📺 See 10X Results Proof
+              </Button>
+            </div>
             
-            <Button 
-              variant="outline" 
-              size="lg"
-              onClick={() => setShowVideoDemo(true)}
-            >
-              <Play className="mr-2 h-4 w-4" />
-              Watch Demo
-            </Button>
+            <div className="grid md:grid-cols-3 gap-6 max-w-4xl mx-auto">
+              <div className="bg-white rounded-lg shadow-lg p-6 border-l-4 border-green-500">
+                <h3 className="font-bold text-lg mb-2 text-green-800">✅ Creates Fresh Value</h3>
+                <p className="text-gray-600">100% original guides, not gated existing content</p>
+              </div>
+              <div className="bg-white rounded-lg shadow-lg p-6 border-l-4 border-blue-500">
+                <h3 className="font-bold text-lg mb-2 text-blue-800">⚡ Smart Timestamping</h3>
+                <p className="text-gray-600">Click to jump to exact moments in source content</p>
+              </div>
+              <div className="bg-white rounded-lg shadow-lg p-6 border-l-4 border-purple-500">
+                <h3 className="font-bold text-lg mb-2 text-purple-800">🎯 ANY Content Type</h3>
+                <p className="text-gray-600">Videos, audio, blogs, PDFs, streams - not just YouTube</p>
+              </div>
+            </div>
           </div>
           
-          <div className="flex items-center justify-center text-sm text-gray-500">
+          <div className="flex items-center justify-center text-sm text-gray-500 mb-8">
             <Check className="h-4 w-4 text-green-500 mr-2" />
             No credit card required • Free forever plan available
+          </div>
+          
+          {/* Social Proof Stats */}
+          <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-5xl mx-auto">
+            <div className="text-center mb-8">
+              <h3 className="text-2xl font-bold text-gray-900 mb-4">Join Content Creators Getting REAL Results</h3>
+            </div>
+            
+            <div className="grid md:grid-cols-4 gap-8 text-center">
+              <div className="border-r border-gray-200 last:border-r-0">
+                <div className="text-4xl font-black text-green-600 mb-2">10X</div>
+                <div className="text-sm font-semibold text-gray-600">MORE LEADS</div>
+                <div className="text-xs text-gray-500">From Same Traffic</div>
+              </div>
+              <div className="border-r border-gray-200 last:border-r-0">
+                <div className="text-4xl font-black text-blue-600 mb-2">2-20%</div>
+                <div className="text-sm font-semibold text-gray-600">CONVERSION RATE</div>
+                <div className="text-xs text-gray-500">vs 2% Industry Average</div>
+              </div>
+              <div className="border-r border-gray-200 last:border-r-0">
+                <div className="text-4xl font-black text-purple-600 mb-2">$0</div>
+                <div className="text-sm font-semibold text-gray-600">STARTUP COST</div>
+                <div className="text-xs text-gray-500">vs $1000+ Manual</div>
+              </div>
+              <div>
+                <div className="text-4xl font-black text-orange-600 mb-2">5</div>
+                <div className="text-sm font-semibold text-gray-600">MINUTES</div>
+                <div className="text-xs text-gray-500">Per Lead Magnet</div>
+              </div>
+            </div>
+            
+            <div className="mt-8 bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg p-6">
+              <div className="text-center">
+                <p className="text-lg font-semibold text-green-800 mb-2">
+                  "I found the 'New Way' but needed a solution to do the heavy lifting..."
+                </p>
+                <p className="text-gray-700 mb-4">
+                  "After discovering video-specific lead magnets generated 10X more leads, I personally coded ConvertMag.net to solve the $1000+ cost barrier that prevented scaling this strategy."
+                </p>
+                <div className="flex items-center justify-center">
+                  <div className="text-sm font-bold text-gray-800">— Founder of GetMoreViews.com</div>
+                  <Badge className="ml-3 bg-green-100 text-green-800">VERIFIED CREATOR</Badge>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Urgency/Scarcity Section */}
+      <section className="bg-gradient-to-r from-red-600 to-pink-600 py-16 text-white">
+        <div className="container mx-auto px-4">
+          <div className="max-w-4xl mx-auto text-center">
+            <div className="bg-white text-red-600 rounded-full px-6 py-3 inline-block mb-6 font-bold text-lg animate-pulse">
+              🚨 LIMITED TIME: EARLY ACCESS PRICING
+            </div>
+            
+            <h2 className="text-4xl md:text-5xl font-black mb-6">
+              Your Competitors Are Already Using This
+            </h2>
+            
+            <p className="text-xl mb-8 opacity-90">
+              While you're stuck with 2% converting lead magnets, smart creators are secretly getting 20% conversion rates using video-specific strategies. Don't get left behind.
+            </p>
+            
+            <div className="bg-black bg-opacity-20 rounded-2xl p-8 backdrop-blur-sm">
+              <h3 className="text-2xl font-bold mb-6">What's Happening Right Now</h3>
+              <div className="grid md:grid-cols-2 gap-8 text-left">
+                <div>
+                  <h4 className="font-bold text-lg mb-3 text-yellow-300">❌ Content Creators Struggling:</h4>
+                  <ul className="space-y-2 opacity-90">
+                    <li>• Spending $1000+ per video-specific lead magnet</li>
+                    <li>• Waiting weeks for manual creation</li>
+                    <li>• Missing out on 10X lead generation potential</li>
+                    <li>• Watching competitors pull ahead</li>
+                  </ul>
+                </div>
+                <div>
+                  <h4 className="font-bold text-lg mb-3 text-green-300">✅ ConvertMag.net Users:</h4>
+                  <ul className="space-y-2 opacity-90">
+                    <li>• Creating video-specific magnets in 5 minutes</li>
+                    <li>• Getting 10X more leads from same traffic</li>
+                    <li>• Building massive email lists automatically</li>
+                    <li>• Scaling without the $1000+ cost barrier</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </section>
 
       {/* Problem Statement Section */}
-      <section className="bg-gradient-to-r from-red-50 to-orange-50 py-16">
+      <section className="bg-white py-16">
         <div className="container mx-auto px-4">
-          <div className="max-w-4xl mx-auto text-center">
-            <h2 className="text-4xl font-bold mb-6 text-gray-900">
-              Lead Magnets Are Dying a Fast Death
-            </h2>
-            <p className="text-xl text-gray-700 mb-8">
-              There's only two types that work well: <strong>Personal support</strong> (customized to their needs) and <strong>laser-precise focused support</strong> (like a guide specifically made for the content and goal the viewer is watching in the moment).
-            </p>
+          <div className="max-w-6xl mx-auto">
+            <div className="text-center mb-12">
+              <h2 className="text-4xl md:text-5xl font-black mb-6 text-gray-900">
+                The <span className="text-red-600">$1000+ Problem</span> That's Killing Your Lead Generation
+              </h2>
+              <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+                Video-specific lead magnets generate 10X more leads, but the manual process costs $1000+ per video and takes weeks to implement. Until now.
+              </p>
+            </div>
             
-            <div className="bg-white rounded-2xl shadow-xl p-8 mb-8">
-              <h3 className="text-2xl font-bold mb-4 text-blue-600">
-                ConvertMag.net Does BOTH
-              </h3>
-              <p className="text-lg text-gray-700 mb-6">
-                Turn ANY video, audio, stream, post, blog, or book instantly into a custom made, beautiful lead magnet with a 2,000,000+ lead tested landing page design, automated delivery, tracking, follow up and more.
+            <div className="grid lg:grid-cols-3 gap-8 mb-12">
+              <div className="bg-gradient-to-br from-red-50 to-red-100 rounded-2xl p-8 border-2 border-red-200">
+                <div className="text-center mb-6">
+                  <div className="w-16 h-16 bg-red-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <span className="text-white font-bold text-2xl">$</span>
+                  </div>
+                  <h3 className="text-2xl font-bold text-red-800">The Cost Barrier</h3>
+                </div>
+                <div className="space-y-4">
+                  <div className="bg-white rounded-lg p-4 shadow-sm">
+                    <div className="font-bold text-gray-800">Content Creation</div>
+                    <div className="text-red-600 font-semibold">$300-500 per guide</div>
+                  </div>
+                  <div className="bg-white rounded-lg p-4 shadow-sm">
+                    <div className="font-bold text-gray-800">Landing Page Design</div>
+                    <div className="text-red-600 font-semibold">$200-400 per page</div>
+                  </div>
+                  <div className="bg-white rounded-lg p-4 shadow-sm">
+                    <div className="font-bold text-gray-800">Funnel Integration</div>
+                    <div className="text-red-600 font-semibold">$500-800 per setup</div>
+                  </div>
+                  <div className="bg-red-600 text-white rounded-lg p-4 text-center">
+                    <div className="font-bold text-xl">Total: $1000-1700</div>
+                    <div className="text-sm opacity-90">PER VIDEO</div>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="bg-gradient-to-br from-orange-50 to-orange-100 rounded-2xl p-8 border-2 border-orange-200">
+                <div className="text-center mb-6">
+                  <div className="w-16 h-16 bg-orange-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Clock className="text-white h-8 w-8" />
+                  </div>
+                  <h3 className="text-2xl font-bold text-orange-800">The Time Problem</h3>
+                </div>
+                <div className="space-y-4 text-center">
+                  <div className="bg-white rounded-lg p-4 shadow-sm">
+                    <div className="font-bold text-gray-800">Manual Analysis</div>
+                    <div className="text-orange-600 font-semibold">2-4 hours per video</div>
+                  </div>
+                  <div className="bg-white rounded-lg p-4 shadow-sm">
+                    <div className="font-bold text-gray-800">Guide Writing</div>
+                    <div className="text-orange-600 font-semibold">6-8 hours per guide</div>
+                  </div>
+                  <div className="bg-white rounded-lg p-4 shadow-sm">
+                    <div className="font-bold text-gray-800">Landing Page Creation</div>
+                    <div className="text-orange-600 font-semibold">4-6 hours per page</div>
+                  </div>
+                  <div className="bg-orange-600 text-white rounded-lg p-4">
+                    <div className="font-bold text-xl">Total: 2-3 weeks</div>
+                    <div className="text-sm opacity-90">PER VIDEO</div>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-2xl p-8 border-2 border-green-200">
+                <div className="text-center mb-6">
+                  <div className="w-16 h-16 bg-green-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Zap className="text-white h-8 w-8" />
+                  </div>
+                  <h3 className="text-2xl font-bold text-green-800">ConvertMag.net Solution</h3>
+                </div>
+                <div className="space-y-4 text-center">
+                  <div className="bg-white rounded-lg p-4 shadow-sm">
+                    <div className="font-bold text-gray-800">AI Content Analysis</div>
+                    <div className="text-green-600 font-semibold">30 seconds</div>
+                  </div>
+                  <div className="bg-white rounded-lg p-4 shadow-sm">
+                    <div className="font-bold text-gray-800">Guide Generation</div>
+                    <div className="text-green-600 font-semibold">2 minutes</div>
+                  </div>
+                  <div className="bg-white rounded-lg p-4 shadow-sm">
+                    <div className="font-bold text-gray-800">Landing Page Creation</div>
+                    <div className="text-green-600 font-semibold">2 minutes</div>
+                  </div>
+                  <div className="bg-green-600 text-white rounded-lg p-4">
+                    <div className="font-bold text-xl">Total: 5 minutes</div>
+                    <div className="text-sm opacity-90">Cost: $0</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl p-8 text-white text-center">
+              <h3 className="text-3xl font-bold mb-4">The Game-Changing Discovery</h3>
+              <p className="text-xl mb-6 opacity-90">
+                One content creator's 2024 test proved video-specific lead magnets generate 10X more leads than category-based approaches. But the $1000+ cost per video made it impossible to scale.
               </p>
-              <p className="text-lg text-gray-700">
-                Turn your lead magnet into an evergreen, flowing, high converting system that offers new content every time you post to social media, making personalized, in the moment solutions for the people who are focused on you and your content in the moment.
-              </p>
+              <div className="bg-white bg-opacity-20 rounded-lg p-6 backdrop-blur-sm">
+                <p className="text-2xl font-bold">
+                  "I found the 'New Way' but needed a solution to do the heavy lifting. Unfortunately, it didn't exist. So I spent the last year personally coding it myself."
+                </p>
+                <p className="text-lg mt-4 opacity-90">— Founder of GetMoreViews.net (Generated millions of leads)</p>
+              </div>
             </div>
           </div>
         </div>
@@ -717,6 +929,96 @@ export default function SalesPage() {
         </div>
       </section>
 
+      {/* Origin Story Section */}
+      <section className="bg-gradient-to-r from-blue-50 to-purple-50 py-16">
+        <div className="container mx-auto px-4">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl font-bold mb-4">The Story Behind ConvertMag.net</h2>
+            <p className="text-xl text-gray-600">
+              How one founder's testing revealed the secret to 10x lead generation
+            </p>
+          </div>
+          
+          <div className="max-w-4xl mx-auto">
+            <div className="bg-white rounded-lg shadow-lg p-8 mb-8">
+              <h3 className="text-2xl font-bold mb-6 text-center">The Discovery That Changed Everything</h3>
+              
+              <div className="space-y-6">
+                <div className="flex items-start space-x-4">
+                  <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
+                    <span className="text-blue-600 font-bold">1</span>
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-lg mb-2">The Old Way: Category-Based Lead Magnets</h4>
+                    <p className="text-gray-600">
+                      I built GetMoreViews.com using "bucket categories" - grouping content under 3-6 core subjects that capture 80% of search volume. In business: Traffic, Lead Generation, Sales Conversion, Ascension & Scale. In basketball: Dribbling, Shooting, Scoring, Athleticism.
+                    </p>
+                  </div>
+                </div>
+                
+                <div className="flex items-start space-x-4">
+                  <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
+                    <span className="text-purple-600 font-bold">2</span>
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-lg mb-2">The 2024 Test: Video-Specific Lead Magnets</h4>
+                    <p className="text-gray-600">
+                      I tested taking it one step further - creating lead magnets specific to individual videos instead of broad categories. The results shocked me.
+                    </p>
+                  </div>
+                </div>
+                
+                <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg p-6 border-l-4 border-green-500">
+                  <h4 className="font-bold text-xl mb-3 text-green-800">The Results: 10x Lead Generation</h4>
+                  <p className="text-gray-700 mb-4">
+                    <strong>5 videos with video-specific lead magnets = Same results as 25+ videos with category-based approach</strong>
+                  </p>
+                  <p className="text-gray-600">
+                    Video-specific lead magnets allowed me to pre-segment my audience based on the exact content they were watching, creating perfect alignment between their interest and my offer.
+                  </p>
+                </div>
+                
+                <div className="flex items-start space-x-4">
+                  <div className="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
+                    <span className="text-red-600 font-bold">3</span>
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-lg mb-2">The Problem: $1000+ Cost Per Video</h4>
+                    <p className="text-gray-600">
+                      Each video-specific lead magnet required: New free gift creation, landing page design, funnel buildout, integrations, Zapier webhooks, and more. Over $1000 in time, effort, and costs per video.
+                    </p>
+                  </div>
+                </div>
+                
+                <div className="flex items-start space-x-4">
+                  <div className="w-8 h-8 bg-yellow-100 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
+                    <span className="text-yellow-600 font-bold">4</span>
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-lg mb-2">The Solution: ConvertMag.net</h4>
+                    <p className="text-gray-600">
+                      I found the "New Way" but needed a solution to do the heavy lifting. Unfortunately, it didn't exist. So I spent the last year personally coding ConvertMag.net myself.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div className="text-center">
+              <div className="inline-block bg-white rounded-lg shadow-lg p-6">
+                <h3 className="text-2xl font-bold mb-4 text-gray-800">Now You Can Access This Same Strategy</h3>
+                <p className="text-gray-600 mb-4">
+                  What took me $1000+ per video and generated millions of leads over the years...
+                </p>
+                <p className="text-lg font-semibold text-blue-600">
+                  Now takes minutes and costs pennies with ConvertMag.net
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Why Choose ConvertMag.net Section */}
       <section className="bg-white py-16">
         <div className="container mx-auto px-4">
@@ -953,6 +1255,151 @@ export default function SalesPage() {
           <div className="mt-8 text-sm opacity-75">
             <Check className="inline h-4 w-4 mr-2" />
             Setup takes less than 2 minutes • No credit card required
+          </div>
+        </div>
+      </section>
+
+      {/* Risk Reversal & Final CTA Section */}
+      <section className="bg-gradient-to-r from-green-600 to-emerald-600 py-20 text-white">
+        <div className="container mx-auto px-4">
+          <div className="max-w-4xl mx-auto text-center">
+            <div className="bg-white text-green-600 rounded-full px-8 py-4 inline-block mb-8 font-bold text-xl">
+              🛡️ 100% RISK-FREE GUARANTEE
+            </div>
+            
+            <h2 className="text-4xl md:text-5xl font-black mb-8">
+              Try ConvertMag.net <span className="text-yellow-300">Completely Risk-Free</span>
+            </h2>
+            
+            <div className="bg-white bg-opacity-20 rounded-2xl p-8 backdrop-blur-sm mb-8">
+              <h3 className="text-2xl font-bold mb-6">Our Iron-Clad Promise to You</h3>
+              <div className="grid md:grid-cols-3 gap-6 text-center">
+                <div>
+                  <div className="w-16 h-16 bg-white bg-opacity-30 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <span className="text-2xl">✅</span>
+                  </div>
+                  <h4 className="font-bold text-lg mb-2">Start FREE Today</h4>
+                  <p className="text-sm opacity-90">No credit card required to begin</p>
+                </div>
+                <div>
+                  <div className="w-16 h-16 bg-white bg-opacity-30 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <span className="text-2xl">💰</span>
+                  </div>
+                  <h4 className="font-bold text-lg mb-2">30-Day Money Back</h4>
+                  <p className="text-sm opacity-90">Full refund if not completely satisfied</p>
+                </div>
+                <div>
+                  <div className="w-16 h-16 bg-white bg-opacity-30 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <span className="text-2xl">🚀</span>
+                  </div>
+                  <h4 className="font-bold text-lg mb-2">See Results in 5 Minutes</h4>
+                  <p className="text-sm opacity-90">Create your first lead magnet immediately</p>
+                </div>
+              </div>
+            </div>
+            
+            <div className="space-y-6">
+              <Dialog>
+                <DialogTrigger asChild>
+                  <Button 
+                    size="lg" 
+                    className="bg-white text-green-600 hover:bg-gray-100 px-16 py-8 text-2xl font-black shadow-2xl transform hover:scale-105 transition-all duration-300"
+                  >
+                    🎯 START YOUR 10X TRANSFORMATION NOW
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-md">
+                  <DialogHeader>
+                    <DialogTitle>🚀 Start Your Risk-Free Account</DialogTitle>
+                    <DialogDescription>
+                      Join thousands of creators getting 10X better results
+                    </DialogDescription>
+                  </DialogHeader>
+                  <p className="text-center text-sm text-gray-600">
+                    Account creation redirects to secure signup form
+                  </p>
+                  <Button 
+                    className="w-full bg-gradient-to-r from-green-600 to-emerald-600"
+                    onClick={() => window.location.href = '/signup'}
+                  >
+                    Create Free Account
+                  </Button>
+                </DialogContent>
+              </Dialog>
+              
+              <div className="flex items-center justify-center space-x-8 text-sm">
+                <div className="flex items-center">
+                  <Check className="h-4 w-4 mr-2" />
+                  No credit card required
+                </div>
+                <div className="flex items-center">
+                  <Check className="h-4 w-4 mr-2" />
+                  Setup in under 2 minutes
+                </div>
+                <div className="flex items-center">
+                  <Check className="h-4 w-4 mr-2" />
+                  30-day money back guarantee
+                </div>
+              </div>
+            </div>
+            
+            <div className="mt-12 bg-yellow-400 text-black rounded-2xl p-6">
+              <p className="text-lg font-bold">
+                ⏰ <strong>EARLY ACCESS PRICING:</strong> Lock in your account before prices increase next month
+              </p>
+              <p className="text-sm mt-2 opacity-80">
+                Current users will be grandfathered into their pricing forever
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* FAQ Section */}
+      <section className="bg-gray-50 py-16">
+        <div className="container mx-auto px-4">
+          <div className="max-w-4xl mx-auto">
+            <div className="text-center mb-12">
+              <h2 className="text-3xl font-bold mb-4">Frequently Asked Questions</h2>
+              <p className="text-gray-600">Everything you need to know about ConvertMag.net</p>
+            </div>
+            
+            <div className="space-y-6">
+              <div className="bg-white rounded-lg shadow-sm p-6">
+                <h3 className="font-bold text-lg mb-3">How is this different from VidMagnet.io?</h3>
+                <p className="text-gray-600">
+                  VidMagnet.io just gates existing YouTube videos behind opt-ins - basically content theft. ConvertMag.net creates 100% original, valuable guides from your content using AI analysis. We build trust by giving real value, not just restricting access.
+                </p>
+              </div>
+              
+              <div className="bg-white rounded-lg shadow-sm p-6">
+                <h3 className="font-bold text-lg mb-3">What content types work with ConvertMag.net?</h3>
+                <p className="text-gray-600">
+                  ANY content: YouTube videos, audio files, blog posts, PDFs, live streams, podcasts, and more. Unlike tools that only work with YouTube, we transform all content types into lead magnets.
+                </p>
+              </div>
+              
+              <div className="bg-white rounded-lg shadow-sm p-6">
+                <h3 className="font-bold text-lg mb-3">How does Smart Timestamping work?</h3>
+                <p className="text-gray-600">
+                  Our exclusive Smart Timestamping feature lets your leads click to jump to exact moments in your source content. It's like having interactive guides that connect back to your videos - no competitor offers this.
+                </p>
+              </div>
+              
+              <div className="bg-white rounded-lg shadow-sm p-6">
+                <h3 className="font-bold text-lg mb-3">Can I really create lead magnets in 5 minutes?</h3>
+                <p className="text-gray-600">
+                  Yes! Our AI analyzes content in 30 seconds, generates guides in 2 minutes, and creates landing pages in 2 minutes. What used to take weeks and cost $1000+ now takes minutes and costs nothing.
+                </p>
+              </div>
+              
+              <div className="bg-white rounded-lg shadow-sm p-6">
+                <h3 className="font-bold text-lg mb-3">What if I'm not satisfied with the results?</h3>
+                <p className="text-gray-600">
+                  We offer a 30-day money-back guarantee. If ConvertMag.net doesn't help you generate more leads, we'll refund every penny. Plus, you can start with our free plan - no risk at all.
+                </p>
+              </div>
+            </div>
           </div>
         </div>
       </section>
