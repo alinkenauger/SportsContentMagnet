@@ -192,7 +192,7 @@ export default function SalesPage() {
           </p>
           
           {/* Large Video Player */}
-          <div className="w-full max-w-none px-4 mb-16" style={{ maxWidth: 'calc(100vw - 2rem)' }}>
+          <div className="w-full max-w-none px-2 mb-16" style={{ maxWidth: 'calc(150% * 100vw / 100 - 1rem)', marginLeft: 'calc(-25vw)', marginRight: 'calc(-25vw)' }}>
             <div className="relative bg-black rounded-2xl overflow-hidden shadow-2xl border-4 border-blue-200">
               <div className="aspect-video bg-gradient-to-br from-gray-900 to-black flex items-center justify-center">
                 <div className="text-center">
