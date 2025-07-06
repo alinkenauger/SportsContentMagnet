@@ -1213,16 +1213,14 @@ export default function GuideEditorEnhanced() {
                     </div>
                   </div>
                   
-                  {/* Draggable Separator */}
+                  {/* Simple Drag Dot Separator */}
                   {index < totalColumns - 1 && (
-                    <div
-                      className="relative flex items-center justify-center w-2 bg-muted/50 hover:bg-primary/20 cursor-col-resize group transition-colors"
-                      onMouseDown={(e) => handleColumnResizeStart(e, element.id, column.id, index)}
-                    >
-                      <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
-                        <div className="w-1 h-8 bg-muted-foreground/30 group-hover:bg-primary/60 rounded-full transition-colors"></div>
-                        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-3 h-3 bg-background border-2 border-muted-foreground/40 group-hover:border-primary rounded-full transition-colors"></div>
-                      </div>
+                    <div className="relative flex items-center justify-center w-4 group">
+                      <div
+                        className="w-3 h-3 bg-gray-300 hover:bg-primary border-2 border-white rounded-full cursor-col-resize shadow-sm hover:shadow-md transition-all duration-200 hover:scale-110 group-hover:ring-2 group-hover:ring-primary/30"
+                        onMouseDown={(e) => handleColumnResizeStart(e, element.id, column.id, index)}
+                        title="Drag to resize columns"
+                      />
                     </div>
                   )}
                 </div>
