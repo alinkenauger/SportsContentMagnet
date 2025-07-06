@@ -192,7 +192,7 @@ export default function SalesPage() {
           </p>
           
           {/* Large Video Player */}
-          <div className="max-w-5xl mx-auto mb-16">
+          <div className="max-w-7xl mx-auto mb-16">
             <div className="relative bg-black rounded-2xl overflow-hidden shadow-2xl border-4 border-blue-200">
               <div className="aspect-video bg-gradient-to-br from-gray-900 to-black flex items-center justify-center">
                 <div className="text-center">
