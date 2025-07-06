@@ -721,7 +721,7 @@ export default function SalesPage() {
                   <h3 className="text-lg font-bold text-gray-800 mb-4">YouTube Video</h3>
                   <div className="relative">
                     <img 
-                      src="/attached_assets/image_1751824933774.png" 
+                      src="/attached_assets/mqdefault_1751825204492.jpg" 
                       alt="YouTube Golf Video Thumbnail" 
                       className="w-full max-w-[200px] mx-auto rounded-lg shadow-lg"
                     />
@@ -739,7 +739,7 @@ export default function SalesPage() {
                   <h3 className="text-lg font-bold text-gray-800 mb-4">High-Converting Landing Page</h3>
                   <div className="relative">
                     <img 
-                      src="/attached_assets/CleanShot 2025-07-06 at 13.58.18@2x_1751824935600.png" 
+                      src="/attached_assets/CleanShot 2025-07-06 at 13.58.18@2x_1751825245756.png" 
                       alt="Golf Landing Page" 
                       className="w-full max-w-[300px] mx-auto rounded-lg shadow-lg border border-gray-200"
                     />
@@ -756,7 +756,7 @@ export default function SalesPage() {
                   <h3 className="text-lg font-bold text-gray-800 mb-4">Interactive Practice Guide</h3>
                   <div className="relative">
                     <img 
-                      src="/attached_assets/CleanShot 2025-07-06 at 13.59.43_1751824980682.gif" 
+                      src="/attached_assets/CleanShot 2025-07-06 at 13.59.43_1751825178398.gif" 
                       alt="Interactive Golf Practice Guide" 
                       className="w-full max-w-[350px] mx-auto rounded-lg shadow-lg border border-gray-200"
                     />
