@@ -15,7 +15,8 @@ import {
   Building2,
   ChevronRight,
   CreditCard,
-  UserCog
+  UserCog,
+  Mail
 } from "lucide-react";
 import { useState } from "react";
 import { useBrands, useSetCurrentBrand, useClearCurrentBrand } from "@/hooks/useBrands";

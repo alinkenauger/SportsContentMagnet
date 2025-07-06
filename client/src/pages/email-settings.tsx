@@ -75,7 +75,7 @@ export default function EmailSettings() {
   });
 
   const handleEditTemplate = (type: string) => {
-    const template = templates?.find((t: any) => t.type === type);
+    const template = Array.isArray(templates) ? templates.find((t: any) => t.type === type) : null;
     setEditingTemplate(type);
     setTemplateContent(template?.content || '');
   };
@@ -91,7 +91,7 @@ export default function EmailSettings() {
   };
 
   const renderTemplateCard = (emailType: any) => {
-    const template = templates?.find((t: any) => t.type === emailType.key);
+    const template = Array.isArray(templates) ? templates.find((t: any) => t.type === emailType.key) : null;
     const isEditing = editingTemplate === emailType.key;
     
     return (
@@ -137,7 +137,7 @@ export default function EmailSettings() {
                   className="min-h-[200px]"
                 />
                 <p className="text-sm text-muted-foreground mt-2">
-                  Use variables like {{customerName}}, {{guideName}}, {{brandName}} in your template.
+                  Use variables like {"{{customerName}}, {{guideName}}, {{brandName}}"} in your template.
                 </p>
               </div>
               <div className="flex gap-2">
@@ -156,7 +156,7 @@ export default function EmailSettings() {
   };
 
   const renderIntegrationCard = (provider: any) => {
-    const integration = integrations?.find((i: any) => i.provider === provider.key);
+    const integration = Array.isArray(integrations) ? integrations.find((i: any) => i.provider === provider.key) : null;
     
     return (
       <Card key={provider.key} className="mb-4">
@@ -298,7 +298,7 @@ export default function EmailSettings() {
                   <Input
                     id="sender-name"
                     placeholder="Your Name or Company"
-                    defaultValue={user?.firstName || ''}
+                    defaultValue={(user as any)?.firstName || ''}
                   />
                 </div>
 
@@ -308,7 +308,7 @@ export default function EmailSettings() {
                     id="sender-email"
                     type="email"
                     placeholder="your-email@example.com"
-                    defaultValue={user?.email || ''}
+                    defaultValue={(user as any)?.email || ''}
                   />
                 </div>
               </div>
