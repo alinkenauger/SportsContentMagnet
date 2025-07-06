@@ -9,6 +9,7 @@ import { generateGuidePDF, generatePDFFilename } from "./services/pdfGenerator";
 import { insertGuideSchema, insertLandingPageSchema, insertLeadSchema, insertBrandingSettingsSchema, insertTrainingSettingsSchema, insertKnowledgebaseEntrySchema } from "@shared/schema";
 import QRCode from 'qrcode';
 import multer from 'multer';
+import { StorageCostManager } from "./services/storageManager";
 // import pdf from 'pdf-parse'; // Temporarily disabled due to module issues
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -1213,6 +1214,139 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Admin: Check admin status
   app.get('/api/admin/check', isGlobalAdmin, async (req, res) => {
     res.json({ isAdmin: true });
+  });
+
+  // Storage Management API Routes
+  
+  // Get user storage stats for dashboard
+  app.get('/api/storage/stats', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const stats = await StorageCostManager.getStorageDashboardStats(userId);
+      res.json(stats);
+    } catch (error) {
+      console.error("Error fetching storage stats:", error);
+      res.status(500).json({ message: "Failed to fetch storage stats" });
+    }
+  });
+
+  // Get user storage files
+  app.get('/api/storage/files', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const files = await storage.getUserStorageFiles(userId);
+      res.json(files);
+    } catch (error) {
+      console.error("Error fetching storage files:", error);
+      res.status(500).json({ message: "Failed to fetch storage files" });
+    }
+  });
+
+  // Upload file with storage cost tracking
+  app.post('/api/storage/upload', isAuthenticated, upload.single('file'), async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const file = req.file;
+      
+      if (!file) {
+        return res.status(400).json({ message: "No file provided" });
+      }
+
+      // Check storage quota before upload
+      const quotaCheck = await StorageCostManager.checkStorageQuota(userId);
+      if (!quotaCheck.canUpload) {
+        return res.status(413).json({ 
+          message: quotaCheck.message,
+          currentUsage: quotaCheck.currentUsageMB,
+          quota: quotaCheck.quotaMB
+        });
+      }
+
+      // Track file upload
+      const storageRecord = await StorageCostManager.trackFileUpload({
+        userId,
+        fileName: file.originalname,
+        fileSizeMB: file.size / (1024 * 1024),
+        fileType: file.mimetype,
+        fileUrl: null, // Will be updated after actual storage
+        processingCostUSD: 0, // Will be calculated during processing
+        storageCostUSD: 0 // Will be calculated monthly
+      });
+
+      res.json({
+        success: true,
+        storageId: storageRecord.id,
+        fileSizeMB: file.size / (1024 * 1024),
+        monthlyCost: StorageCostManager.calculateMonthlyCost(file.size / (1024 * 1024)),
+        processingCost: StorageCostManager.calculateProcessingCost(file.size / (1024 * 1024))
+      });
+    } catch (error) {
+      console.error("Error uploading file:", error);
+      res.status(500).json({ message: "Failed to upload file" });
+    }
+  });
+
+  // Mark file as processed (after transcription/extraction)
+  app.post('/api/storage/:id/processed', isAuthenticated, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const userId = req.user.claims.sub;
+      
+      await StorageCostManager.markFileProcessed(parseInt(id));
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error marking file as processed:", error);
+      res.status(500).json({ message: "Failed to mark file as processed" });
+    }
+  });
+
+  // Delete file and stop storage costs
+  app.delete('/api/storage/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const userId = req.user.claims.sub;
+      
+      await StorageCostManager.deleteFileAndStopCosts(parseInt(id), userId);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting file:", error);
+      res.status(500).json({ message: "Failed to delete file" });
+    }
+  });
+
+  // Get storage billing history
+  app.get('/api/storage/billing', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const billingHistory = await storage.getStorageBillingHistory(userId);
+      res.json(billingHistory);
+    } catch (error) {
+      console.error("Error fetching billing history:", error);
+      res.status(500).json({ message: "Failed to fetch billing history" });
+    }
+  });
+
+  // Get subscription tier information
+  app.get('/api/storage/subscription', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const tier = await storage.getUserSubscriptionTier(userId);
+      res.json(tier);
+    } catch (error) {
+      console.error("Error fetching subscription tier:", error);
+      res.status(500).json({ message: "Failed to fetch subscription tier" });
+    }
+  });
+
+  // Process cleanup jobs (admin endpoint)
+  app.post('/api/admin/storage/cleanup', isGlobalAdmin, async (req, res) => {
+    try {
+      await StorageCostManager.processCleanupJobs();
+      res.json({ success: true, message: "Cleanup jobs processed" });
+    } catch (error) {
+      console.error("Error processing cleanup jobs:", error);
+      res.status(500).json({ message: "Failed to process cleanup jobs" });
+    }
   });
 
   const httpServer = createServer(app);

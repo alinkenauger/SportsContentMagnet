@@ -269,7 +269,7 @@ export class StorageCostManager {
   }
 }
 
-// Subscription tiers optimized for 90%+ margin and user growth
+// Simplified subscription tiers - Free, Personal, Business (90%+ margin guaranteed)
 export const DEFAULT_SUBSCRIPTION_TIERS = [
   {
     name: 'free',
@@ -286,6 +286,7 @@ export const DEFAULT_SUBSCRIPTION_TIERS = [
     hasCustomUrl: false, // Must use VidMagnet links
     hasCustomDomain: false,
     hasPixelTracking: false,
+    maxBrands: 1, // Single brand
     isActive: true
   },
   {
@@ -304,7 +305,6 @@ export const DEFAULT_SUBSCRIPTION_TIERS = [
     hasCustomDomain: false, // No custom domains
     hasPixelTracking: false, // No pixel tracking
     maxBrands: 1, // Single brand only
-    maxTeamMembers: 1,
     isActive: true
   },
   {
@@ -324,35 +324,7 @@ export const DEFAULT_SUBSCRIPTION_TIERS = [
     hasCustomDomain: true, // Custom domain per brand
     hasPixelTracking: true, // Custom code & pixel tracking
     maxBrands: 10, // Up to 10 brands
-    maxTeamMembers: 2, // 2 team members per brand
     hasTemplateSharing: true, // Share templates across brands
-    hasBusinessBilling: true, // Each business can pay separately
-    isActive: true
-  },
-  {
-    name: 'agency',
-    displayName: 'Agency (White-Label)',
-    monthlyPriceUSD: 247,
-    storageQuotaGB: 200, // 200GB included
-    storageOveragePricePerGB: 0.05, // $0.05/GB overage (97.8% margin)
-    maxFileSizeMB: 5000, // 5GB max file
-    maxGuidesPerMonth: 1000, // Unlimited guides
-    maxLeadsPerMonth: 50000, // 50k leads total
-    maxVisitsPerMonth: 500000, // 500k visits total
-    retentionDays: 90, // Keep files for 3 months
-    hasBranding: false, // Fully white-labeled
-    hasCustomUrl: true,
-    hasCustomDomain: true,
-    hasPixelTracking: true,
-    maxBrands: 7, // Up to 7 client brands
-    maxTeamMembers: 5, // Base team members
-    hasTemplateSharing: true,
-    hasWhiteLabel: true, // Complete white-labeling
-    hasRevenueSharing: true, // 30% to VidMagnet, 70% to agency
-    hasAffiliateProgram: true, // 50% commission on referrals
-    hasClientAccountAccess: true, // Seamless client access
-    hasUpchargeCapability: true, // Upcharge on maintenance, storage, services
-    hasPayPerLeadBilling: true, // Pay-per-lead capability
     isActive: true
   }
 ];

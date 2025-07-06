@@ -14,6 +14,10 @@ import {
   googleConnections,
   promptTemplates,
   mediaAssets,
+  storageUsage,
+  storageBilling,
+  subscriptionTiers,
+  fileCleanupJobs,
   type User,
   type UpsertUser,
   type Brand,
@@ -44,6 +48,13 @@ import {
   type InsertPromptTemplate,
   type MediaAsset,
   type InsertMediaAsset,
+  type StorageUsage,
+  type InsertStorageUsage,
+  type StorageBilling,
+  type InsertStorageBilling,
+  type SubscriptionTier,
+  type FileCleanupJob,
+  type InsertFileCleanupJob,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, sql, count, avg, isNull } from "drizzle-orm";
@@ -198,6 +209,32 @@ export interface IStorage {
     activeUsersLast30Days: number;
     newUsersLast30Days: number;
   }>;
+
+  // Storage management operations
+  createStorageUsage(usage: InsertStorageUsage): Promise<StorageUsage>;
+  getUserStorageFiles(userId: string): Promise<StorageUsage[]>;
+  markStorageFileProcessed(storageId: number): Promise<void>;
+  deleteStorageFile(storageId: number): Promise<void>;
+  markStorageFileDeleted(storageId: number): Promise<void>;
+  getUserStorageStats(userId: string): Promise<{
+    totalUsedMB: number;
+    totalMonthlyCost: number;
+  }>;
+  updateUserStorageQuota(userId: string, data: {
+    storageUsedMB: number;
+    monthlyStorageCostUSD: number;
+  }): Promise<void>;
+  createFileCleanupJob(job: InsertFileCleanupJob): Promise<FileCleanupJob>;
+  getPendingCleanupJobs(): Promise<Array<FileCleanupJob & { storageUsage: StorageUsage }>>;
+  updateFileCleanupJob(id: number, data: Partial<InsertFileCleanupJob>): Promise<void>;
+  getUserSubscriptionTier(userId: string): Promise<SubscriptionTier | null>;
+  getUserStorageStatsForMonth(userId: string, month: string): Promise<{
+    totalUsedMB: number;
+    totalMonthlyCost: number;
+  }>;
+  createStorageBilling(billing: InsertStorageBilling): Promise<StorageBilling>;
+  updateStorageBilling(id: number, data: Partial<InsertStorageBilling>): Promise<void>;
+  getStorageBillingHistory(userId: string): Promise<StorageBilling[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -910,6 +947,160 @@ export class DatabaseStorage implements IStorage {
       activeUsersLast30Days: activeUsers.count,
       newUsersLast30Days: newUsers.count,
     };
+  }
+
+  // Storage management methods
+  async createStorageUsage(usage: InsertStorageUsage): Promise<StorageUsage> {
+    const [storageRecord] = await db
+      .insert(storageUsage)
+      .values(usage)
+      .returning();
+    return storageRecord;
+  }
+
+  async getUserStorageFiles(userId: string): Promise<StorageUsage[]> {
+    return await db
+      .select()
+      .from(storageUsage)
+      .where(eq(storageUsage.userId, userId))
+      .orderBy(desc(storageUsage.createdAt));
+  }
+
+  async markStorageFileProcessed(storageId: number): Promise<void> {
+    await db
+      .update(storageUsage)
+      .set({ processedAt: new Date(), updatedAt: new Date() })
+      .where(eq(storageUsage.id, storageId));
+  }
+
+  async deleteStorageFile(storageId: number): Promise<void> {
+    await db.delete(storageUsage).where(eq(storageUsage.id, storageId));
+  }
+
+  async markStorageFileDeleted(storageId: number): Promise<void> {
+    await db
+      .update(storageUsage)
+      .set({ deletedAt: new Date(), updatedAt: new Date() })
+      .where(eq(storageUsage.id, storageId));
+  }
+
+  async getUserStorageStats(userId: string): Promise<{
+    totalUsedMB: number;
+    totalMonthlyCost: number;
+  }> {
+    const stats = await db
+      .select({
+        totalUsedMB: sql<number>`COALESCE(SUM(${storageUsage.fileSizeMB}), 0)`,
+        totalMonthlyCost: sql<number>`COALESCE(SUM(${storageUsage.storageCostUSD}), 0)`
+      })
+      .from(storageUsage)
+      .where(and(
+        eq(storageUsage.userId, userId),
+        isNull(storageUsage.deletedAt)
+      ));
+
+    return {
+      totalUsedMB: stats[0]?.totalUsedMB || 0,
+      totalMonthlyCost: stats[0]?.totalMonthlyCost || 0
+    };
+  }
+
+  async updateUserStorageQuota(userId: string, data: {
+    storageUsedMB: number;
+    monthlyStorageCostUSD: number;
+  }): Promise<void> {
+    await db
+      .update(users)
+      .set({
+        storageUsedMB: data.storageUsedMB.toString(),
+        monthlyStorageCostUSD: data.monthlyStorageCostUSD.toString(),
+        updatedAt: new Date()
+      })
+      .where(eq(users.id, userId));
+  }
+
+  async createFileCleanupJob(job: InsertFileCleanupJob): Promise<FileCleanupJob> {
+    const [cleanupJob] = await db
+      .insert(fileCleanupJobs)
+      .values(job)
+      .returning();
+    return cleanupJob;
+  }
+
+  async getPendingCleanupJobs(): Promise<Array<FileCleanupJob & { storageUsage: StorageUsage }>> {
+    const now = new Date();
+    return await db
+      .select()
+      .from(fileCleanupJobs)
+      .leftJoin(storageUsage, eq(fileCleanupJobs.storageUsageId, storageUsage.id))
+      .where(and(
+        eq(fileCleanupJobs.status, 'pending'),
+        sql`${fileCleanupJobs.scheduledFor} <= ${now}`
+      )) as any;
+  }
+
+  async updateFileCleanupJob(id: number, data: Partial<InsertFileCleanupJob>): Promise<void> {
+    await db
+      .update(fileCleanupJobs)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(fileCleanupJobs.id, id));
+  }
+
+  async getUserSubscriptionTier(userId: string): Promise<SubscriptionTier | null> {
+    const user = await this.getUser(userId);
+    if (!user?.subscriptionTier) return null;
+
+    const [tier] = await db
+      .select()
+      .from(subscriptionTiers)
+      .where(eq(subscriptionTiers.name, user.subscriptionTier));
+    
+    return tier || null;
+  }
+
+  async getUserStorageStatsForMonth(userId: string, month: string): Promise<{
+    totalUsedMB: number;
+    totalMonthlyCost: number;
+  }> {
+    const stats = await db
+      .select({
+        totalUsedMB: sql<number>`COALESCE(SUM(${storageUsage.fileSizeMB}), 0)`,
+        totalMonthlyCost: sql<number>`COALESCE(SUM(${storageUsage.storageCostUSD}), 0)`
+      })
+      .from(storageUsage)
+      .where(and(
+        eq(storageUsage.userId, userId),
+        sql`DATE_TRUNC('month', ${storageUsage.createdAt}) = ${month}-01`,
+        isNull(storageUsage.deletedAt)
+      ));
+
+    return {
+      totalUsedMB: stats[0]?.totalUsedMB || 0,
+      totalMonthlyCost: stats[0]?.totalMonthlyCost || 0
+    };
+  }
+
+  async createStorageBilling(billing: InsertStorageBilling): Promise<StorageBilling> {
+    const [billingRecord] = await db
+      .insert(storageBilling)
+      .values(billing)
+      .returning();
+    return billingRecord;
+  }
+
+  async updateStorageBilling(id: number, data: Partial<InsertStorageBilling>): Promise<void> {
+    await db
+      .update(storageBilling)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(storageBilling.id, id));
+  }
+
+  async getStorageBillingHistory(userId: string): Promise<StorageBilling[]> {
+    return await db
+      .select()
+      .from(storageBilling)
+      .where(eq(storageBilling.userId, userId))
+      .orderBy(desc(storageBilling.createdAt));
   }
 }
 
