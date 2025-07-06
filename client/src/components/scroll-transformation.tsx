@@ -33,7 +33,7 @@ const steps: TransformationStep[] = [
   {
     id: "step3",
     title: "And a Custom Highly Detailed Guide...",
-    image: "/attached_assets/CleanShot 2025-07-06 at 13.59.43_1751825178398.gif",
+    image: "/attached_assets/CleanShot 2025-07-06 at 16.05.48_1751832465394.gif",
     alt: "Interactive Practice Guide",
     description: "Complete interactive guide with smart timestamping",
     bgColor: "from-green-500 to-green-600", 
@@ -52,8 +52,8 @@ const steps: TransformationStep[] = [
 
 export function ScrollTransformation() {
   const [currentStep, setCurrentStep] = useState(0);
+  const [scrollProgress, setScrollProgress] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
-  const stepRefs = useRef<(HTMLDivElement | null)[]>([]);
 
   useEffect(() => {
     let ticking = false;
@@ -74,70 +74,124 @@ export function ScrollTransformation() {
         const scrollY = window.scrollY;
         const windowHeight = window.innerHeight;
 
-        // More precise viewport calculation
-        const containerBottom = containerTop + containerHeight;
-        const viewportTop = scrollY;
-        const viewportBottom = scrollY + windowHeight;
-
-        // Only animate when container is in viewport
-        if (viewportBottom < containerTop || viewportTop > containerBottom) {
-          ticking = false;
-          return;
-        }
-
-        // Calculate smooth progress through the container
-        const scrollProgress = Math.max(0, Math.min(1, 
-          (scrollY + windowHeight * 0.5 - containerTop) / (containerHeight * 0.8)
+        // Calculate precise scroll progress through the container
+        const startTrigger = containerTop - windowHeight * 0.3;
+        const endTrigger = containerTop + containerHeight - windowHeight * 0.7;
+        const rawProgress = Math.max(0, Math.min(1, 
+          (scrollY - startTrigger) / (endTrigger - startTrigger)
         ));
 
-        // Smooth step transitions with easing
-        const easedProgress = scrollProgress < 0.5 
-          ? 2 * scrollProgress * scrollProgress 
-          : 1 - Math.pow(-2 * scrollProgress + 2, 3) / 2;
+        // Apply smooth easing for buttery transitions
+        const smoothProgress = rawProgress < 0.5 
+          ? 4 * rawProgress * rawProgress * rawProgress
+          : 1 - Math.pow(-2 * rawProgress + 2, 3) / 2;
 
-        const stepIndex = Math.floor(easedProgress * steps.length);
-        const activeStep = Math.min(Math.max(0, stepIndex), steps.length - 1);
+        setScrollProgress(smoothProgress);
+
+        // Calculate step with smoother transitions
+        const stepProgress = smoothProgress * (steps.length - 1);
+        const newStep = Math.round(stepProgress);
         
-        setCurrentStep(activeStep);
+        // Only update step if it actually changed to reduce unnecessary re-renders
+        setCurrentStep(prevStep => {
+          const clampedStep = Math.min(Math.max(0, newStep), steps.length - 1);
+          return prevStep !== clampedStep ? clampedStep : prevStep;
+        });
+        
         ticking = false;
       });
     };
 
-    // Throttled scroll listener
     window.addEventListener('scroll', handleScroll, { passive: true });
-    handleScroll(); // Initial check
+    window.addEventListener('resize', handleScroll, { passive: true });
+    handleScroll();
 
-    return () => window.removeEventListener('scroll', handleScroll);
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      window.removeEventListener('resize', handleScroll);
+    };
   }, []);
 
   return (
     <div ref={containerRef} className="relative h-[400vh] w-full">
+      {/* Progress indicator on the left */}
+      <div className="fixed left-4 sm:left-8 top-1/2 transform -translate-y-1/2 z-20 hidden md:block">
+        <div className="flex flex-col items-center space-y-4">
+          {steps.map((step, index) => (
+            <div key={step.id} className="relative flex flex-col items-center">
+              {/* Progress line */}
+              {index < steps.length - 1 && (
+                <div 
+                  className="absolute top-6 w-0.5 bg-white/20"
+                  style={{
+                    height: '32px',
+                    background: index < currentStep 
+                      ? 'linear-gradient(to bottom, rgba(255,255,255,0.6), rgba(255,255,255,0.2))'
+                      : 'rgba(255,255,255,0.2)',
+                    transition: 'background 0.6s ease-out',
+                  }}
+                />
+              )}
+              
+              {/* Progress dot */}
+              <div
+                className={`relative w-4 h-4 rounded-full border-2 transition-all duration-500 ${
+                  index <= currentStep
+                    ? 'bg-white border-white shadow-lg scale-110'
+                    : 'bg-transparent border-white/40 scale-100'
+                }`}
+                style={{
+                  transitionDelay: `${index * 50}ms`,
+                }}
+              >
+                {/* Active indicator */}
+                {index === currentStep && (
+                  <div className="absolute inset-0 rounded-full bg-white animate-ping opacity-30" />
+                )}
+              </div>
+              
+              {/* Step label */}
+              <div 
+                className={`mt-2 text-xs font-medium transition-all duration-300 ${
+                  index === currentStep ? 'text-white opacity-100' : 'text-white/60 opacity-70'
+                }`}
+                style={{
+                  transform: `scale(${index === currentStep ? 1.1 : 0.9})`,
+                }}
+              >
+                {index + 1}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
       {/* Sticky container for the transformation content */}
       <div className="sticky top-0 h-screen flex items-center justify-center overflow-hidden">
         <div className="relative w-full max-w-2xl mx-auto px-4 sm:px-6 lg:px-8">
           {/* Background that changes with each step */}
           <div 
-            className={`absolute inset-0 bg-gradient-to-br ${steps[currentStep]?.bgColor || 'from-gray-500 to-gray-600'} rounded-2xl sm:rounded-3xl transition-all duration-1000 ease-out transform`}
+            className={`absolute inset-0 bg-gradient-to-br ${steps[currentStep]?.bgColor || 'from-gray-500 to-gray-600'} rounded-2xl sm:rounded-3xl`}
             style={{
               opacity: 0.95,
-              transform: `scale(${1 + currentStep * 0.015}) rotate(${currentStep * 0.5}deg)`,
-              filter: `blur(${Math.max(0, (steps.length - 1 - currentStep) * 0.5)}px)`,
+              transform: `scale(${1 + scrollProgress * 0.02}) rotate(${scrollProgress * 1}deg)`,
+              filter: `blur(${Math.max(0, (1 - scrollProgress) * 1)}px)`,
+              transition: 'background-color 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
             }}
           />
           
           {/* Floating particles effect */}
           <div className="absolute inset-0 overflow-hidden rounded-2xl sm:rounded-3xl">
-            {[...Array(6)].map((_, i) => (
+            {[...Array(8)].map((_, i) => (
               <div
                 key={i}
-                className="absolute w-2 h-2 bg-white/20 rounded-full animate-pulse"
+                className="absolute w-1 h-1 sm:w-2 sm:h-2 bg-white/30 rounded-full"
                 style={{
-                  left: `${20 + i * 15}%`,
-                  top: `${30 + (i % 2) * 40}%`,
-                  animationDelay: `${i * 0.5}s`,
-                  animationDuration: `${2 + i * 0.3}s`,
-                  transform: `translateY(${currentStep * -10}px)`,
-                  transition: 'transform 0.8s cubic-bezier(0.4, 0, 0.2, 1)',
+                  left: `${15 + i * 12}%`,
+                  top: `${25 + (i % 3) * 25}%`,
+                  transform: `translateY(${scrollProgress * -15}px) scale(${0.5 + scrollProgress * 0.5})`,
+                  opacity: 0.3 + scrollProgress * 0.4,
+                  transition: 'all 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
                 }}
               />
             ))}
@@ -168,10 +222,11 @@ export function ScrollTransformation() {
             <h2 
               className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold mb-6 sm:mb-8 text-white leading-tight"
               style={{
-                transform: `translateY(${(steps.length - 1 - currentStep) * 5}px)`,
-                opacity: 1 - (steps.length - 1 - currentStep) * 0.1,
-                transition: 'all 0.8s cubic-bezier(0.34, 1.56, 0.64, 1)',
-                textShadow: '0 4px 12px rgba(0,0,0,0.3)',
+                transform: `translateY(${Math.sin(scrollProgress * Math.PI) * -10}px)`,
+                opacity: 0.8 + scrollProgress * 0.2,
+                transition: 'opacity 0.3s ease-out',
+                textShadow: '0 4px 12px rgba(0,0,0,0.4)',
+                filter: `brightness(${1 + scrollProgress * 0.1})`,
               }}
             >
               {steps[currentStep]?.title}
@@ -187,22 +242,29 @@ export function ScrollTransformation() {
                     className="w-full rounded-xl sm:rounded-2xl shadow-2xl border-2 sm:border-4 border-white/30"
                     style={{
                       transform: `
-                        translateY(${(steps.length - 1 - currentStep) * -3}px) 
-                        scale(${0.95 + currentStep * 0.0125}) 
-                        rotateY(${(steps.length - 1 - currentStep) * 2}deg)
+                        translateY(${Math.sin(scrollProgress * Math.PI) * -5}px) 
+                        scale(${0.92 + scrollProgress * 0.08}) 
+                        rotateX(${Math.cos(scrollProgress * Math.PI) * 3}deg)
                       `,
-                      transition: 'all 0.9s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
-                      filter: `brightness(${0.9 + currentStep * 0.025}) contrast(${1 + currentStep * 0.05})`,
+                      transition: 'transform 0.3s ease-out',
+                      filter: `brightness(${0.9 + scrollProgress * 0.15}) contrast(${1 + scrollProgress * 0.1}) saturate(${1 + scrollProgress * 0.2})`,
                     }}
                   />
                   
                   {/* Enhanced play button overlay for video thumbnail */}
                   {currentStep === 0 && (
-                    <div className="absolute inset-0 bg-black bg-opacity-20 rounded-xl sm:rounded-2xl flex items-center justify-center transition-opacity duration-500">
+                    <div 
+                      className="absolute inset-0 bg-black bg-opacity-20 rounded-xl sm:rounded-2xl flex items-center justify-center"
+                      style={{
+                        opacity: 1 - scrollProgress * 0.3,
+                        transition: 'opacity 0.3s ease-out',
+                      }}
+                    >
                       <div 
-                        className="w-12 h-12 sm:w-16 sm:h-16 bg-white rounded-full flex items-center justify-center shadow-xl transform transition-transform duration-300 hover:scale-110"
+                        className="w-12 h-12 sm:w-16 sm:h-16 bg-white rounded-full flex items-center justify-center shadow-xl"
                         style={{
                           animation: 'pulse 2s infinite',
+                          transform: `scale(${1 + Math.sin(scrollProgress * Math.PI * 2) * 0.1})`,
                         }}
                       >
                         <Play className="h-6 w-6 sm:h-8 sm:w-8 text-red-600 ml-0.5" />
@@ -219,7 +281,8 @@ export function ScrollTransformation() {
                     className="text-6xl sm:text-7xl lg:text-8xl"
                     style={{
                       animation: 'bounce 1s infinite, pulse 2s infinite',
-                      filter: 'drop-shadow(0 0 20px rgba(255,255,255,0.5))',
+                      filter: `drop-shadow(0 0 ${20 + scrollProgress * 10}px rgba(255,255,255,${0.5 + scrollProgress * 0.3}))`,
+                      transform: `scale(${1 + scrollProgress * 0.2}) rotate(${scrollProgress * 10}deg)`,
                     }}
                   >
                     ⚡
@@ -233,10 +296,10 @@ export function ScrollTransformation() {
               className="text-lg sm:text-xl lg:text-2xl font-medium leading-relaxed"
               style={{
                 color: 'rgba(255,255,255,0.95)',
-                transform: `translateY(${(steps.length - 1 - currentStep) * 3}px)`,
-                opacity: 1 - (steps.length - 1 - currentStep) * 0.15,
-                transition: 'all 0.7s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
-                textShadow: '0 2px 8px rgba(0,0,0,0.2)',
+                transform: `translateY(${Math.cos(scrollProgress * Math.PI) * 5}px)`,
+                opacity: 0.85 + scrollProgress * 0.15,
+                transition: 'opacity 0.3s ease-out',
+                textShadow: '0 2px 8px rgba(0,0,0,0.3)',
               }}
             >
               {steps[currentStep]?.description}
