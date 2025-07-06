@@ -136,7 +136,10 @@ export default function GuideEditorEnhanced() {
         }
         
         if (content.sections) {
+          console.log('Processing sections:', content.sections.length);
           content.sections.forEach((section: any, index: number) => {
+            console.log(`Section ${index}:`, section);
+            console.log(`Section ${index} timestamp:`, section.timestamp, 'timestampSeconds:', section.timestampSeconds);
             initialElements.push({
               id: `section-title-${index}`,
               type: 'heading',
@@ -652,6 +655,8 @@ export default function GuideEditorEnhanced() {
           ) : (
             <div className="space-y-3">
               <div className="flex items-start gap-3">
+                {/* Debug timestamp button rendering */}
+                {console.log('Heading element:', element.id, 'timestamp:', element.timestamp, 'timestampSeconds:', element.timestampSeconds, 'youtubeVideoId:', guide?.youtubeVideoId)}
                 {element.timestamp && element.timestampSeconds && guide?.youtubeVideoId && (
                   <Button
                     variant="default"
