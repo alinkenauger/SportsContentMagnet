@@ -73,7 +73,7 @@ export default function StorageDashboard() {
 
   const toggleAutoCleanupMutation = useMutation({
     mutationFn: async (enabled: boolean) => {
-      return await apiRequest("PUT", "/api/storage/settings", { autoCleanupEnabled: enabled });
+      return await apiRequest("/api/storage/settings", "PUT", { autoCleanupEnabled: enabled });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/storage"] });
@@ -83,7 +83,7 @@ export default function StorageDashboard() {
 
   const upgradeSubscriptionMutation = useMutation({
     mutationFn: async (tierName: string) => {
-      return await apiRequest("POST", "/api/storage/upgrade", { tierName });
+      return await apiRequest("/api/storage/upgrade", "POST", { tierName });
     },
     onSuccess: (data) => {
       if (data.checkoutUrl) {

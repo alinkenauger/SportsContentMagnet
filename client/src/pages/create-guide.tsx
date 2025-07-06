@@ -218,7 +218,7 @@ export default function CreateGuide() {
           requestData.title = contentTitle || "Stream Content";
         }
         
-        response = await apiRequest("POST", "/api/guides", requestData);
+        response = await apiRequest("/api/guides", "POST", requestData);
       }
       
       const result = await response.json();

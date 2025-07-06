@@ -62,7 +62,7 @@ export default function Branding() {
 
   const saveBrandingMutation = useMutation({
     mutationFn: async (data: typeof formData) => {
-      return await apiRequest("POST", "/api/branding", data);
+      return await apiRequest("/api/branding", "POST", data);
     },
     onSuccess: () => {
       toast({

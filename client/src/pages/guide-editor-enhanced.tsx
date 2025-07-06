@@ -82,7 +82,7 @@ export default function GuideEditorEnhanced() {
   // Save guide mutation
   const saveGuideMutation = useMutation({
     mutationFn: async (updatedGuide: Partial<Guide>) => {
-      const response = await apiRequest("PUT", `/api/guides/${guideId}`, updatedGuide);
+      const response = await apiRequest(`/api/guides/${guideId}`, "PUT", updatedGuide);
       return response;
     },
     onSuccess: () => {

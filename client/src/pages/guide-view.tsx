@@ -188,7 +188,7 @@ export default function GuideView() {
     if (guideId && guideData) {
       const trackView = async () => {
         try {
-          await apiRequest("POST", `/api/guides/${guideId}/view`, {});
+          await apiRequest(`/api/guides/${guideId}/view`, "POST", {});
         } catch (error) {
           console.error("Failed to track view:", error);
         }

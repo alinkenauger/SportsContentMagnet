@@ -80,7 +80,7 @@ export default function KnowledgeBaseSettings() {
   // Mutations
   const createCollectionMutation = useMutation({
     mutationFn: async (data: any) => {
-      return await apiRequest("POST", "/api/knowledgebase/collections", data);
+      return await apiRequest("/api/knowledgebase/collections", "POST", data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/knowledgebase/collections"] });
@@ -95,7 +95,7 @@ export default function KnowledgeBaseSettings() {
 
   const updateUsageSettingsMutation = useMutation({
     mutationFn: async (data: any) => {
-      return await apiRequest("PUT", "/api/knowledgebase/usage-settings", data);
+      return await apiRequest("/api/knowledgebase/usage-settings", "PUT", data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/knowledgebase/usage-settings"] });
