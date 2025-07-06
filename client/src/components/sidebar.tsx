@@ -16,7 +16,8 @@ import {
   ChevronRight,
   CreditCard,
   UserCog,
-  Mail
+  Mail,
+  ChevronDown
 } from "lucide-react";
 import { useState } from "react";
 import { useBrands, useSetCurrentBrand, useClearCurrentBrand } from "@/hooks/useBrands";
@@ -31,10 +32,13 @@ const navigation = [
   { name: "Content Library", href: "/content-library", icon: Book },
   { name: "Analytics", href: "/analytics", icon: BarChart3 },
   { name: "Leads", href: "/leads", icon: Users },
-  { name: "Team", href: "/team", icon: UserCog },
+];
+
+const settingsNavigation = [
+  { name: "General", href: "/settings", icon: Settings },
   { name: "Pricing", href: "/pricing", icon: CreditCard },
+  { name: "Team", href: "/team", icon: UserCog },
   { name: "Email Settings", href: "/email-settings", icon: Mail },
-  { name: "Settings", href: "/settings", icon: Settings },
 ];
 
 export default function Sidebar() {
@@ -42,12 +46,17 @@ export default function Sidebar() {
   const [location] = useLocation();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isSpacePickerOpen, setIsSpacePickerOpen] = useState(false);
+  const [isSettingsExpanded, setIsSettingsExpanded] = useState(false);
   const { brands } = useBrands();
   const { brandingSettings, logoUrl, companyName } = useBranding();
   const { toast } = useToast();
   const setCurrentBrandMutation = useSetCurrentBrand();
   const clearCurrentBrandMutation = useClearCurrentBrand();
   const currentBrandId = (user as any)?.currentBrandId;
+
+  // Check if we're on a settings page and expand the settings section
+  const isInSettingsSection = settingsNavigation.some(item => item.href === location);
+  const shouldShowSettingsExpanded = isSettingsExpanded || isInSettingsSection;
   const currentBrand = currentBrandId ? brands?.find(brand => brand.id === currentBrandId) : null;
 
   const handleLogout = () => {
@@ -80,6 +89,7 @@ export default function Sidebar() {
       {/* Navigation */}
       <nav className="flex-1 px-4 pb-4">
         <ul className="space-y-2">
+          {/* Main Navigation */}
           {navigation.map((item) => {
             const isActive = location === item.href;
             return (
@@ -98,6 +108,48 @@ export default function Sidebar() {
               </li>
             );
           })}
+          
+          {/* Settings Section */}
+          <li>
+            <button
+              onClick={() => setIsSettingsExpanded(!isSettingsExpanded)}
+              className={`sidebar-nav-item ${
+                isInSettingsSection ? "sidebar-nav-item-active" : "sidebar-nav-item-inactive"
+              } ${isCollapsed ? 'justify-center' : ''} w-full`}
+              title={isCollapsed ? "Settings" : undefined}
+            >
+              <Settings className="w-5 h-5 flex-shrink-0" />
+              {!isCollapsed && (
+                <>
+                  <span>Settings</span>
+                  <ChevronDown className={`w-4 h-4 ml-auto transition-transform ${shouldShowSettingsExpanded ? 'rotate-180' : ''}`} />
+                </>
+              )}
+            </button>
+            
+            {/* Settings Submenu */}
+            {shouldShowSettingsExpanded && !isCollapsed && (
+              <ul className="ml-6 mt-2 space-y-1">
+                {settingsNavigation.map((item) => {
+                  const isActive = location === item.href;
+                  return (
+                    <li key={item.name}>
+                      <Link href={item.href}>
+                        <a
+                          className={`sidebar-nav-item ${
+                            isActive ? "sidebar-nav-item-active" : "sidebar-nav-item-inactive"
+                          } text-sm py-2`}
+                        >
+                          <item.icon className="w-4 h-4 flex-shrink-0" />
+                          <span>{item.name}</span>
+                        </a>
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </li>
         </ul>
       </nav>
 
