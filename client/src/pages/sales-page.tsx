@@ -473,7 +473,7 @@ export default function SalesPage() {
                 </div>
                 <div className="space-y-4">
                   <div className="bg-white rounded-lg p-4 shadow-sm">
-                    <div className="font-bold text-gray-800">Content Creation</div>
+                    <div className="font-bold text-gray-800 text-center">Content Creation</div>
                     <div className="text-red-600 font-semibold text-center">$300-500 per guide</div>
                   </div>
                   <div className="bg-white rounded-lg p-4 shadow-sm">
