@@ -8,10 +8,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Mail, Zap, Settings, Users, CheckCircle, AlertCircle } from 'lucide-react';
+import { Mail, Zap, Settings, Users, CheckCircle, AlertCircle, Building } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/useAuth";
+import { useBrands } from "@/hooks/useBrands";
 
 const EMAIL_TYPES = [
   { 
@@ -59,9 +60,9 @@ const EMAIL_TYPES = [
     label: 'Guide Delivery', 
     description: 'Sent when someone downloads a guide',
     category: 'guide',
-    requiredElements: ['guideName', 'downloadUrl'],
-    protectedContent: '=== GUIDE DOWNLOAD (REQUIRED - DO NOT DELETE) ===\nGuide: {{guideName}}\nDownload: {{downloadUrl}}\n=== END REQUIRED SECTION ===',
-    defaultContent: 'Your Free Guide is Ready!\n\nThank you for your interest. Here is your requested guide with valuable insights to help you improve your skills.\n\n=== GUIDE DOWNLOAD (REQUIRED - DO NOT DELETE) ===\nGuide: {{guideName}}\nDownload: {{downloadUrl}}\n=== END REQUIRED SECTION ===\n\nWe hope you find this guide valuable. Feel free to share it with others who might benefit.\n\nLooking for more resources? Visit our website for additional guides and training materials.\n\nBest regards,\n{{brandName || "ConvertMag.net"}}',
+    requiredElements: ['customerName', 'guideName', 'guideUrl', 'pdfDownloadUrl', 'creatorName', 'brandName', 'brandWebsite'],
+    protectedContent: '=== GUIDE ACCESS (REQUIRED - DO NOT DELETE) ===\nGuide: {{guideName}}\nAccess: {{guideUrl}}\nPDF Download: {{pdfDownloadUrl}}\n=== END REQUIRED SECTION ===',
+    defaultContent: 'Welcome to {{brandName}}!\n\nHi {{customerName}},\n\nYour Guide, "{{guideName}}" is available here:\n{{guideUrl}}\n\nYou can also download the PDF of your guide here:\n{{pdfDownloadUrl}}\n\nThanks so much and enjoy!\n\n{{creatorName}},\n{{brandName}}\n{{brandWebsite}}',
     canDisable: true
   },
 ];
@@ -76,6 +77,7 @@ const INTEGRATION_PROVIDERS = [
 
 export default function EmailSettings() {
   const { user } = useAuth();
+  const { brands, currentBrand } = useBrands();
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState('templates');
   const [editingTemplate, setEditingTemplate] = useState<string | null>(null);
@@ -266,9 +268,16 @@ export default function EmailSettings() {
                   placeholder={emailType.defaultContent || "Enter your email template content here..."}
                   className="min-h-[200px]"
                 />
-                <p className="text-sm text-muted-foreground mt-2">
-                  Use variables like customerName, guideName, brandName in your template.
-                </p>
+                <div className="mt-2 space-y-2">
+                  <p className="text-sm text-muted-foreground">
+                    Available variables for personalization:
+                  </p>
+                  <div className="text-xs text-muted-foreground bg-muted/50 p-2 rounded">
+                    Brand: <code>{{brandName}}</code>, <code>{{creatorName}}</code>, <code>{{brandWebsite}}</code><br/>
+                    Customer: <code>{{customerName}}</code>, <code>{{leadEmail}}</code><br/>
+                    Guide: <code>{{guideName}}</code>, <code>{{guideUrl}}</code>, <code>{{pdfDownloadUrl}}</code>
+                  </div>
+                </div>
                 {emailType.requiredElements && (
                   <div className="bg-blue-50 p-3 rounded-lg mt-2">
                     <p className="text-sm font-medium text-blue-800 mb-1">Required Elements:</p>
@@ -348,9 +357,15 @@ export default function EmailSettings() {
   return (
     <div className="space-y-6">
       <div>
+        <div className="flex items-center gap-2 mb-2">
+          <Building className="h-5 w-5 text-muted-foreground" />
+          <span className="text-sm text-muted-foreground">
+            {currentBrand ? `${currentBrand.name} Brand` : 'Personal Account'}
+          </span>
+        </div>
         <h1 className="text-3xl font-bold">Email Settings</h1>
         <p className="text-muted-foreground">
-          Manage your email templates and integrations
+          Configure email templates that will be sent from {currentBrand ? currentBrand.name : 'your account'}
         </p>
       </div>
 
@@ -366,7 +381,9 @@ export default function EmailSettings() {
             <CardHeader>
               <CardTitle>Email Templates</CardTitle>
               <p className="text-sm text-muted-foreground">
-                Customize your automated email templates. System emails require specific elements and cannot be disabled.
+                Customize email templates sent from {currentBrand ? currentBrand.name : 'your account'}. 
+                System emails require specific elements and cannot be disabled. All emails will be personalized 
+                with your brand information including creator name, brand name, and website.
               </p>
             </CardHeader>
           </Card>
