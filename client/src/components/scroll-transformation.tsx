@@ -53,6 +53,7 @@ const steps: TransformationStep[] = [
 export function ScrollTransformation() {
   const [currentStep, setCurrentStep] = useState(0);
   const [scrollProgress, setScrollProgress] = useState(0);
+  const [isInSection, setIsInSection] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -81,6 +82,9 @@ export function ScrollTransformation() {
           (scrollY - startTrigger) / (endTrigger - startTrigger)
         ));
 
+        // Check if user is actively viewing the transformation section
+        const isInTransformationSection = scrollY >= startTrigger && scrollY <= endTrigger;
+
         // Apply smooth easing for buttery transitions
         const smoothProgress = rawProgress < 0.5 
           ? 4 * rawProgress * rawProgress * rawProgress
@@ -97,6 +101,9 @@ export function ScrollTransformation() {
           const clampedStep = Math.min(Math.max(0, newStep), steps.length - 1);
           return prevStep !== clampedStep ? clampedStep : prevStep;
         });
+
+        // Store whether we're in the transformation section for the progress indicator
+        setIsInSection(isInTransformationSection);
         
         ticking = false;
       });
@@ -114,8 +121,12 @@ export function ScrollTransformation() {
 
   return (
     <div ref={containerRef} className="relative h-[400vh] w-full">
-      {/* Progress indicator on the left */}
-      <div className="fixed left-4 sm:left-8 top-1/2 transform -translate-y-1/2 z-20 hidden md:block">
+      {/* Progress indicator on the left - only visible when in transformation section */}
+      <div 
+        className={`fixed left-4 sm:left-8 top-1/2 transform -translate-y-1/2 z-20 hidden md:block transition-all duration-500 ${
+          isInSection ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-4'
+        }`}
+      >
         <div className="flex flex-col items-center space-y-4">
           {steps.map((step, index) => (
             <div key={step.id} className="relative flex flex-col items-center">
