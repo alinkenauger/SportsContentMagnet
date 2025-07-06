@@ -182,13 +182,12 @@ export default function SalesPage() {
           </Badge>
           
           <h1 className="text-5xl md:text-6xl font-bold mb-6 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-            Transform Your Videos Into 
+            Turn ANY Content Into 
             <span className="block">High-Converting Lead Magnets</span>
           </h1>
           
           <p className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto">
-            Turn your YouTube videos into professional practice guides that capture leads automatically. 
-            Perfect for fitness coaches, instructors, and content creators.
+            Unlike tools that just gate existing videos behind opt-ins, ConvertMag.net creates 100% fresh, valuable guides using AI-powered analysis. Turn videos, audio, blogs, or any content into educational lead magnets in minutes.
           </p>
           
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-12">
@@ -647,6 +646,156 @@ export default function SalesPage() {
               <p className="text-gray-600">
                 Set up integrations in minutes, not hours. Your leads flow directly where you need them, when you need them.
               </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* How It Works Section */}
+      <section className="bg-gradient-to-r from-slate-50 to-blue-50 py-16">
+        <div className="container mx-auto px-4">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl font-bold mb-4">How It Works</h2>
+            <p className="text-xl text-gray-600">
+              Turn any content into high-converting lead magnets in 5 simple steps
+            </p>
+          </div>
+          
+          <div className="max-w-4xl mx-auto">
+            <div className="grid md:grid-cols-5 gap-8">
+              <div className="text-center">
+                <div className="w-16 h-16 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <span className="text-white font-bold text-xl">1</span>
+                </div>
+                <h3 className="font-bold mb-2">Upload Content</h3>
+                <p className="text-sm text-gray-600">
+                  Add ANY content - videos, audio, blogs, PDFs, or streams
+                </p>
+              </div>
+              
+              <div className="text-center">
+                <div className="w-16 h-16 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <span className="text-white font-bold text-xl">2</span>
+                </div>
+                <h3 className="font-bold mb-2">AI Analysis</h3>
+                <p className="text-sm text-gray-600">
+                  Our AI analyzes and extracts key insights, techniques, and knowledge
+                </p>
+              </div>
+              
+              <div className="text-center">
+                <div className="w-16 h-16 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <span className="text-white font-bold text-xl">3</span>
+                </div>
+                <h3 className="font-bold mb-2">Fresh Guide Creation</h3>
+                <p className="text-sm text-gray-600">
+                  Creates 100% original, valuable guides and step-by-step instructions
+                </p>
+              </div>
+              
+              <div className="text-center">
+                <div className="w-16 h-16 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <span className="text-white font-bold text-xl">4</span>
+                </div>
+                <h3 className="font-bold mb-2">Landing Page</h3>
+                <p className="text-sm text-gray-600">
+                  Auto-generates high-converting landing pages with your branding
+                </p>
+              </div>
+              
+              <div className="text-center">
+                <div className="w-16 h-16 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <span className="text-white font-bold text-xl">5</span>
+                </div>
+                <h3 className="font-bold mb-2">Capture & Convert</h3>
+                <p className="text-sm text-gray-600">
+                  Leads get real value while you capture emails and grow your business
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Why Choose ConvertMag.net Section */}
+      <section className="bg-white py-16">
+        <div className="container mx-auto px-4">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl font-bold mb-4">Why ConvertMag.net Beats the Competition</h2>
+            <p className="text-xl text-gray-600">
+              We don't just gate existing content - we create fresh, valuable educational materials
+            </p>
+          </div>
+          
+          <div className="max-w-6xl mx-auto">
+            <div className="grid md:grid-cols-2 gap-12 mb-12">
+              <div className="bg-red-50 border-l-4 border-red-500 p-6 rounded-r-lg">
+                <h3 className="text-xl font-bold mb-4 text-red-800">❌ Other Tools (Like VidMagnet.io)</h3>
+                <ul className="space-y-2 text-gray-700">
+                  <li>• Just gate existing YouTube videos behind opt-ins</li>
+                  <li>• No new value created for leads</li>
+                  <li>• Only works with YouTube content</li>
+                  <li>• Focuses on "trending" vs educational content</li>
+                  <li>• Generic templates with no customization</li>
+                  <li>• Basically just content theft</li>
+                </ul>
+              </div>
+              
+              <div className="bg-green-50 border-l-4 border-green-500 p-6 rounded-r-lg">
+                <h3 className="text-xl font-bold mb-4 text-green-800">✅ ConvertMag.net</h3>
+                <ul className="space-y-2 text-gray-700">
+                  <li>• Creates 100% original, valuable guides</li>
+                  <li>• Leads get fresh educational content</li>
+                  <li>• Works with ALL content types</li>
+                  <li>• Focuses on knowledge extraction & education</li>
+                  <li>• Complete customization with AI prompting</li>
+                  <li>• Builds genuine value and trust</li>
+                </ul>
+              </div>
+            </div>
+            
+            <div className="grid md:grid-cols-3 gap-8">
+              <Card className="border-0 shadow-lg hover:shadow-xl transition-shadow">
+                <CardHeader>
+                  <CardTitle className="text-xl flex items-center">
+                    <Target className="h-6 w-6 mr-3 text-blue-600" />
+                    Knowledge-Based AI
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-gray-600">
+                    Our AI actually understands your content and creates educational materials that add real value to your audience.
+                  </p>
+                </CardContent>
+              </Card>
+              
+              <Card className="border-0 shadow-lg hover:shadow-xl transition-shadow">
+                <CardHeader>
+                  <CardTitle className="text-xl flex items-center">
+                    <Zap className="h-6 w-6 mr-3 text-purple-600" />
+                    All Content Types
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-gray-600">
+                    Videos, audio, blogs, PDFs, streams - transform any content into lead magnets, not just YouTube videos.
+                  </p>
+                </CardContent>
+              </Card>
+              
+              <Card className="border-0 shadow-lg hover:shadow-xl transition-shadow">
+                <CardHeader>
+                  <CardTitle className="text-xl flex items-center">
+                    <Shield className="h-6 w-6 mr-3 text-green-600" />
+                    Ethical & Valuable
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-gray-600">
+                    Build trust by giving real value. Your leads get fresh educational content, not just gated access to existing videos.
+                  </p>
+                </CardContent>
+              </Card>
             </div>
           </div>
         </div>
