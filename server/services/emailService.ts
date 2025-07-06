@@ -22,7 +22,16 @@ interface HighLevelContactData {
 
 export class EmailService {
   private mailService?: MailService;
-  private defaultFromEmail = 'noreply@convertmag.net';
+  private defaultFromEmail = 'noreply@getmoreviews.com';
+  
+  // SendGrid Dynamic Template IDs - these should be set in your environment variables
+  private templates = {
+    welcome: process.env.SENDGRID_WELCOME_TEMPLATE_ID,
+    passwordReset: process.env.SENDGRID_PASSWORD_RESET_TEMPLATE_ID,
+    guideDelivery: process.env.SENDGRID_GUIDE_DELIVERY_TEMPLATE_ID,
+    leadNotification: process.env.SENDGRID_LEAD_NOTIFICATION_TEMPLATE_ID,
+    subscriptionConfirmation: process.env.SENDGRID_SUBSCRIPTION_CONFIRMATION_TEMPLATE_ID,
+  };
 
   constructor() {
     if (process.env.SENDGRID_API_KEY) {
@@ -58,6 +67,25 @@ export class EmailService {
     const loginUrl = process.env.REPLIT_DOMAINS ? 
       `https://${process.env.REPLIT_DOMAINS.split(',')[0]}/api/login` : 
       'https://your-domain.com/api/login';
+
+    // If we have a dynamic template, use it
+    if (this.templates.welcome) {
+      return this.sendEmail({
+        to: user.email,
+        subject: 'Welcome to ConvertMag.net - Your Account is Ready!',
+        templateId: this.templates.welcome,
+        dynamicTemplateData: {
+          firstName: user.firstName,
+          lastName: user.lastName,
+          email: user.email,
+          tempPassword: user.tempPassword,
+          loginUrl: loginUrl,
+          currentYear: new Date().getFullYear()
+        }
+      });
+    }
+
+    // Fallback to HTML template
 
     const html = `
       <!DOCTYPE html>
@@ -133,6 +161,22 @@ export class EmailService {
     const resetUrl = process.env.REPLIT_DOMAINS ? 
       `https://${process.env.REPLIT_DOMAINS.split(',')[0]}/reset-password?token=${resetToken}` : 
       `https://your-domain.com/reset-password?token=${resetToken}`;
+
+    // If we have a dynamic template, use it
+    if (this.templates.passwordReset) {
+      return this.sendEmail({
+        to: user.email,
+        subject: 'Reset Your ConvertMag.net Password',
+        templateId: this.templates.passwordReset,
+        dynamicTemplateData: {
+          firstName: user.firstName,
+          resetUrl: resetUrl,
+          currentYear: new Date().getFullYear()
+        }
+      });
+    }
+
+    // Fallback to HTML template
 
     const html = `
       <!DOCTYPE html>
