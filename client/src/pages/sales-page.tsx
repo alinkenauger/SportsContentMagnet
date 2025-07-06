@@ -715,7 +715,7 @@ export default function SalesPage() {
           <div className="max-w-7xl mx-auto">
             {/* YouTube Video Example */}
             <div className="bg-white rounded-3xl shadow-2xl p-8 mb-12 border border-gray-100">
-              <div className="flex flex-col lg:flex-row items-center justify-center gap-8">
+              <div className="flex flex-col lg:flex-row items-center justify-center gap-12">
                 {/* Source Content */}
                 <div className="text-center">
                   <h3 className="text-lg font-bold text-gray-800 mb-4">YouTube Video</h3>
@@ -723,14 +723,14 @@ export default function SalesPage() {
                     <img 
                       src="/attached_assets/mqdefault_1751825204492.jpg" 
                       alt="YouTube Golf Video Thumbnail" 
-                      className="w-full max-w-[320px] mx-auto rounded-lg shadow-2xl border-2 border-gray-200 hover:shadow-3xl transition-shadow duration-300"
+                      className="w-full max-w-[450px] mx-auto rounded-lg shadow-2xl border-2 border-gray-200 hover:shadow-3xl transition-shadow duration-300"
                     />
                   </div>
                 </div>
 
                 {/* Equal Sign */}
                 <div className="flex items-center justify-center">
-                  <div className="text-6xl font-black text-blue-600 bg-blue-50 rounded-full w-20 h-20 flex items-center justify-center shadow-lg">
+                  <div className="text-8xl font-black text-blue-600 bg-blue-50 rounded-full w-28 h-28 flex items-center justify-center shadow-lg">
                     =
                   </div>
                 </div>
@@ -738,20 +738,20 @@ export default function SalesPage() {
                 {/* Combined Output */}
                 <div className="text-center">
                   <h3 className="text-lg font-bold text-gray-800 mb-4">High-Converting Landing Page + Interactive Guide</h3>
-                  <div className="flex flex-col sm:flex-row gap-4 items-center justify-center">
+                  <div className="flex flex-col lg:flex-row gap-6 items-center justify-center">
                     {/* Landing Page */}
                     <div className="relative">
                       <img 
                         src="/attached_assets/CleanShot 2025-07-06 at 13.58.18@2x_1751825245756.png" 
                         alt="Golf Landing Page" 
-                        className="w-full max-w-[280px] mx-auto rounded-lg shadow-xl border border-gray-200"
+                        className="w-full max-w-[400px] mx-auto rounded-lg shadow-xl border border-gray-200"
                       />
                     </div>
                     
                     {/* Plus Sign */}
                     <div className="flex items-center justify-center">
-                      <div className="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center shadow-lg">
-                        <span className="text-white font-bold text-2xl">+</span>
+                      <div className="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center shadow-lg">
+                        <span className="text-white font-bold text-3xl">+</span>
                       </div>
                     </div>
                     
@@ -760,7 +760,7 @@ export default function SalesPage() {
                       <img 
                         src="/attached_assets/CleanShot 2025-07-06 at 13.59.43_1751825178398.gif" 
                         alt="Interactive Golf Practice Guide" 
-                        className="w-full max-w-[280px] mx-auto rounded-lg shadow-xl border border-gray-200"
+                        className="w-full max-w-[400px] mx-auto rounded-lg shadow-xl border border-gray-200"
                       />
                     </div>
                   </div>
