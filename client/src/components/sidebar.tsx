@@ -32,6 +32,7 @@ const navigation = [
   { name: "Leads", href: "/leads", icon: Users },
   { name: "Team", href: "/team", icon: UserCog },
   { name: "Pricing", href: "/pricing", icon: CreditCard },
+  { name: "Email Settings", href: "/email-settings", icon: Mail },
   { name: "Settings", href: "/settings", icon: Settings },
 ];
 

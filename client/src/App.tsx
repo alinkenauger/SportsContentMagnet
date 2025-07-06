@@ -29,6 +29,7 @@ import Pricing from "@/pages/pricing";
 import TeamManagement from "@/pages/team-management";
 import SalesPage from "@/pages/sales-page";
 import ResetPassword from "@/pages/reset-password";
+import EmailSettings from "@/pages/email-settings";
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -55,6 +56,7 @@ function Router() {
           <Route path="/knowledge-base" component={KnowledgeBaseSettings} />
           <Route path="/pricing" component={Pricing} />
           <Route path="/team" component={TeamManagement} />
+          <Route path="/email-settings" component={EmailSettings} />
           <Route path="/admin" component={AdminDashboard} />
           <Route path="/test-transcription" component={TranscriptionTest} />
         </>

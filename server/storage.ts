@@ -1270,6 +1270,54 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(storageBilling.createdAt));
   }
 
+  // Email template operations
+  async getEmailTemplates(userId: string, brandId: number | null): Promise<EmailTemplate[]> {
+    return await db.select().from(emailTemplates).where(
+      and(
+        eq(emailTemplates.userId, userId),
+        brandId ? eq(emailTemplates.brandId, brandId) : isNull(emailTemplates.brandId)
+      )
+    );
+  }
+
+  async createEmailTemplate(template: InsertEmailTemplate): Promise<EmailTemplate> {
+    const [newTemplate] = await db.insert(emailTemplates).values(template).returning();
+    return newTemplate;
+  }
+
+  async updateEmailTemplate(id: number, template: Partial<InsertEmailTemplate>): Promise<EmailTemplate> {
+    const [updatedTemplate] = await db
+      .update(emailTemplates)
+      .set({ ...template, updatedAt: new Date() })
+      .where(eq(emailTemplates.id, id))
+      .returning();
+    return updatedTemplate;
+  }
+
+  // Email integration operations
+  async getEmailIntegrations(userId: string, brandId: number | null): Promise<EmailIntegration[]> {
+    return await db.select().from(emailIntegrations).where(
+      and(
+        eq(emailIntegrations.userId, userId),
+        brandId ? eq(emailIntegrations.brandId, brandId) : isNull(emailIntegrations.brandId)
+      )
+    );
+  }
+
+  async createEmailIntegration(integration: InsertEmailIntegration): Promise<EmailIntegration> {
+    const [newIntegration] = await db.insert(emailIntegrations).values(integration).returning();
+    return newIntegration;
+  }
+
+  async updateEmailIntegration(id: number, integration: Partial<InsertEmailIntegration>): Promise<EmailIntegration> {
+    const [updatedIntegration] = await db
+      .update(emailIntegrations)
+      .set({ ...integration, updatedAt: new Date() })
+      .where(eq(emailIntegrations.id, id))
+      .returning();
+    return updatedIntegration;
+  }
+
   // Subscription operations
   async getSubscriptionPlans(): Promise<SubscriptionPlan[]> {
     return await db

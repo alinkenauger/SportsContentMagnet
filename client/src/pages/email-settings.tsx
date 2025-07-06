@@ -1,360 +1,321 @@
-import { useState } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import React, { useState } from 'react';
+import { useQuery, useMutation } from '@tanstack/react-query';
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
+import { Mail, Zap, Settings, Users, CheckCircle, AlertCircle } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Mail, Zap, Settings, MessageSquare, CheckCircle, AlertCircle } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
+
+const EMAIL_TYPES = [
+  { key: 'welcome', label: 'Welcome Email', description: 'Sent when someone signs up' },
+  { key: 'guide_delivery', label: 'Guide Delivery', description: 'Sent when someone downloads a guide' },
+  { key: 'lead_notification', label: 'Lead Notification', description: 'Sent to you when someone signs up' },
+  { key: 'password_reset', label: 'Password Reset', description: 'Sent when password reset is requested' },
+  { key: 'subscription_confirmation', label: 'Subscription Confirmation', description: 'Sent when subscription is confirmed' },
+];
+
+const INTEGRATION_PROVIDERS = [
+  { key: 'sendgrid', label: 'SendGrid', description: 'Professional email delivery' },
+  { key: 'mailchimp', label: 'Mailchimp', description: 'Email marketing automation' },
+  { key: 'convertkit', label: 'ConvertKit', description: 'Creator-focused email marketing' },
+  { key: 'activecampaign', label: 'ActiveCampaign', description: 'Advanced email automation' },
+  { key: 'zapier', label: 'Zapier', description: 'Connect to any email service' },
+];
 
 export default function EmailSettings() {
+  const { user } = useAuth();
   const { toast } = useToast();
-  
-  const { data: emailIntegrations, isLoading: integrationsLoading } = useQuery({
-    queryKey: ["/api/email-integrations"],
+  const [activeTab, setActiveTab] = useState('templates');
+  const [editingTemplate, setEditingTemplate] = useState<string | null>(null);
+  const [templateContent, setTemplateContent] = useState('');
+
+  const { data: templates, isLoading: templatesLoading } = useQuery({
+    queryKey: ['/api/email-templates'],
+    retry: false,
   });
 
-  const { data: emailTemplates, isLoading: templatesLoading } = useQuery({
-    queryKey: ["/api/email-templates"],
+  const { data: integrations, isLoading: integrationsLoading } = useQuery({
+    queryKey: ['/api/email-integrations'],
+    retry: false,
   });
 
-  const saveIntegrationMutation = useMutation({
-    mutationFn: async (data: any) => {
-      return await apiRequest("POST", "/api/email-integrations", data);
+  const updateTemplateMutation = useMutation({
+    mutationFn: async (data: { type: string; content: string; enabled: boolean }) => {
+      return apiRequest('POST', '/api/email-templates', data);
     },
     onSuccess: () => {
-      toast({
-        title: "Integration saved",
-        description: "Your email integration has been configured successfully.",
-      });
-      queryClient.invalidateQueries({ queryKey: ["/api/email-integrations"] });
+      queryClient.invalidateQueries({ queryKey: ['/api/email-templates'] });
+      toast({ title: "Template updated successfully!" });
+      setEditingTemplate(null);
     },
     onError: (error) => {
-      toast({
-        title: "Error saving integration",
-        description: error.message,
-        variant: "destructive",
-      });
+      toast({ title: "Failed to update template", description: error.message, variant: "destructive" });
     },
   });
 
-  const saveTemplateMutation = useMutation({
-    mutationFn: async (data: any) => {
-      return await apiRequest("POST", "/api/email-templates", data);
+  const createIntegrationMutation = useMutation({
+    mutationFn: async (data: { provider: string; settings: any }) => {
+      return apiRequest('POST', '/api/email-integrations', data);
     },
     onSuccess: () => {
-      toast({
-        title: "Template saved",
-        description: "Your email template has been updated successfully.",
-      });
-      queryClient.invalidateQueries({ queryKey: ["/api/email-templates"] });
+      queryClient.invalidateQueries({ queryKey: ['/api/email-integrations'] });
+      toast({ title: "Integration created successfully!" });
     },
     onError: (error) => {
-      toast({
-        title: "Error saving template",
-        description: error.message,
-        variant: "destructive",
-      });
+      toast({ title: "Failed to create integration", description: error.message, variant: "destructive" });
     },
   });
 
-  const handleZapierSetup = (webhookUrl: string) => {
-    saveIntegrationMutation.mutate({
-      provider: "zapier",
-      webhookUrl,
-      isActive: true,
+  const handleEditTemplate = (type: string) => {
+    const template = templates?.find((t: any) => t.type === type);
+    setEditingTemplate(type);
+    setTemplateContent(template?.content || '');
+  };
+
+  const handleSaveTemplate = () => {
+    if (!editingTemplate) return;
+    
+    updateTemplateMutation.mutate({
+      type: editingTemplate,
+      content: templateContent,
+      enabled: true,
     });
   };
 
-  const handleTemplateUpdate = (templateType: string, subject: string, htmlContent: string) => {
-    saveTemplateMutation.mutate({
-      templateType,
-      subject,
-      htmlContent,
-      isActive: true,
-      requiredVariables: getRequiredVariables(templateType),
-    });
-  };
-
-  const getRequiredVariables = (templateType: string) => {
-    switch (templateType) {
-      case "guide_delivery":
-        return ["firstName", "guideTitle", "guideUrl", "downloadUrl", "brandName", "creatorName", "brandWebsite"];
-      case "welcome":
-        return ["firstName", "email"];
-      case "password_reset":
-        return ["firstName", "resetUrl"];
-      default:
-        return [];
-    }
-  };
-
-  if (integrationsLoading || templatesLoading) {
+  const renderTemplateCard = (emailType: any) => {
+    const template = templates?.find((t: any) => t.type === emailType.key);
+    const isEditing = editingTemplate === emailType.key;
+    
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
-      </div>
+      <Card key={emailType.key} className="mb-4">
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="text-lg">{emailType.label}</CardTitle>
+              <p className="text-sm text-muted-foreground">{emailType.description}</p>
+            </div>
+            <div className="flex items-center gap-2">
+              {template?.enabled ? (
+                <Badge variant="default" className="gap-1">
+                  <CheckCircle className="h-3 w-3" />
+                  Active
+                </Badge>
+              ) : (
+                <Badge variant="outline" className="gap-1">
+                  <AlertCircle className="h-3 w-3" />
+                  Default
+                </Badge>
+              )}
+              <Button
+                variant={isEditing ? "default" : "outline"}
+                size="sm"
+                onClick={() => isEditing ? handleSaveTemplate() : handleEditTemplate(emailType.key)}
+              >
+                {isEditing ? "Save" : "Edit"}
+              </Button>
+            </div>
+          </div>
+        </CardHeader>
+        {isEditing && (
+          <CardContent>
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor={`template-${emailType.key}`}>Email Template</Label>
+                <Textarea
+                  id={`template-${emailType.key}`}
+                  value={templateContent}
+                  onChange={(e) => setTemplateContent(e.target.value)}
+                  placeholder="Enter your email template content here..."
+                  className="min-h-[200px]"
+                />
+                <p className="text-sm text-muted-foreground mt-2">
+                  Use variables like {{customerName}}, {{guideName}}, {{brandName}} in your template.
+                </p>
+              </div>
+              <div className="flex gap-2">
+                <Button onClick={handleSaveTemplate} disabled={updateTemplateMutation.isPending}>
+                  {updateTemplateMutation.isPending ? "Saving..." : "Save Template"}
+                </Button>
+                <Button variant="outline" onClick={() => setEditingTemplate(null)}>
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        )}
+      </Card>
     );
-  }
+  };
+
+  const renderIntegrationCard = (provider: any) => {
+    const integration = integrations?.find((i: any) => i.provider === provider.key);
+    
+    return (
+      <Card key={provider.key} className="mb-4">
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="text-lg">{provider.label}</CardTitle>
+              <p className="text-sm text-muted-foreground">{provider.description}</p>
+            </div>
+            <div className="flex items-center gap-2">
+              {integration?.enabled ? (
+                <Badge variant="default" className="gap-1">
+                  <CheckCircle className="h-3 w-3" />
+                  Connected
+                </Badge>
+              ) : (
+                <Badge variant="outline">Not Connected</Badge>
+              )}
+              <Button
+                variant={integration?.enabled ? "outline" : "default"}
+                size="sm"
+                onClick={() => {
+                  if (integration?.enabled) {
+                    // Disconnect
+                  } else {
+                    // Connect
+                    createIntegrationMutation.mutate({
+                      provider: provider.key,
+                      settings: {}
+                    });
+                  }
+                }}
+              >
+                {integration?.enabled ? "Disconnect" : "Connect"}
+              </Button>
+            </div>
+          </div>
+        </CardHeader>
+      </Card>
+    );
+  };
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="max-w-4xl mx-auto">
-        <div className="flex items-center gap-3 mb-6">
-          <Mail className="w-8 h-8 text-primary" />
-          <div>
-            <h1 className="text-3xl font-bold">Email Management</h1>
-            <p className="text-muted-foreground">Configure email integrations and customize your templates</p>
-          </div>
+    <div className="container mx-auto p-6 space-y-8">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold">Email Settings</h1>
+          <p className="text-muted-foreground">
+            Control your email templates and integrations
+          </p>
         </div>
+      </div>
 
-        <Tabs defaultValue="integrations" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="integrations">Email Integrations</TabsTrigger>
-            <TabsTrigger value="templates">Email Templates</TabsTrigger>
-          </TabsList>
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="templates" className="flex items-center gap-2">
+            <Mail className="h-4 w-4" />
+            Email Templates
+          </TabsTrigger>
+          <TabsTrigger value="integrations" className="flex items-center gap-2">
+            <Zap className="h-4 w-4" />
+            Integrations
+          </TabsTrigger>
+          <TabsTrigger value="settings" className="flex items-center gap-2">
+            <Settings className="h-4 w-4" />
+            Settings
+          </TabsTrigger>
+        </TabsList>
 
-          <TabsContent value="integrations" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Zap className="w-5 h-5" />
-                  Zapier Integration
-                </CardTitle>
-                <CardDescription>
-                  Connect your email marketing tools via Zapier for advanced automation
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="bg-blue-50 p-4 rounded-lg">
-                  <h3 className="font-semibold mb-2">How to set up Zapier:</h3>
-                  <ol className="list-decimal list-inside space-y-1 text-sm">
-                    <li>Create a new Zap in Zapier</li>
-                    <li>Set trigger to "Webhooks by Zapier" → "Catch Hook"</li>
-                    <li>Copy the webhook URL below</li>
-                    <li>Set action to your email tool (Mailchimp, ConvertKit, etc.)</li>
-                    <li>Map the lead data to your email list</li>
-                  </ol>
+        <TabsContent value="templates" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Email Templates</CardTitle>
+              <p className="text-sm text-muted-foreground">
+                Customize your email templates or use our professional defaults.
+                <br />
+                <strong>Free users</strong> use our default templates with ConvertMag.net branding.
+                <br />
+                <strong>Paid users</strong> can customize templates or connect their own email service.
+              </p>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {EMAIL_TYPES.map((emailType) => renderTemplateCard(emailType))}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="integrations" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Email Service Integrations</CardTitle>
+              <p className="text-sm text-muted-foreground">
+                Connect your preferred email marketing service to take full control of your email campaigns.
+                When connected, our system will send leads to your service instead of using our templates.
+              </p>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {INTEGRATION_PROVIDERS.map((provider) => renderIntegrationCard(provider))}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="settings" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Email Settings</CardTitle>
+              <p className="text-sm text-muted-foreground">
+                Configure your email preferences and delivery settings.
+              </p>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label htmlFor="email-notifications">Email Notifications</Label>
+                    <p className="text-sm text-muted-foreground">
+                      Receive notifications when someone downloads your guides
+                    </p>
+                  </div>
+                  <Switch id="email-notifications" />
                 </div>
                 
-                <ZapierSetupForm onSetup={handleZapierSetup} />
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Direct Integrations</CardTitle>
-                <CardDescription>
-                  Coming soon: Direct connections to popular email marketing platforms
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  {["MailChimp", "ConvertKit", "ActiveCampaign", "HubSpot"].map((provider) => (
-                    <div key={provider} className="text-center p-4 border rounded-lg bg-gray-50">
-                      <div className="text-2xl mb-2">📧</div>
-                      <p className="text-sm font-medium">{provider}</p>
-                      <Badge variant="secondary" className="mt-2">Coming Soon</Badge>
-                    </div>
-                  ))}
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label htmlFor="auto-followup">Auto Follow-up</Label>
+                    <p className="text-sm text-muted-foreground">
+                      Automatically send follow-up emails after guide delivery
+                    </p>
+                  </div>
+                  <Switch id="auto-followup" />
                 </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
 
-          <TabsContent value="templates" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <MessageSquare className="w-5 h-5" />
-                  Email Templates
-                </CardTitle>
-                <CardDescription>
-                  Customize the emails sent to your leads (Free users use default templates)
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <EmailTemplateEditor
-                  templates={emailTemplates || []}
-                  onUpdate={handleTemplateUpdate}
-                />
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
-      </div>
+                <div className="space-y-2">
+                  <Label htmlFor="sender-name">Sender Name</Label>
+                  <Input
+                    id="sender-name"
+                    placeholder="Your Name or Company"
+                    defaultValue={user?.firstName || ''}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="sender-email">Sender Email</Label>
+                  <Input
+                    id="sender-email"
+                    type="email"
+                    placeholder="your-email@example.com"
+                    defaultValue={user?.email || ''}
+                  />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
-}
-
-function ZapierSetupForm({ onSetup }: { onSetup: (webhookUrl: string) => void }) {
-  const [webhookUrl, setWebhookUrl] = useState("");
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (webhookUrl) {
-      onSetup(webhookUrl);
-      setWebhookUrl("");
-    }
-  };
-
-  return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <div>
-        <Label htmlFor="webhook-url">Zapier Webhook URL</Label>
-        <Input
-          id="webhook-url"
-          type="url"
-          placeholder="https://hooks.zapier.com/hooks/catch/..."
-          value={webhookUrl}
-          onChange={(e) => setWebhookUrl(e.target.value)}
-          required
-        />
-      </div>
-      <Button type="submit">Connect Zapier</Button>
-    </form>
-  );
-}
-
-function EmailTemplateEditor({ templates, onUpdate }: { templates: any[], onUpdate: (type: string, subject: string, content: string) => void }) {
-  const [activeTemplate, setActiveTemplate] = useState("guide_delivery");
-  const [subject, setSubject] = useState("");
-  const [htmlContent, setHtmlContent] = useState("");
-
-  const templateTypes = [
-    { id: "guide_delivery", name: "Guide Delivery", description: "Sent to customers when they download a guide" },
-    { id: "welcome", name: "Welcome Email", description: "Sent to new users when they sign up" },
-    { id: "password_reset", name: "Password Reset", description: "Sent when users request password reset" },
-  ];
-
-  const currentTemplate = templates.find(t => t.templateType === activeTemplate);
-
-  const handleSave = () => {
-    onUpdate(activeTemplate, subject, htmlContent);
-  };
-
-  const loadTemplate = (templateType: string) => {
-    const template = templates.find(t => t.templateType === templateType);
-    if (template) {
-      setSubject(template.subject);
-      setHtmlContent(template.htmlContent);
-    } else {
-      // Load default template
-      setSubject(getDefaultSubject(templateType));
-      setHtmlContent(getDefaultContent(templateType));
-    }
-  };
-
-  const getDefaultSubject = (templateType: string) => {
-    switch (templateType) {
-      case "guide_delivery":
-        return "Your {{guideTitle}} is ready!";
-      case "welcome":
-        return "Welcome to {{brandName}}!";
-      case "password_reset":
-        return "Reset your password";
-      default:
-        return "";
-    }
-  };
-
-  const getDefaultContent = (templateType: string) => {
-    switch (templateType) {
-      case "guide_delivery":
-        return `<div style="padding: 30px; font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-    <h2 style="margin-top: 0; color: #333;">Hi {{firstName}}!</h2>
-    <p style="margin: 20px 0;">Congratulations on getting your copy of "<strong>{{guideTitle}}</strong>" from {{brandName}}!</p>
-    <p style="margin: 20px 0;">We hope you enjoy it and find it helpful.</p>
-    <div style="margin: 30px 0;">
-        <a href="{{guideUrl}}" style="display: inline-block; background: #10b981; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;">Access Your Guide</a>
-    </div>
-    <p style="margin: 20px 0;">Or if you prefer, you can also download the PDF guide here: <a href="{{downloadUrl}}" style="color: #10b981; text-decoration: none;">{{downloadUrl}}</a></p>
-    <p style="margin: 20px 0;">Thanks and we wish you much success!</p>
-    <p style="margin: 30px 0 10px 0;">{{creatorName}}<br>The {{brandName}}<br><a href="{{brandWebsite}}" style="color: #10b981; text-decoration: none;">{{brandWebsite}}</a></p>
-</div>`;
-      default:
-        return "";
-    }
-  };
-
-  return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap gap-2">
-        {templateTypes.map((type) => (
-          <Button
-            key={type.id}
-            variant={activeTemplate === type.id ? "default" : "outline"}
-            onClick={() => {
-              setActiveTemplate(type.id);
-              loadTemplate(type.id);
-            }}
-          >
-            {type.name}
-          </Button>
-        ))}
-      </div>
-
-      <div className="space-y-4">
-        <div>
-          <Label htmlFor="subject">Email Subject</Label>
-          <Input
-            id="subject"
-            value={subject}
-            onChange={(e) => setSubject(e.target.value)}
-            placeholder="Enter email subject..."
-          />
-        </div>
-
-        <div>
-          <Label htmlFor="content">Email Content (HTML)</Label>
-          <textarea
-            id="content"
-            className="w-full h-64 p-3 border rounded-md font-mono text-sm"
-            value={htmlContent}
-            onChange={(e) => setHtmlContent(e.target.value)}
-            placeholder="Enter HTML content..."
-          />
-        </div>
-
-        <div className="flex items-center gap-2">
-          <Button onClick={handleSave}>Save Template</Button>
-          <Button variant="outline" onClick={() => loadTemplate(activeTemplate)}>
-            Reset to Default
-          </Button>
-        </div>
-      </div>
-
-      <div className="bg-yellow-50 p-4 rounded-lg">
-        <div className="flex items-center gap-2 mb-2">
-          <AlertCircle className="w-4 h-4 text-yellow-600" />
-          <h4 className="font-semibold text-yellow-800">Available Variables</h4>
-        </div>
-        <div className="text-sm text-yellow-700">
-          {getRequiredVariables(activeTemplate).map((variable) => (
-            <code key={variable} className="bg-yellow-100 px-2 py-1 rounded mr-2">
-              {`{{${variable}}}`}
-            </code>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function getRequiredVariables(templateType: string) {
-  switch (templateType) {
-    case "guide_delivery":
-      return ["firstName", "guideTitle", "guideUrl", "downloadUrl", "brandName", "creatorName", "brandWebsite"];
-    case "welcome":
-      return ["firstName", "email"];
-    case "password_reset":
-      return ["firstName", "resetUrl"];
-    default:
-      return [];
-  }
 }
