@@ -187,7 +187,7 @@ export default function SalesPage() {
             <span className="block text-gray-900 mt-2">From The Same Traffic...</span>
           </h1>
           
-          <p className="text-2xl md:text-3xl font-bold text-gray-700 mb-12">
+          <p className="text-2xl md:text-3xl font-bold text-gray-700 mb-8">
             ... and instantly create your high converting funnels for you.
           </p>
         </div>
