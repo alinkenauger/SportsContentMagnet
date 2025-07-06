@@ -68,26 +68,16 @@ export async function transcribeVideo(videoId: string): Promise<string | { text:
   try {
     console.log(`Attempting to transcribe video: ${videoId}`);
     
-    // Primary method: Use whisper-youtube (yt-dlp + Whisper)
-    // This bypasses YouTube's restrictions by downloading audio directly
-    console.log("Trying whisper-youtube (yt-dlp + Whisper)...");
-    const whisperYoutubeResult = await whisperYoutubeService.extractAndTranscribe(videoId, 'base');
-    
-    if (whisperYoutubeResult.success && whisperYoutubeResult.transcript && whisperYoutubeResult.transcript.length > 100) {
-      console.log(`Successfully extracted transcript via whisper-youtube: ${whisperYoutubeResult.transcript.length} characters`);
-      return whisperYoutubeResult.transcript;
-    }
-
-    // Fallback 1: Try youtube-transcript library (fastest, if available)
-    console.log("whisper-youtube failed, trying youtube-transcript library...");
+    // Primary method: Try youtube-transcript library FIRST (fastest, if available)
+    console.log("Trying youtube-transcript library (fastest method)...");
     const transcript = await getYouTubeTranscript(videoId);
     if (transcript && transcript.length > 100) {
       console.log(`Successfully extracted transcript via youtube-transcript: ${transcript.length} characters`);
       return transcript;
     }
     
-    // Fallback 2: Try yt-dlp for subtitle extraction
-    console.log("Trying yt-dlp subtitle extraction...");
+    // Fallback 2: Try yt-dlp for subtitle extraction (medium speed)
+    console.log("youtube-transcript failed, trying yt-dlp subtitle extraction...");
     let ytdlpResult: any = { success: false, error: 'Not attempted' };
     try {
       const { ytdlpTranscription } = await import('./ytdlpTranscription');
@@ -140,6 +130,15 @@ export async function transcribeVideo(videoId: string): Promise<string | { text:
       audioResult.error = `Audio processing error: ${error}`;
     }
     
+    // Final fallback: Try whisper-youtube with fast tiny model (last resort)
+    console.log("Trying whisper-youtube as final fallback (with tiny model for speed)...");
+    const whisperYoutubeResult = await whisperYoutubeService.extractAndTranscribe(videoId, 'tiny');
+    
+    if (whisperYoutubeResult.success && whisperYoutubeResult.transcript && whisperYoutubeResult.transcript.length > 100) {
+      console.log(`Successfully extracted transcript via whisper-youtube: ${whisperYoutubeResult.transcript.length} characters`);
+      return whisperYoutubeResult.transcript;
+    }
+
     // Provide specific error messaging based on what failed
     if (whisperYoutubeResult.error) {
       if (whisperYoutubeResult.error.includes('AGE_RESTRICTED')) {

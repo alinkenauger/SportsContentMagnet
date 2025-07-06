@@ -103,6 +103,8 @@ export default function Dashboard() {
   ]);
   const [currentStep, setCurrentStep] = useState("");
   const [progress, setProgress] = useState(0);
+  const [isTranscribing, setIsTranscribing] = useState(false);
+  const [transcriptionProgress, setTranscriptionProgress] = useState(0);
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -210,16 +212,16 @@ export default function Dashboard() {
     setProgress(0);
     setCurrentStep("metadata");
 
-    // Simulate processing steps
+    // Simulate processing steps with transcription progress tracking
     const stepTimings = [
       { step: "metadata", duration: 1000, progress: 25 },
-      { step: "transcript", duration: 2000, progress: 50 },
+      { step: "transcript", duration: 30000, progress: 50, isTranscribing: true },
       { step: "analysis", duration: 3000, progress: 75 },
       { step: "guide", duration: 2000, progress: 100 },
     ];
 
     try {
-      for (const { step, duration, progress: stepProgress } of stepTimings) {
+      for (const { step, duration, progress: stepProgress, isTranscribing: stepIsTranscribing } of stepTimings) {
         setCurrentStep(step);
         setProcessingSteps(prev => 
           prev.map(s => 
@@ -227,7 +229,26 @@ export default function Dashboard() {
           )
         );
         
-        await new Promise(resolve => setTimeout(resolve, duration));
+        // Special handling for transcription step with progress updates
+        if (stepIsTranscribing) {
+          setIsTranscribing(true);
+          
+          // Simulate real-time transcription progress
+          const progressInterval = setInterval(() => {
+            setTranscriptionProgress(prev => {
+              const newProgress = prev + Math.random() * 5; // Random increments
+              return Math.min(95, newProgress); // Cap at 95% until completion
+            });
+          }, 200);
+          
+          await new Promise(resolve => setTimeout(resolve, duration));
+          
+          clearInterval(progressInterval);
+          setTranscriptionProgress(100);
+          setIsTranscribing(false);
+        } else {
+          await new Promise(resolve => setTimeout(resolve, duration));
+        }
         
         setProgress(stepProgress);
         setProcessingSteps(prev => 
@@ -1191,6 +1212,8 @@ export default function Dashboard() {
         steps={processingSteps}
         currentStep={currentStep}
         progress={progress}
+        isTranscribing={isTranscribing}
+        transcriptionProgress={transcriptionProgress}
       />
     </div>
   );

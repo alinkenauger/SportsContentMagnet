@@ -34,12 +34,12 @@ export class WhisperYoutubeService {
    * Extract and transcribe YouTube video using yt-dlp + Whisper
    * This bypasses YouTube's subtitle restrictions by downloading audio
    */
-  async extractAndTranscribe(videoIdOrUrl: string, modelSize: 'tiny' | 'base' | 'small' | 'medium' | 'large' = 'base'): Promise<WhisperYoutubeResult> {
+  async extractAndTranscribe(videoIdOrUrl: string, modelSize: 'tiny' | 'base' | 'small' | 'medium' | 'large' = 'tiny'): Promise<WhisperYoutubeResult> {
     return new Promise((resolve) => {
-      // Spawn Python process with timeout
+      // Spawn Python process with much shorter timeout
       const pythonProcess = spawn('python3', [this.pythonScriptPath, videoIdOrUrl, modelSize], {
         stdio: ['pipe', 'pipe', 'pipe'],
-        timeout: 300000 // 5 minute timeout for larger videos
+        timeout: 45000 // 45 second timeout - much more reasonable for web requests
       });
 
       let stdout = '';
@@ -109,7 +109,7 @@ export class WhisperYoutubeService {
         pythonProcess.kill();
         resolve({
           success: false,
-          error: 'Transcription timed out after 5 minutes',
+          error: 'Transcription timed out after 45 seconds',
           method: 'whisper_youtube_timeout'
         });
       });
