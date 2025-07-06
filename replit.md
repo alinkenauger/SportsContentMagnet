@@ -288,6 +288,12 @@ Changelog:
   * **GLOBAL INHERITANCE PATTERN**: Default user account maintains global knowledge base and AI prompts that brands inherit unless they create their own
   * **BRAND-LEVEL OVERRIDES**: Brands can create their own knowledge base entries to override global defaults for specialized content
   * **CLEAN SEPARATION**: Removed knowledge base addition from default account level to prevent messy, contradictory knowledge bases
+- July 06, 2025. Simplified pricing strategy from storage billing to lead/visit limits:
+  * **ABANDONED COMPLEX STORAGE BILLING**: Removed sophisticated storage cost tracking system as actual usage is minimal (~$3/month per heavy user)
+  * **SIMPLIFIED PACKAGE STRUCTURE**: Free (50 leads/500 visits, VidMagnet branded), Personal ($24.95, unlimited leads/visits, no branding), Business ($33/brand, minimum 3 brands)
+  * **UNLIMITED GUIDE CREATION**: No artificial limits on guide creation across all tiers - focus on lead capture limits instead of content creation limits
+  * **CLEAR VALUE PROGRESSION**: Free trial → remove branding + unlimited leads → multiple brands + advanced features
+  * **USER-FRIENDLY APPROACH**: Storage costs absorbed into pricing rather than nickel-and-diming users over negligible infrastructure costs
   * **CONTEXTUAL UI**: Knowledge base training toggle only appears when creating guides within brand workspaces
   * **TIERED ARCHITECTURE**: Sets foundation for pricing tiers where basic users have global knowledge while premium users get brand-specific customization
   * **FALLBACK SYSTEM**: If brands have no custom entries, system automatically falls back to user's global knowledge base for consistency
