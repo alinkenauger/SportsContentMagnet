@@ -13,6 +13,7 @@ import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { ScrollTransformation } from "@/components/scroll-transformation";
 
 const signUpSchema = z.object({
   firstName: z.string().min(2, "First name must be at least 2 characters"),
@@ -872,117 +873,12 @@ export default function SalesPage() {
             </p>
           </div>
           
-          <div className="max-w-7xl mx-auto">
-            {/* YouTube Video Example */}
-            <div className="bg-gradient-to-br from-white to-gray-50 rounded-3xl shadow-2xl p-12 mb-12 border border-gray-100 overflow-hidden relative">
-              {/* Background decoration */}
-              <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-blue-100 to-purple-100 rounded-full -translate-y-32 translate-x-32 opacity-20"></div>
-              <div className="absolute bottom-0 left-0 w-48 h-48 bg-gradient-to-tr from-green-100 to-emerald-100 rounded-full translate-y-24 -translate-x-24 opacity-20"></div>
-              
-              <div className="relative z-10">
-                {/* Header */}
-                <div className="text-center mb-12">
-                  <div className="inline-flex items-center bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-2 rounded-full mb-4">
-                    <span className="text-sm font-bold">LIVE TRANSFORMATION EXAMPLE</span>
-                  </div>
-                  <h3 className="text-3xl font-bold text-gray-800">From One YouTube Video to Complete Lead Magnet System</h3>
-                </div>
-
-                {/* Transformation Flow */}
-                <div className="flex flex-col lg:flex-row items-center justify-center gap-16">
-                  {/* Source Content */}
-                  <div className="text-center flex-1 max-w-lg">
-                    <div className="bg-gradient-to-r from-red-500 to-red-600 text-white px-4 py-2 rounded-full inline-block mb-4">
-                      <span className="font-bold text-sm">INPUT</span>
-                    </div>
-                    <h4 className="text-xl font-bold text-gray-800 mb-6">YouTube Golf Tutorial</h4>
-                    <div className="relative group">
-                      <img 
-                        src="/attached_assets/mqdefault_1751825204492.jpg" 
-                        alt="YouTube Golf Video Thumbnail" 
-                        className="w-full rounded-2xl shadow-2xl border-4 border-white group-hover:scale-105 transition-transform duration-300"
-                      />
-                      {/* Play button overlay */}
-                      <div className="absolute inset-0 bg-black bg-opacity-30 rounded-2xl flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                        <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center">
-                          <Play className="h-8 w-8 text-red-600 ml-1" />
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Transformation Arrow */}
-                  <div className="flex flex-col items-center">
-                    <div className="w-20 h-20 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full flex items-center justify-center shadow-2xl mb-4">
-                      <ArrowRight className="h-10 w-10 text-white" />
-                    </div>
-                    <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-4 py-2 rounded-full">
-                      <span className="font-bold text-sm">AI TRANSFORMS IN 5 MIN</span>
-                    </div>
-                  </div>
-                  
-                  {/* Output Results */}
-                  <div className="text-center flex-1 max-w-lg">
-                    <div className="bg-gradient-to-r from-green-500 to-emerald-600 text-white px-4 py-2 rounded-full inline-block mb-4">
-                      <span className="font-bold text-sm">OUTPUT</span>
-                    </div>
-                    <h4 className="text-xl font-bold text-gray-800 mb-6">Complete Lead Magnet System</h4>
-                    
-                    <div className="space-y-6">
-                      {/* Landing Page */}
-                      <div className="bg-white rounded-2xl p-4 shadow-xl border-2 border-blue-200">
-                        <div className="text-sm font-bold text-blue-600 mb-2">High-Converting Landing Page</div>
-                        <img 
-                          src="/attached_assets/CleanShot 2025-07-06 at 13.58.18@2x_1751825245756.png" 
-                          alt="Golf Landing Page" 
-                          className="w-full rounded-lg shadow-md"
-                        />
-                      </div>
-                      
-                      {/* Interactive Guide */}
-                      <div className="bg-white rounded-2xl p-4 shadow-xl border-2 border-green-200">
-                        <div className="text-sm font-bold text-green-600 mb-2">Interactive Practice Guide</div>
-                        <img 
-                          src="/attached_assets/CleanShot 2025-07-06 at 13.59.43_1751825178398.gif" 
-                          alt="Interactive Golf Practice Guide" 
-                          className="w-full rounded-lg shadow-md"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Key Features */}
-                <div className="mt-12 grid md:grid-cols-3 gap-6">
-                  <div className="bg-white rounded-xl p-6 shadow-lg border border-blue-200">
-                    <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mb-4">
-                      <Zap className="h-6 w-6 text-blue-600" />
-                    </div>
-                    <h5 className="font-bold text-gray-800 mb-2">Smart Timestamping</h5>
-                    <p className="text-gray-600 text-sm">Click buttons to jump to exact moments in original video</p>
-                  </div>
-                  
-                  <div className="bg-white rounded-xl p-6 shadow-lg border border-green-200">
-                    <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mb-4">
-                      <Target className="h-6 w-6 text-green-600" />
-                    </div>
-                    <h5 className="font-bold text-gray-800 mb-2">18% Conversion Rate</h5>
-                    <p className="text-gray-600 text-sm">9x higher than industry average of 2%</p>
-                  </div>
-                  
-                  <div className="bg-white rounded-xl p-6 shadow-lg border border-purple-200">
-                    <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center mb-4">
-                      <Clock className="h-6 w-6 text-purple-600" />
-                    </div>
-                    <h5 className="font-bold text-gray-800 mb-2">5 Minute Setup</h5>
-                    <p className="text-gray-600 text-sm">Complete system ready in minutes, not weeks</p>
-                  </div>
-                </div>
-              </div>
-            </div>
+          <div className="max-w-4xl mx-auto">
+            {/* Scroll-Triggered Transformation Animation */}
+            <ScrollTransformation />
             
             {/* Additional Content Type Examples */}
-            <div className="grid md:grid-cols-2 gap-8">
+            <div className="grid md:grid-cols-2 gap-8 mt-16">
               {/* Podcast Example */}
               <div className="bg-white rounded-2xl shadow-xl p-6 border border-gray-100">
                 <div className="flex items-center justify-between mb-4">
