@@ -500,7 +500,7 @@ export default function SalesPage() {
                 </div>
                 <div className="space-y-4 text-center">
                   <div className="bg-white rounded-lg p-4 shadow-sm">
-                    <div className="font-bold text-gray-800">Manual Analysis</div>
+                    <div className="font-bold text-gray-800">Manual Creation</div>
                     <div className="text-orange-600 font-semibold">2-4 hours per video</div>
                   </div>
                   <div className="bg-white rounded-lg p-4 shadow-sm">
