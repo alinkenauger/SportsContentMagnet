@@ -1957,6 +1957,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Email Logo Upload API
+  app.post("/api/email-logo-upload", isAuthenticated, logoUpload.single('logo'), async (req: any, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ message: "No logo file provided" });
+      }
+
+      const userId = req.user.claims.sub;
+      const brandId = req.user.currentBrandId || null;
+      
+      // Generate unique filename
+      const timestamp = Date.now();
+      const extension = path.extname(req.file.originalname);
+      const filename = `email-logo-${userId}-${brandId || 'global'}-${timestamp}${extension}`;
+      const logoPath = path.join(process.cwd(), 'public', 'logos', filename);
+
+      // Ensure directory exists
+      const logoDir = path.dirname(logoPath);
+      if (!fs.existsSync(logoDir)) {
+        fs.mkdirSync(logoDir, { recursive: true });
+      }
+
+      // Resize and save logo
+      await sharp(req.file.buffer)
+        .resize(200, 200, { 
+          fit: 'contain',
+          background: { r: 255, g: 255, b: 255, alpha: 0 }
+        })
+        .png()
+        .toFile(logoPath);
+
+      const logoUrl = `/logos/${filename}`;
+      
+      res.json({ logoUrl });
+    } catch (error) {
+      console.error("Error uploading email logo:", error);
+      res.status(500).json({ message: "Failed to upload logo" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

@@ -1,12 +1,11 @@
-import React, { useState } from 'react';
-import { useQuery, useMutation } from '@tanstack/react-query';
+import { useState } from "react";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Mail, Zap, Settings, Users, CheckCircle, AlertCircle } from 'lucide-react';
@@ -20,25 +19,10 @@ const EMAIL_TYPES = [
     label: 'Welcome Email', 
     description: 'Sent when someone signs up',
     category: 'system',
-    requiredElements: ['username', 'password', 'loginUrl'],
-    defaultContent: 'Welcome to ConvertMag.net! Your account has been created successfully.\n\nYour login credentials:\nUsername: {{username}}\nPassword: {{tempPassword}}\n\nLogin anytime at: {{loginUrl}}\n\nStart creating your first lead magnet today!'
-  },
-  { 
-    key: 'guide_delivery', 
-    label: 'Guide Delivery', 
-    description: 'Sent when someone downloads a guide',
-    category: 'guide',
-    requiredElements: ['guideName', 'downloadUrl'],
-    defaultContent: 'Thank you for your interest! Here\'s your free guide:\n\n{{guideName}}\n\nDownload your guide: {{downloadUrl}}\n\nThis guide contains valuable insights to help you improve your skills. Enjoy!',
-    canDisable: true
-  },
-  { 
-    key: 'lead_notification', 
-    label: 'Lead Notification', 
-    description: 'Sent to you when someone signs up',
-    category: 'system',
-    requiredElements: ['leadName', 'leadEmail', 'guideName'],
-    defaultContent: 'New lead captured!\n\nName: {{leadName}}\nEmail: {{leadEmail}}\nGuide: {{guideName}}\nTime: {{captureTime}}\n\nLogin to your dashboard to view full details.'
+    requiredElements: ['username', 'tempPassword', 'loginUrl'],
+    protectedContent: '=== LOGIN CREDENTIALS (REQUIRED - DO NOT DELETE) ===\nUsername: {{username}}\nPassword: {{tempPassword}}\nLogin URL: {{loginUrl}}\n=== END REQUIRED SECTION ===',
+    defaultContent: 'Welcome to ConvertMag.net!\n\nYour account has been successfully created. You can now start transforming your content into high-converting lead magnets.\n\n=== LOGIN CREDENTIALS (REQUIRED - DO NOT DELETE) ===\nUsername: {{username}}\nPassword: {{tempPassword}}\nLogin URL: {{loginUrl}}\n=== END REQUIRED SECTION ===\n\nGet started by creating your first guide from any YouTube video, document, or audio file.\n\nQuestions? Reply to this email for support.\n\nBest regards,\nThe ConvertMag.net Team',
+    canDisable: false
   },
   { 
     key: 'password_reset', 
@@ -46,15 +30,39 @@ const EMAIL_TYPES = [
     description: 'Sent when password reset is requested',
     category: 'system',
     requiredElements: ['resetUrl'],
-    defaultContent: 'You requested a password reset for your ConvertMag.net account.\n\nClick here to reset your password:\n{{resetUrl}}\n\nThis link expires in 24 hours. If you didn\'t request this, please ignore this email.'
+    protectedContent: '=== PASSWORD RESET (REQUIRED - DO NOT DELETE) ===\nReset your password: {{resetUrl}}\n=== END REQUIRED SECTION ===',
+    defaultContent: 'Password Reset Request\n\nWe received a request to reset your ConvertMag.net password.\n\n=== PASSWORD RESET (REQUIRED - DO NOT DELETE) ===\nReset your password: {{resetUrl}}\n=== END REQUIRED SECTION ===\n\nThis link expires in 24 hours for security reasons.\n\nIf you did not request this reset, please ignore this email.\n\nBest regards,\nThe ConvertMag.net Team',
+    canDisable: false
   },
   { 
     key: 'subscription_confirmation', 
     label: 'Subscription Confirmation', 
     description: 'Sent when subscription is confirmed',
     category: 'system',
-    requiredElements: ['planName', 'amount', 'billingDate'],
-    defaultContent: 'Your subscription has been confirmed!\n\nPlan: {{planName}}\nAmount: ${{amount}}\nNext billing: {{billingDate}}\n\nThank you for upgrading to unlock unlimited lead magnets!'
+    requiredElements: ['planName', 'amount', 'billingDate', 'manageUrl'],
+    protectedContent: '=== SUBSCRIPTION DETAILS (REQUIRED - DO NOT DELETE) ===\nPlan: {{planName}}\nAmount: ${{amount}}\nNext billing date: {{billingDate}}\nManage subscription: {{manageUrl}}\n=== END REQUIRED SECTION ===',
+    defaultContent: 'Subscription Confirmed - Welcome to Premium!\n\nThank you for upgrading your ConvertMag.net account. You now have access to unlimited lead magnets and advanced features.\n\n=== SUBSCRIPTION DETAILS (REQUIRED - DO NOT DELETE) ===\nPlan: {{planName}}\nAmount: ${{amount}}\nNext billing date: {{billingDate}}\nManage subscription: {{manageUrl}}\n=== END REQUIRED SECTION ===\n\nYour Premium Features Include:\n• Unlimited lead magnet creation\n• Custom branding and logos\n• Advanced analytics and tracking\n• Priority customer support\n• Multiple brand workspaces\n\nStart maximizing your lead generation today!\n\nQuestions about your subscription? Contact our billing support.\n\nThe ConvertMag.net Team',
+    canDisable: false
+  },
+  { 
+    key: 'lead_notification', 
+    label: 'Lead Notification', 
+    description: 'Sent to you when someone signs up',
+    category: 'system',
+    requiredElements: ['leadName', 'leadEmail', 'guideName', 'captureTime'],
+    protectedContent: '=== LEAD DETAILS (REQUIRED - DO NOT DELETE) ===\nName: {{leadName}}\nEmail: {{leadEmail}}\nGuide: {{guideName}}\nCaptured: {{captureTime}}\n=== END REQUIRED SECTION ===',
+    defaultContent: 'New Lead Captured!\n\nGreat news! Someone just downloaded one of your lead magnets.\n\n=== LEAD DETAILS (REQUIRED - DO NOT DELETE) ===\nName: {{leadName}}\nEmail: {{leadEmail}}\nGuide: {{guideName}}\nCaptured: {{captureTime}}\n=== END REQUIRED SECTION ===\n\nLogin to your dashboard to view full lead details and follow up.\n\nKeep creating amazing content!\n\nThe ConvertMag.net Team',
+    canDisable: false
+  },
+  { 
+    key: 'guide_delivery', 
+    label: 'Guide Delivery', 
+    description: 'Sent when someone downloads a guide',
+    category: 'guide',
+    requiredElements: ['guideName', 'downloadUrl'],
+    protectedContent: '=== GUIDE DOWNLOAD (REQUIRED - DO NOT DELETE) ===\nGuide: {{guideName}}\nDownload: {{downloadUrl}}\n=== END REQUIRED SECTION ===',
+    defaultContent: 'Your Free Guide is Ready!\n\nThank you for your interest. Here is your requested guide with valuable insights to help you improve your skills.\n\n=== GUIDE DOWNLOAD (REQUIRED - DO NOT DELETE) ===\nGuide: {{guideName}}\nDownload: {{downloadUrl}}\n=== END REQUIRED SECTION ===\n\nWe hope you find this guide valuable. Feel free to share it with others who might benefit.\n\nLooking for more resources? Visit our website for additional guides and training materials.\n\nBest regards,\n{{brandName || "ConvertMag.net"}}',
+    canDisable: true
   },
 ];
 
@@ -92,8 +100,9 @@ export default function EmailSettings() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/email-templates'] });
-      toast({ title: "Template updated successfully!" });
       setEditingTemplate(null);
+      setTemplateContent('');
+      toast({ title: "Template updated successfully!" });
     },
     onError: (error) => {
       toast({ title: "Failed to update template", description: error.message, variant: "destructive" });
@@ -115,8 +124,9 @@ export default function EmailSettings() {
 
   const handleEditTemplate = (type: string) => {
     const template = Array.isArray(templates) ? templates.find((t: any) => t.type === type) : null;
+    const emailType = EMAIL_TYPES.find(t => t.key === type);
     setEditingTemplate(type);
-    setTemplateContent(template?.content || '');
+    setTemplateContent(template?.content || emailType?.defaultContent || '');
   };
 
   const handleSaveTemplate = () => {
@@ -182,8 +192,17 @@ export default function EmailSettings() {
     formData.append('logo', file);
 
     try {
-      const response = await apiRequest('POST', '/api/email-logo-upload', formData);
-      const { logoUrl } = response as { logoUrl: string };
+      const response = await fetch('/api/email-logo-upload', {
+        method: 'POST',
+        body: formData,
+        credentials: 'include'
+      });
+      
+      if (!response.ok) {
+        throw new Error('Upload failed');
+      }
+      
+      const data = await response.json();
       setLogoType('custom');
       toast({
         title: "Logo Uploaded",
@@ -203,33 +222,34 @@ export default function EmailSettings() {
   const renderTemplateCard = (emailType: any) => {
     const template = Array.isArray(templates) ? templates.find((t: any) => t.type === emailType.key) : null;
     const isEditing = editingTemplate === emailType.key;
+    const hasExternalIntegration = Array.isArray(integrations) && integrations.some((i: any) => i.isActive);
     
     return (
       <Card key={emailType.key} className="mb-4">
-        <CardHeader className="pb-3">
+        <CardHeader>
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle className="text-lg">{emailType.label}</CardTitle>
+              <CardTitle className="text-lg flex items-center gap-2">
+                {emailType.label}
+                {emailType.category === 'system' && (
+                  <Badge variant="secondary">System Email</Badge>
+                )}
+                {emailType.canDisable && (
+                  <Badge variant="outline">Optional</Badge>
+                )}
+              </CardTitle>
               <p className="text-sm text-muted-foreground">{emailType.description}</p>
             </div>
             <div className="flex items-center gap-2">
-              {template?.enabled ? (
-                <Badge variant="default" className="gap-1">
-                  <CheckCircle className="h-3 w-3" />
-                  Active
-                </Badge>
-              ) : (
-                <Badge variant="outline" className="gap-1">
-                  <AlertCircle className="h-3 w-3" />
-                  Default
-                </Badge>
+              {emailType.canDisable && hasExternalIntegration && (
+                <Switch defaultChecked={template?.isActive !== false} />
               )}
               <Button
                 variant={isEditing ? "default" : "outline"}
                 size="sm"
-                onClick={() => isEditing ? handleSaveTemplate() : handleEditTemplate(emailType.key)}
+                onClick={() => isEditing ? setEditingTemplate(null) : handleEditTemplate(emailType.key)}
               >
-                {isEditing ? "Save" : "Edit"}
+                {isEditing ? "Cancel" : "Edit"}
               </Button>
             </div>
           </div>
@@ -307,7 +327,7 @@ export default function EmailSettings() {
                   className="min-h-[200px]"
                 />
                 <p className="text-sm text-muted-foreground mt-2">
-                  Use variables like {"{{customerName}}, {{guideName}}, {{brandName}}"} in your template.
+                  Use variables like customerName, guideName, brandName in your template.
                 </p>
                 {emailType.requiredElements && (
                   <div className="bg-blue-50 p-3 rounded-lg mt-2">
@@ -386,97 +406,80 @@ export default function EmailSettings() {
   };
 
   return (
-    <div className="container mx-auto p-6 space-y-8">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Email Settings</h1>
-          <p className="text-muted-foreground">
-            Control your email templates and integrations
-          </p>
-        </div>
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-3xl font-bold">Email Settings</h1>
+        <p className="text-muted-foreground">
+          Manage your email templates and integrations
+        </p>
       </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="templates" className="flex items-center gap-2">
-            <Mail className="h-4 w-4" />
-            Email Templates
-          </TabsTrigger>
-          <TabsTrigger value="integrations" className="flex items-center gap-2">
-            <Zap className="h-4 w-4" />
-            Integrations
-          </TabsTrigger>
-          <TabsTrigger value="settings" className="flex items-center gap-2">
-            <Settings className="h-4 w-4" />
-            Settings
-          </TabsTrigger>
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="templates">Templates</TabsTrigger>
+          <TabsTrigger value="integrations">Integrations</TabsTrigger>
+          <TabsTrigger value="settings">Settings</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="templates" className="space-y-6">
+        <TabsContent value="templates" className="space-y-4">
           <Card>
             <CardHeader>
               <CardTitle>Email Templates</CardTitle>
               <p className="text-sm text-muted-foreground">
-                Customize your email templates or use our professional defaults.
-                <br />
-                <strong>Free users</strong> use our default templates with ConvertMag.net branding.
-                <br />
-                <strong>Paid users</strong> can customize templates or connect their own email service.
+                Customize your automated email templates. System emails require specific elements and cannot be disabled.
               </p>
             </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {EMAIL_TYPES.map((emailType) => renderTemplateCard(emailType))}
-              </div>
-            </CardContent>
           </Card>
+          
+          {templatesLoading ? (
+            <div className="text-center py-8">Loading templates...</div>
+          ) : (
+            EMAIL_TYPES.map(renderTemplateCard)
+          )}
         </TabsContent>
 
-        <TabsContent value="integrations" className="space-y-6">
+        <TabsContent value="integrations" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Email Service Integrations</CardTitle>
+              <CardTitle>Email Integrations</CardTitle>
               <p className="text-sm text-muted-foreground">
-                Connect your preferred email marketing service to take full control of your email campaigns.
-                When connected, our system will send leads to your service instead of using our templates.
+                Connect external email marketing tools. When connected, you can disable guide delivery emails to use your own system.
               </p>
             </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {INTEGRATION_PROVIDERS.map((provider) => renderIntegrationCard(provider))}
-              </div>
-            </CardContent>
           </Card>
+          
+          {integrationsLoading ? (
+            <div className="text-center py-8">Loading integrations...</div>
+          ) : (
+            INTEGRATION_PROVIDERS.map(renderIntegrationCard)
+          )}
         </TabsContent>
 
-        <TabsContent value="settings" className="space-y-6">
+        <TabsContent value="settings" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Email Settings</CardTitle>
-              <p className="text-sm text-muted-foreground">
-                Configure your email preferences and delivery settings.
-              </p>
+              <CardTitle>Email Preferences</CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="space-y-6">
-                <div className="flex items-center justify-between">
-                  <div>
+            <CardContent className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
                     <Label htmlFor="email-notifications">Email Notifications</Label>
-                    <p className="text-sm text-muted-foreground">
-                      Receive notifications when someone downloads your guides
-                    </p>
+                    <Switch id="email-notifications" defaultChecked />
                   </div>
-                  <Switch id="email-notifications" />
+                  <p className="text-sm text-muted-foreground">
+                    Receive notifications about new leads and account updates
+                  </p>
                 </div>
-                
-                <div className="flex items-center justify-between">
-                  <div>
+
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
                     <Label htmlFor="auto-followup">Auto Follow-up</Label>
-                    <p className="text-sm text-muted-foreground">
-                      Automatically send follow-up emails after guide delivery
-                    </p>
+                    <Switch id="auto-followup" />
                   </div>
-                  <Switch id="auto-followup" />
+                  <p className="text-sm text-muted-foreground">
+                    Automatically send follow-up emails to new leads
+                  </p>
                 </div>
 
                 <div className="space-y-2">
