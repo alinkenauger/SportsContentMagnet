@@ -26,9 +26,14 @@ export default function Landing() {
             )}
             <h1 className="text-2xl font-bold text-foreground">{companyName}</h1>
           </div>
-          <Button onClick={() => window.location.href = '/api/login'}>
-            Sign In
-          </Button>
+          <div className="flex items-center space-x-3">
+            <Button variant="outline" onClick={() => window.location.href = '/sales'}>
+              Get Started Free
+            </Button>
+            <Button onClick={() => window.location.href = '/api/login'}>
+              Sign In
+            </Button>
+          </div>
         </div>
       </header>
 

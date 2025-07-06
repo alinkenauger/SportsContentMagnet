@@ -34,6 +34,11 @@ export const users = pgTable("users", {
   firstName: varchar("first_name"),
   lastName: varchar("last_name"),
   profileImageUrl: varchar("profile_image_url"),
+  tempPassword: varchar("temp_password"), // For new signups
+  resetToken: varchar("reset_token"),
+  resetTokenExpiry: timestamp("reset_token_expiry"),
+  emailVerificationToken: varchar("email_verification_token"),
+  isEmailVerified: boolean("is_email_verified").default(false),
   currentBrandId: integer("current_brand_id"), // Reference to active brand
   role: varchar("role", { length: 50 }).default("user"), // 'user', 'admin'
   subscriptionTier: varchar("subscription_tier").default("free"), // 'free', 'basic', 'pro', 'enterprise'

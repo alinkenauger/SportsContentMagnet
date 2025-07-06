@@ -15,6 +15,7 @@ import { StorageCostManager } from "./services/storageManager";
 import fs from 'fs';
 import path from 'path';
 import sharp from 'sharp';
+import { registerAuthRoutes } from "./authRoutes";
 // import pdf from 'pdf-parse'; // Temporarily disabled due to module issues
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -54,6 +55,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   setupGoogleAuth(app);
   // Keep Replit Auth as backup/alternative
   await setupAuth(app);
+  
+  // Register custom auth routes (signup, password reset, etc.)
+  registerAuthRoutes(app);
 
   // Primary auth route (Google OAuth)
   app.get('/api/auth/user', async (req: any, res) => {

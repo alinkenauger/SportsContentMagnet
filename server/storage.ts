@@ -74,6 +74,15 @@ export interface IStorage {
   getUserByEmail(email: string): Promise<User | undefined>;
   getUserByGoogleId(googleId: string): Promise<User | undefined>;
   upsertUser(user: UpsertUser): Promise<User>;
+  
+  // Authentication operations for signup/password reset
+  getUserByResetToken(token: string): Promise<User | undefined>;
+  updateUserResetToken(userId: string, token: string, expiry: Date): Promise<void>;
+  clearUserResetToken(userId: string): Promise<void>;
+  updateUserPassword(userId: string, hashedPassword: string): Promise<void>;
+  getUserByEmailVerificationToken(token: string): Promise<User | undefined>;
+  updateUserEmailVerificationToken(userId: string, token: string): Promise<void>;
+  markEmailAsVerified(userId: string): Promise<void>;
 
   // Brand operations
   createBrand(brand: InsertBrand): Promise<Brand>;
@@ -310,6 +319,76 @@ export class DatabaseStorage implements IStorage {
     }
 
     return user;
+  }
+
+  // Authentication operations for signup/password reset
+  async getUserByResetToken(token: string): Promise<User | undefined> {
+    const [user] = await db
+      .select()
+      .from(users)
+      .where(eq(users.resetToken, token));
+    return user;
+  }
+
+  async updateUserResetToken(userId: string, token: string, expiry: Date): Promise<void> {
+    await db
+      .update(users)
+      .set({
+        resetToken: token,
+        resetTokenExpiry: expiry,
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, userId));
+  }
+
+  async clearUserResetToken(userId: string): Promise<void> {
+    await db
+      .update(users)
+      .set({
+        resetToken: null,
+        resetTokenExpiry: null,
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, userId));
+  }
+
+  async updateUserPassword(userId: string, hashedPassword: string): Promise<void> {
+    await db
+      .update(users)
+      .set({
+        tempPassword: hashedPassword,
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, userId));
+  }
+
+  async getUserByEmailVerificationToken(token: string): Promise<User | undefined> {
+    const [user] = await db
+      .select()
+      .from(users)
+      .where(eq(users.emailVerificationToken, token));
+    return user;
+  }
+
+  async updateUserEmailVerificationToken(userId: string, token: string): Promise<void> {
+    await db
+      .update(users)
+      .set({
+        emailVerificationToken: token,
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, userId));
+  }
+
+  async markEmailAsVerified(userId: string): Promise<void> {
+    await db
+      .update(users)
+      .set({
+        isEmailVerified: true,
+        emailVerificationToken: null,
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, userId));
   }
 
   // Brand operations

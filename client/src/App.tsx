@@ -27,6 +27,8 @@ import StorageDashboard from "@/pages/storage-dashboard";
 import KnowledgeBaseSettings from "@/pages/knowledge-base-settings";
 import Pricing from "@/pages/pricing";
 import TeamManagement from "@/pages/team-management";
+import SalesPage from "@/pages/sales-page";
+import ResetPassword from "@/pages/reset-password";
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -34,7 +36,11 @@ function Router() {
   return (
     <Switch>
       {isLoading || !isAuthenticated ? (
-        <Route path="/" component={Landing} />
+        <>
+          <Route path="/" component={Landing} />
+          <Route path="/sales" component={SalesPage} />
+          <Route path="/reset-password" component={ResetPassword} />
+        </>
       ) : (
         <>
           <Route path="/" component={Dashboard} />
