@@ -245,17 +245,27 @@ export default function GuideDelivery() {
         {/* Welcome Message */}
         <Card className="mb-8">
           <CardContent className="p-8 text-center">
+            {/* Success status banner */}
+            <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
+              <div className="flex items-center justify-center space-x-2">
+                <CheckCircle className="w-6 h-6 text-green-600" />
+                <p className="text-green-800 font-bold text-lg">
+                  ✅ Access Granted! Your guide is now unlocked and ready
+                </p>
+              </div>
+            </div>
+            
             <h2 
               className="text-3xl font-bold text-slate-800 mb-4"
               style={{ fontFamily: brandingSettings?.fontFamily }}
             >
-              {lead.firstName ? `Congratulations ${lead.firstName}!` : "Congratulations!"}
+              Welcome{lead.firstName ? `, ${lead.firstName}` : ''}! You're all set 🎉
             </h2>
             <p 
               className="text-xl text-slate-600 mb-6"
               style={{ fontFamily: brandingSettings?.fontFamily }}
             >
-              Your personalized practice guide is ready. This guide has been customized based on your responses.
+              Your personalized practice guide is now accessible. This guide has been customized based on proven techniques from the original video.
             </p>
             
             {/* Video Preview */}

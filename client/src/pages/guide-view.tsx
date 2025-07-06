@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
 import { 
   Star, 
   Target, 
@@ -17,7 +18,10 @@ import {
   Clock,
   AlertCircle,
   Zap,
-  Repeat
+  Repeat,
+  TrendingUp,
+  Timer,
+  Award
 } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 
@@ -152,6 +156,12 @@ function DrillVisual({ breakdown }: { breakdown: DrillBreakdown }) {
 
 export default function GuideView() {
   const { guideId } = useParams<{ guideId: string }>();
+  
+  // Progress tracking state
+  const [completedSections, setCompletedSections] = useState<Set<number>>(new Set());
+  const [drillRepTracking, setDrillRepTracking] = useState<{ [key: number]: number }>({});
+  const [totalTimeSpent, setTotalTimeSpent] = useState(0);
+  const [sessionStartTime] = useState(Date.now());
 
   const { data: guideData, isLoading } = useQuery<GuideViewData>({
     queryKey: ["/api/guide", guideId, "public"],
@@ -164,6 +174,14 @@ export default function GuideView() {
     },
     enabled: !!guideId,
   });
+
+  // Update time spent every minute
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setTotalTimeSpent(Math.floor((Date.now() - sessionStartTime) / 1000 / 60));
+    }, 60000);
+    return () => clearInterval(interval);
+  }, [sessionStartTime]);
 
   // Track view when guide loads
   useEffect(() => {
@@ -178,6 +196,31 @@ export default function GuideView() {
       trackView();
     }
   }, [guideId, guideData]);
+
+  // Helper functions for progress tracking
+  const toggleSectionCompletion = (sectionIndex: number) => {
+    setCompletedSections(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(sectionIndex)) {
+        newSet.delete(sectionIndex);
+      } else {
+        newSet.add(sectionIndex);
+      }
+      return newSet;
+    });
+  };
+
+  const updateDrillReps = (sectionIndex: number, reps: number) => {
+    setDrillRepTracking(prev => ({
+      ...prev,
+      [sectionIndex]: (prev[sectionIndex] || 0) + reps
+    }));
+  };
+
+  const calculateProgress = () => {
+    if (!guideData?.guide.content.sections) return 0;
+    return Math.round((completedSections.size / guideData.guide.content.sections.length) * 100);
+  };
 
   const handleShare = () => {
     if (navigator.share) {
@@ -362,6 +405,55 @@ export default function GuideView() {
           </div>
         </div>
 
+        {/* Progress Tracking Section */}
+        <Card className="mb-8">
+          <CardContent className="p-6">
+            <h3 className="text-lg font-semibold text-slate-800 mb-4 flex items-center">
+              <TrendingUp className="w-5 h-5 mr-2" />
+              Your Training Progress
+            </h3>
+            
+            {/* Progress Stats */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-center">
+                <div className="text-2xl font-bold text-blue-600">{calculateProgress()}%</div>
+                <div className="text-sm text-blue-600 font-medium">Complete</div>
+              </div>
+              <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-center">
+                <div className="text-2xl font-bold text-green-600">{completedSections.size}</div>
+                <div className="text-sm text-green-600 font-medium">Sections Done</div>
+              </div>
+              <div className="bg-purple-50 border border-purple-200 rounded-lg p-4 text-center">
+                <div className="text-2xl font-bold text-purple-600 flex items-center justify-center">
+                  <Timer className="w-5 h-5 mr-1" />
+                  {totalTimeSpent}m
+                </div>
+                <div className="text-sm text-purple-600 font-medium">Time Spent</div>
+              </div>
+            </div>
+            
+            {/* Progress Bar */}
+            <div className="mb-4">
+              <div className="flex justify-between items-center mb-2">
+                <span className="text-sm font-medium text-slate-700">Overall Progress</span>
+                <span className="text-sm text-slate-600">{completedSections.size} of {guide.content.sections.length} sections</span>
+              </div>
+              <Progress value={calculateProgress()} className="h-3" />
+            </div>
+            
+            {/* Achievement badge */}
+            {calculateProgress() >= 100 && (
+              <div className="bg-gradient-to-r from-yellow-400 to-orange-500 rounded-lg p-4 text-center">
+                <div className="flex items-center justify-center mb-2">
+                  <Award className="w-8 h-8 text-white" />
+                </div>
+                <div className="text-white font-bold text-lg">🎉 Training Complete!</div>
+                <div className="text-yellow-100 text-sm">You've mastered all techniques in this guide</div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
         {/* Guide Sections */}
         <div className="space-y-6">
           {guide.content.sections.map((section, index) => (
@@ -376,9 +468,21 @@ export default function GuideView() {
                   </div>
                   <div className="flex-1">
                     <div className="flex items-center space-x-3 mb-2">
-                      <h3 className="text-xl font-semibold text-slate-800">
-                        {section.title}
-                      </h3>
+                      <label className="flex items-center space-x-3 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          className="w-5 h-5 text-blue-600 border-2 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
+                          checked={completedSections.has(index)}
+                          onChange={() => toggleSectionCompletion(index)}
+                        />
+                        <h3 className={`text-xl font-semibold transition-colors ${
+                          completedSections.has(index) 
+                            ? 'text-green-600 line-through' 
+                            : 'text-slate-800'
+                        }`}>
+                          {section.title}
+                        </h3>
+                      </label>
                       <Badge variant="secondary" className="text-xs">
                         {section.type.charAt(0).toUpperCase() + section.type.slice(1)}
                       </Badge>
@@ -392,7 +496,62 @@ export default function GuideView() {
 
                     {section.type === 'drill' && (() => {
                       const drillBreakdown = parseDrillContent(section.content);
-                      return drillBreakdown ? <DrillVisual breakdown={drillBreakdown} /> : null;
+                      return drillBreakdown ? (
+                        <div>
+                          <DrillVisual breakdown={drillBreakdown} />
+                          
+                          {/* Workout Tracking for Drills */}
+                          <div className="mt-4 bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                            <h5 className="font-semibold text-yellow-800 mb-3 flex items-center">
+                              <Target className="w-5 h-5 mr-2" />
+                              Training Log
+                            </h5>
+                            <div className="flex items-center space-x-4">
+                              <div className="flex items-center space-x-2">
+                                <span className="text-sm font-medium text-yellow-700">Reps completed:</span>
+                                <div className="flex items-center space-x-2">
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => updateDrillReps(index, -1)}
+                                    disabled={(drillRepTracking[index] || 0) <= 0}
+                                    className="w-8 h-8 p-0"
+                                  >
+                                    -
+                                  </Button>
+                                  <span className="font-bold text-yellow-800 min-w-[2rem] text-center">
+                                    {drillRepTracking[index] || 0}
+                                  </span>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => updateDrillReps(index, 1)}
+                                    className="w-8 h-8 p-0"
+                                  >
+                                    +
+                                  </Button>
+                                </div>
+                              </div>
+                              <Button
+                                variant="default"
+                                size="sm"
+                                onClick={() => updateDrillReps(index, 5)}
+                                className="bg-yellow-600 hover:bg-yellow-700"
+                              >
+                                +5 Reps
+                              </Button>
+                              <Button
+                                variant="default"
+                                size="sm"
+                                onClick={() => updateDrillReps(index, 10)}
+                                className="bg-yellow-600 hover:bg-yellow-700"
+                              >
+                                +10 Reps
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      ) : null;
                     })()}
 
                     {section.timestamp && (

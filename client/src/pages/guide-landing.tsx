@@ -261,9 +261,19 @@ export default function GuideLanding() {
               <h2 className="text-2xl font-bold text-gray-800 mb-2">
                 Get Your FREE Practice Guide
               </h2>
-              <p className="text-gray-600">
+              <p className="text-gray-600 mb-4">
                 Join thousands who've improved their game with our proven techniques
               </p>
+              
+              {/* Clear Access Promise */}
+              <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-4">
+                <div className="flex items-center justify-center space-x-2">
+                  <CheckCircle className="w-5 h-5 text-green-600" />
+                  <p className="text-green-800 font-medium">
+                    ✨ Instant Access - Your guide unlocks immediately after submission
+                  </p>
+                </div>
+              </div>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-4" id="lead-form">
@@ -350,15 +360,27 @@ export default function GuideLanding() {
                 {submitLeadMutation.isPending ? (
                   <div className="flex items-center justify-center">
                     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                    Processing...
+                    Unlocking your guide...
                   </div>
                 ) : (
                   <>
                     <Download className="w-5 h-5 mr-2" />
-                    {(landingPage as any).buttonText || "GET MY FREE GUIDE NOW"}
+                    {(landingPage as any).buttonText || "UNLOCK MY FREE GUIDE NOW"} →
                   </>
                 )}
               </Button>
+              
+              {/* What happens next */}
+              <div className="text-center pt-3">
+                <p className="text-sm text-gray-600 mb-2">
+                  👆 Click to unlock your personalized practice guide instantly
+                </p>
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                  <p className="text-blue-800 text-sm font-medium">
+                    📋 What happens next: You'll be taken directly to your guide page where you can start practicing immediately
+                  </p>
+                </div>
+              </div>
             </form>
 
             <div className="text-xs text-gray-500 text-center mt-4 leading-relaxed space-y-2">
