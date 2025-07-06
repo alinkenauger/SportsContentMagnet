@@ -282,74 +282,108 @@ export default function SalesPage() {
             </p>
           </div>
           
-          {/* YouTube Video Example */}
+          {/* Problem Discovery Story */}
           <div className="bg-white rounded-3xl shadow-2xl p-12 mb-16 border border-gray-100">
-            <div className="flex flex-col lg:flex-row items-center justify-center gap-12">
-              {/* Source Content */}
-              <div className="text-center">
-                <h3 className="text-xl font-bold text-gray-800 mb-6">YouTube Video</h3>
-                <div className="relative">
-                  <img 
-                    src="/attached_assets/mqdefault_1751825204492.jpg" 
-                    alt="YouTube Golf Video Thumbnail" 
-                    className="w-full max-w-[450px] mx-auto rounded-lg shadow-2xl border-2 border-gray-200 hover:shadow-3xl transition-shadow duration-300"
-                  />
+            <div className="text-center mb-12">
+              <h3 className="text-3xl font-bold text-gray-900 mb-4">How ConvertMag.net Was Born</h3>
+              <p className="text-xl text-gray-600">The real-world discovery that changed everything for content creators</p>
+            </div>
+            
+            {/* The Discovery Story */}
+            <div className="max-w-4xl mx-auto space-y-8">
+              {/* Step 1: The Problem */}
+              <div className="flex flex-col md:flex-row gap-8 items-center">
+                <div className="md:w-1/2">
+                  <div className="bg-red-50 border-l-4 border-red-500 p-6 rounded-r-lg">
+                    <h4 className="text-xl font-bold text-red-800 mb-3">💔 The Painful Reality</h4>
+                    <p className="text-gray-700 mb-4">
+                      Like most content creators, I was creating generic "Top 10 Tips" PDFs and fitness guides that barely converted 2% of visitors.
+                    </p>
+                    <div className="bg-white rounded-lg p-4 border border-red-200">
+                      <div className="text-red-600 font-semibold text-center">
+                        25+ Generic Lead Magnets = Mediocre Results
+                      </div>
+                    </div>
+                  </div>
                 </div>
-              </div>
-
-              {/* Equal Sign */}
-              <div className="flex items-center justify-center">
-                <div className="text-8xl font-black text-blue-600 bg-blue-50 rounded-full w-28 h-28 flex items-center justify-center shadow-lg">
-                  =
+                <div className="md:w-1/2">
+                  <div className="text-6xl text-center">😤</div>
+                  <p className="text-center text-gray-500 mt-2">Frustrated Creator</p>
                 </div>
               </div>
               
-              {/* Combined Output */}
-              <div className="text-center">
-                <h3 className="text-xl font-bold text-gray-800 mb-6">High-Converting Landing Page + Interactive Guide</h3>
-                <div className="flex flex-col lg:flex-row gap-6 items-center justify-center">
-                  {/* Landing Page */}
-                  <div className="relative">
-                    <img 
-                      src="/attached_assets/CleanShot 2025-07-06 at 13.58.18@2x_1751825245756.png" 
-                      alt="Golf Landing Page" 
-                      className="w-full max-w-[400px] mx-auto rounded-lg shadow-xl border border-gray-200"
-                    />
-                  </div>
-                  
-                  {/* Plus Sign */}
-                  <div className="flex items-center justify-center">
-                    <div className="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center shadow-lg">
-                      <span className="text-white font-bold text-3xl">+</span>
+              {/* Step 2: The Experiment */}
+              <div className="flex flex-col md:flex-row-reverse gap-8 items-center">
+                <div className="md:w-1/2">
+                  <div className="bg-blue-50 border-l-4 border-blue-500 p-6 rounded-r-lg">
+                    <h4 className="text-xl font-bold text-blue-800 mb-3">🧪 The 2024 Test</h4>
+                    <p className="text-gray-700 mb-4">
+                      I decided to try something different: instead of generic guides, I created practice guides specific to individual YouTube videos I'd made.
+                    </p>
+                    <div className="bg-white rounded-lg p-4 border border-blue-200">
+                      <div className="text-blue-600 font-semibold text-center">
+                        5 Video-Specific Guides = Game Changer
+                      </div>
                     </div>
                   </div>
-                  
-                  {/* Guide Output */}
-                  <div className="relative">
-                    <img 
-                      src="/attached_assets/CleanShot 2025-07-06 at 13.59.43_1751825178398.gif" 
-                      alt="Interactive Golf Practice Guide" 
-                      className="w-full max-w-[400px] mx-auto rounded-lg shadow-xl border border-gray-200"
-                    />
-                  </div>
+                </div>
+                <div className="md:w-1/2">
+                  <div className="text-6xl text-center">🤔</div>
+                  <p className="text-center text-gray-500 mt-2">Testing New Ideas</p>
                 </div>
               </div>
-            </div>
-            
-            {/* Results Stats */}
-            <div className="mt-12 bg-gradient-to-r from-green-50 to-emerald-50 rounded-2xl p-8">
-              <div className="grid md:grid-cols-3 gap-8 text-center">
-                <div>
-                  <div className="text-4xl font-black text-green-600 mb-3">5 min</div>
-                  <div className="text-lg font-semibold text-gray-700">Total Creation Time</div>
+              
+              {/* Step 3: The Shocking Result */}
+              <div className="flex flex-col md:flex-row gap-8 items-center">
+                <div className="md:w-1/2">
+                  <div className="bg-green-50 border-l-4 border-green-500 p-6 rounded-r-lg">
+                    <h4 className="text-xl font-bold text-green-800 mb-3">🚀 The Shocking Discovery</h4>
+                    <p className="text-gray-700 mb-4">
+                      Those 5 video-specific lead magnets generated the same number of leads as my previous 25+ generic guides combined!
+                    </p>
+                    <div className="bg-white rounded-lg p-4 border border-green-200">
+                      <div className="text-green-600 font-semibold text-center text-xl">
+                        10X Better Results From Video-Specific Content
+                      </div>
+                    </div>
+                  </div>
                 </div>
-                <div>
-                  <div className="text-4xl font-black text-blue-600 mb-3">18%</div>
-                  <div className="text-lg font-semibold text-gray-700">Conversion Rate Achieved</div>
+                <div className="md:w-1/2">
+                  <div className="text-6xl text-center">🤯</div>
+                  <p className="text-center text-gray-500 mt-2">Mind = Blown</p>
                 </div>
-                <div>
-                  <div className="text-4xl font-black text-purple-600 mb-3">Smart</div>
-                  <div className="text-lg font-semibold text-gray-700">Timestamping Included</div>
+              </div>
+              
+              {/* Step 4: The Problem */}
+              <div className="flex flex-col md:flex-row-reverse gap-8 items-center">
+                <div className="md:w-1/2">
+                  <div className="bg-orange-50 border-l-4 border-orange-500 p-6 rounded-r-lg">
+                    <h4 className="text-xl font-bold text-orange-800 mb-3">💸 The Scaling Problem</h4>
+                    <p className="text-gray-700 mb-4">
+                      But here's the catch: each video-specific guide cost $1000+ to create manually and took weeks to complete. I couldn't scale this strategy.
+                    </p>
+                    <div className="bg-white rounded-lg p-4 border border-orange-200">
+                      <div className="text-orange-600 font-semibold text-center">
+                        Amazing Strategy + Impossible Costs = No Solution
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div className="md:w-1/2">
+                  <div className="text-6xl text-center">😰</div>
+                  <p className="text-center text-gray-500 mt-2">Cost Barrier</p>
+                </div>
+              </div>
+              
+              {/* Step 5: The Solution */}
+              <div className="bg-gradient-to-r from-purple-600 to-blue-600 rounded-2xl p-8 text-white text-center">
+                <h4 className="text-2xl font-bold mb-4">💡 The Solution That Changed Everything</h4>
+                <p className="text-xl mb-6 opacity-90">
+                  "I found the 'New Way' but needed a solution to do the heavy lifting. Unfortunately, it didn't exist. So I spent the last year personally coding it myself."
+                </p>
+                <div className="bg-white bg-opacity-20 rounded-lg p-6 backdrop-blur-sm">
+                  <div className="text-3xl font-bold mb-2">ConvertMag.net Was Born</div>
+                  <div className="text-lg opacity-90">Turning any content into video-specific lead magnets in 5 minutes, not 5 weeks</div>
                 </div>
               </div>
             </div>
