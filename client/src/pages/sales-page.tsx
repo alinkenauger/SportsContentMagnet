@@ -248,11 +248,41 @@ export default function SalesPage() {
             </div>
           </div>
           
-          <h2 className="text-2xl md:text-3xl font-bold mb-8 text-gray-800 max-w-4xl mx-auto">
-            <span className="text-red-600">STOP Wasting Time</span> with Generic "Top 10 Tips" PDFs That Don't Convert...
-            <br />
-            <span className="text-green-600">START Creating</span> Video-Specific Lead Magnets That Convert Up To 10x More Leads!
-          </h2>
+          {/* Stop/Start Call to Action */}
+          <div className="max-w-5xl mx-auto mb-12">
+            <div className="bg-gradient-to-r from-red-50 via-white to-green-50 rounded-3xl p-8 border-2 border-gray-100 shadow-xl relative">
+              <div className="grid md:grid-cols-2 gap-8 items-center">
+                {/* STOP Side */}
+                <div className="text-center md:text-left">
+                  <div className="inline-flex items-center bg-red-100 rounded-full px-6 py-3 mb-4">
+                    <span className="text-2xl mr-2">🛑</span>
+                    <span className="text-red-700 font-bold text-lg">STOP WASTING TIME</span>
+                  </div>
+                  <p className="text-xl text-gray-700 leading-relaxed">
+                    with Generic <strong>"Top 10 Tips"</strong> PDFs That <span className="text-red-600 font-semibold">Don't Convert</span>
+                  </p>
+                </div>
+                
+                {/* START Side */}
+                <div className="text-center md:text-right">
+                  <div className="inline-flex items-center bg-green-100 rounded-full px-6 py-3 mb-4">
+                    <span className="text-2xl mr-2">🚀</span>
+                    <span className="text-green-700 font-bold text-lg">START CREATING</span>
+                  </div>
+                  <p className="text-xl text-gray-700 leading-relaxed">
+                    Video-Specific Lead Magnets That Convert <span className="text-green-600 font-semibold">Up To 10x More Leads!</span>
+                  </p>
+                </div>
+              </div>
+              
+              {/* Central Arrow Divider */}
+              <div className="hidden md:flex absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 z-10">
+                <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center shadow-lg border-2 border-gray-200">
+                  <ArrowRight className="h-8 w-8 text-gray-600" />
+                </div>
+              </div>
+            </div>
+          </div>
           
           <div className="space-y-6 mb-12">
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
