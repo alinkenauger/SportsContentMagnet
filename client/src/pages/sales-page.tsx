@@ -187,53 +187,102 @@ export default function SalesPage() {
             <span className="block text-gray-900 mt-2">From The Same Traffic...</span>
           </h1>
           
-          <p className="text-2xl md:text-3xl font-bold text-gray-700 mb-8">
+          <p className="text-2xl md:text-3xl font-bold text-gray-700 mb-12">
             ... and instantly create your high converting funnels for you.
           </p>
+        </div>
+      </section>
+
+      {/* Transformation Flow Section - Extra Wide */}
+      <section className="bg-gradient-to-r from-gray-50 to-blue-50 py-16">
+        <div className="max-w-[1400px] mx-auto px-4">
+          <div className="text-center mb-12">
+            <h2 className="text-4xl font-black mb-4 text-gray-900">
+              See The <span className="text-blue-600">10X Transformation</span> In Action
+            </h2>
+            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+              Watch how any YouTube video becomes a complete lead generation system with landing page and interactive guide
+            </p>
+          </div>
           
-          {/* Demo Video Section */}
-          <div className="max-w-5xl mx-auto mb-12">
-            <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-2xl p-8">
-              <div className="text-center mb-6">
-                <h3 className="text-2xl font-bold text-gray-900 mb-2">See ConvertMag.net In Action</h3>
-                <p className="text-lg text-gray-600">Watch how easy it is to transform any content into high-converting lead magnets</p>
+          {/* YouTube Video Example */}
+          <div className="bg-white rounded-3xl shadow-2xl p-12 mb-16 border border-gray-100">
+            <div className="flex flex-col lg:flex-row items-center justify-center gap-12">
+              {/* Source Content */}
+              <div className="text-center">
+                <h3 className="text-xl font-bold text-gray-800 mb-6">YouTube Video</h3>
+                <div className="relative">
+                  <img 
+                    src="/attached_assets/mqdefault_1751825204492.jpg" 
+                    alt="YouTube Golf Video Thumbnail" 
+                    className="w-full max-w-[450px] mx-auto rounded-lg shadow-2xl border-2 border-gray-200 hover:shadow-3xl transition-shadow duration-300"
+                  />
+                </div>
+              </div>
+
+              {/* Equal Sign */}
+              <div className="flex items-center justify-center">
+                <div className="text-8xl font-black text-blue-600 bg-blue-50 rounded-full w-28 h-28 flex items-center justify-center shadow-lg">
+                  =
+                </div>
               </div>
               
-              <div className="relative bg-black rounded-xl overflow-hidden shadow-2xl">
-                <div className="aspect-video bg-gray-900 flex items-center justify-center">
-                  <div className="text-center">
-                    <div className="w-24 h-24 bg-white bg-opacity-20 rounded-full flex items-center justify-center mx-auto mb-4 cursor-pointer hover:bg-opacity-30 transition-all duration-300">
-                      <Play className="h-12 w-12 text-white ml-1" />
+              {/* Combined Output */}
+              <div className="text-center">
+                <h3 className="text-xl font-bold text-gray-800 mb-6">High-Converting Landing Page + Interactive Guide</h3>
+                <div className="flex flex-col lg:flex-row gap-6 items-center justify-center">
+                  {/* Landing Page */}
+                  <div className="relative">
+                    <img 
+                      src="/attached_assets/CleanShot 2025-07-06 at 13.58.18@2x_1751825245756.png" 
+                      alt="Golf Landing Page" 
+                      className="w-full max-w-[400px] mx-auto rounded-lg shadow-xl border border-gray-200"
+                    />
+                  </div>
+                  
+                  {/* Plus Sign */}
+                  <div className="flex items-center justify-center">
+                    <div className="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center shadow-lg">
+                      <span className="text-white font-bold text-3xl">+</span>
                     </div>
-                    <h4 className="text-white text-xl font-bold mb-2">ConvertMag.net Demo</h4>
-                    <p className="text-gray-300 text-sm">Click to watch how to create lead magnets in 5 minutes</p>
+                  </div>
+                  
+                  {/* Guide Output */}
+                  <div className="relative">
+                    <img 
+                      src="/attached_assets/CleanShot 2025-07-06 at 13.59.43_1751825178398.gif" 
+                      alt="Interactive Golf Practice Guide" 
+                      className="w-full max-w-[400px] mx-auto rounded-lg shadow-xl border border-gray-200"
+                    />
                   </div>
                 </div>
-                
-                {/* Video placeholder - replace with actual video when available */}
-                <div className="absolute inset-0 bg-gradient-to-r from-blue-600/10 to-purple-600/10"></div>
               </div>
-              
-              <div className="grid md:grid-cols-3 gap-4 mt-6 text-center">
-                <div className="bg-white rounded-lg p-4 shadow-sm">
-                  <div className="text-2xl font-bold text-blue-600 mb-1">Step 1</div>
-                  <div className="text-sm font-semibold text-gray-800">Upload or Share Content</div>
-                  <div className="text-xs text-gray-600">Add your video, audio, or document</div>
+            </div>
+            
+            {/* Results Stats */}
+            <div className="mt-12 bg-gradient-to-r from-green-50 to-emerald-50 rounded-2xl p-8">
+              <div className="grid md:grid-cols-3 gap-8 text-center">
+                <div>
+                  <div className="text-4xl font-black text-green-600 mb-3">5 min</div>
+                  <div className="text-lg font-semibold text-gray-700">Total Creation Time</div>
                 </div>
-                <div className="bg-white rounded-lg p-4 shadow-sm">
-                  <div className="text-2xl font-bold text-green-600 mb-1">Step 2</div>
-                  <div className="text-sm font-semibold text-gray-800">AI Analyzes</div>
-                  <div className="text-xs text-gray-600">Extract key insights automatically</div>
+                <div>
+                  <div className="text-4xl font-black text-blue-600 mb-3">18%</div>
+                  <div className="text-lg font-semibold text-gray-700">Conversion Rate Achieved</div>
                 </div>
-                <div className="bg-white rounded-lg p-4 shadow-sm">
-                  <div className="text-2xl font-bold text-purple-600 mb-1">Step 3</div>
-                  <div className="text-sm font-semibold text-gray-800">Generate & Deploy</div>
-                  <div className="text-xs text-gray-600">Get your complete funnel in minutes</div>
+                <div>
+                  <div className="text-4xl font-black text-purple-600 mb-3">Smart</div>
+                  <div className="text-lg font-semibold text-gray-700">Timestamping Included</div>
                 </div>
               </div>
             </div>
           </div>
-          
+        </div>
+      </section>
+
+      {/* Proven Results Section */}
+      <section className="bg-white py-16">
+        <div className="container mx-auto px-4">
           <div className="bg-yellow-100 border-l-4 border-yellow-500 p-6 rounded-r-lg max-w-4xl mx-auto mb-8 text-left">
             <p className="text-xl font-bold text-gray-900 mb-4">
               🔥 <strong>PROVEN RESULTS:</strong> One content creator's 2024 test revealed...
