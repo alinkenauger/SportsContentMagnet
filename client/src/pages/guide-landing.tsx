@@ -184,31 +184,24 @@ export default function GuideLanding() {
       </header>
 
       {/* Main Content */}
-      <main className="container mx-auto px-4 py-16 max-w-6xl">
-        {/* Main Headline */}
-        <div className="text-center mb-16">
-          <h1 className="text-4xl md:text-5xl font-bold text-gray-800 mb-4 leading-tight max-w-4xl mx-auto">
+      <main className="container mx-auto px-4 py-8 max-w-6xl">
+        {/* Compact Headline Above Content */}
+        <div className="text-center mb-8">
+          <h1 className="text-3xl md:text-4xl font-bold text-gray-800 mb-3 leading-tight max-w-4xl mx-auto">
             {(landingPage as any).headline || `Master sports performance and agility training with This Free Practice Guide`}
           </h1>
           {(landingPage as any).subheadline && (
-            <p className="text-2xl text-gray-700 font-semibold mb-6 max-w-3xl mx-auto">
+            <p className="text-xl text-gray-700 font-semibold mb-4 max-w-3xl mx-auto">
               {(landingPage as any).subheadline}
             </p>
           )}
-          <p className="text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
+          <p className="text-lg text-gray-600 max-w-3xl mx-auto leading-relaxed">
             {(landingPage as any).description || `Download our comprehensive practice guide based on "${guide.title}" and start improving your skills today.`}
           </p>
-          {(landingPage as any).urgencyText && (
-            <div className="mt-6 bg-red-100 border border-red-300 rounded-lg p-4 max-w-lg mx-auto">
-              <p className="text-red-800 font-semibold text-lg">
-                ⏰ {(landingPage as any).urgencyText}
-              </p>
-            </div>
-          )}
         </div>
 
         {/* Thumbnail and Form Section */}
-        <div className="grid lg:grid-cols-2 gap-12 items-start mb-16">
+        <div className="grid lg:grid-cols-2 gap-8 items-start mb-12">
           {/* Left Column - Video with Benefits Below */}
           <div>
             {/* Video Thumbnail with Lock */}
