@@ -898,13 +898,13 @@ export default function SalesPage() {
                 {/* Combined Output - Horizontal Layout */}
                 <div className="text-center lg:w-1/2">
                   <h3 className="text-2xl font-bold text-gray-800 mb-6">High-Converting Landing Page + Interactive Guide</h3>
-                  <div className="flex items-center justify-center gap-6">
+                  <div className="flex items-center justify-center gap-8">
                     {/* Landing Page */}
                     <div className="relative">
                       <img 
                         src="/attached_assets/CleanShot 2025-07-06 at 13.58.18@2x_1751825245756.png" 
                         alt="Golf Landing Page" 
-                        className="w-full max-w-[300px] mx-auto rounded-xl shadow-xl border border-gray-200"
+                        className="w-full max-w-[400px] mx-auto rounded-xl shadow-xl border border-gray-200"
                       />
                     </div>
                     
@@ -920,7 +920,7 @@ export default function SalesPage() {
                       <img 
                         src="/attached_assets/CleanShot 2025-07-06 at 13.59.43_1751825178398.gif" 
                         alt="Interactive Golf Practice Guide" 
-                        className="w-full max-w-[300px] mx-auto rounded-xl shadow-xl border border-gray-200"
+                        className="w-full max-w-[400px] mx-auto rounded-xl shadow-xl border border-gray-200"
                       />
                     </div>
                   </div>
