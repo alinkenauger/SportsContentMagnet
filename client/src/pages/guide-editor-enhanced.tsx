@@ -35,7 +35,10 @@ import {
   Play,
   ChevronLeft,
   ChevronRight,
-  Upload
+  Upload,
+  Globe,
+  EyeOff,
+  BookOpen
 } from "lucide-react";
 
 interface EditableElement {
@@ -47,6 +50,129 @@ interface EditableElement {
   columnId?: string;
   timestamp?: string;
   timestampSeconds?: number;
+}
+
+// PublishControls Component for status management
+function PublishControls({ guide }: { guide: any }) {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  const updateStatusMutation = useMutation({
+    mutationFn: async (status: string) => {
+      const response = await apiRequest(`/api/guides/${guide.id}/status`, "PATCH", { status });
+      return response;
+    },
+    onSuccess: (data, status) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/guides", guide.id] });
+      
+      // Show status-specific success message
+      let message = "Guide updated successfully";
+      if (status === "published") {
+        message = "Guide published and added to Practice Library!";
+      } else if (status === "unlisted") {
+        message = "Guide unlisted - accessible only via direct link";
+      } else if (status === "draft") {
+        message = "Guide moved to draft";
+      }
+      
+      toast({
+        title: "Status Updated",
+        description: message,
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: "Failed to update guide status",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "published": return "bg-green-100 text-green-800";
+      case "unlisted": return "bg-yellow-100 text-yellow-800"; 
+      case "draft": return "bg-gray-100 text-gray-800";
+      default: return "bg-gray-100 text-gray-800";
+    }
+  };
+
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case "published": return <Globe className="w-4 h-4" />;
+      case "unlisted": return <EyeOff className="w-4 h-4" />;
+      case "draft": return <Edit3 className="w-4 h-4" />;
+      default: return <Edit3 className="w-4 h-4" />;
+    }
+  };
+
+  return (
+    <div className="flex items-center gap-2">
+      <Badge className={getStatusColor(guide.status)}>
+        {getStatusIcon(guide.status)}
+        <span className="ml-1 capitalize">{guide.status}</span>
+      </Badge>
+      
+      {guide.status === "draft" && (
+        <Button
+          size="sm"
+          onClick={() => updateStatusMutation.mutate("published")}
+          disabled={updateStatusMutation.isPending}
+          className="bg-green-600 hover:bg-green-700"
+        >
+          <BookOpen className="w-4 h-4 mr-1" />
+          Publish to Library
+        </Button>
+      )}
+      
+      {guide.status === "published" && (
+        <>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => updateStatusMutation.mutate("unlisted")}
+            disabled={updateStatusMutation.isPending}
+          >
+            <EyeOff className="w-4 h-4 mr-1" />
+            Unlist
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => updateStatusMutation.mutate("draft")}
+            disabled={updateStatusMutation.isPending}
+          >
+            <Edit3 className="w-4 h-4 mr-1" />
+            Draft
+          </Button>
+        </>
+      )}
+      
+      {guide.status === "unlisted" && (
+        <>
+          <Button
+            size="sm"
+            onClick={() => updateStatusMutation.mutate("published")}
+            disabled={updateStatusMutation.isPending}
+            className="bg-green-600 hover:bg-green-700"
+          >
+            <Globe className="w-4 h-4 mr-1" />
+            Publish
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => updateStatusMutation.mutate("draft")}
+            disabled={updateStatusMutation.isPending}
+          >
+            <Edit3 className="w-4 h-4 mr-1" />
+            Draft
+          </Button>
+        </>
+      )}
+    </div>
+  );
 }
 
 interface ColumnData {
@@ -1275,9 +1401,12 @@ export default function GuideEditorEnhanced() {
                     <h1 className="text-xl font-bold text-slate-800">Practice Guide Editor</h1>
                     <p className="text-sm text-slate-600">Create your professional training guide</p>
                   </div>
-                  <Badge variant="secondary" className="bg-blue-100 text-blue-700">
-                    Preview Mode
-                  </Badge>
+                  <div className="flex items-center gap-3">
+                    <PublishControls guide={guide} />
+                    <Badge variant="secondary" className="bg-blue-100 text-blue-700">
+                      Preview Mode
+                    </Badge>
+                  </div>
                 </div>
               </div>
             </div>

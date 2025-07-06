@@ -28,9 +28,10 @@ import { apiRequest } from "@/lib/queryClient";
 interface DrillBreakdown {
   painPoint: string;
   technique: string;
-  reps: string;
   duration: string;
   focus: string;
+  tips: string[];
+  verbalSteps: string[];
 }
 
 interface GuideViewData {
@@ -80,9 +81,17 @@ function parseDrillContent(content: string): DrillBreakdown | null {
     // Extract key information using pattern matching
     const painPointMatch = content.match(/(?:pain point|problem|issue|struggle|difficulty)[:\s]+(.*?)(?:\.|,|\n|$)/i);
     const techniqueMatch = content.match(/(?:technique|method|approach|way|how)[:\s]+(.*?)(?:\.|,|\n|$)/i);
-    const repsMatch = content.match(/(?:reps|repetitions|times|sets)[:\s]+(.*?)(?:\.|,|\n|$)/i);
     const durationMatch = content.match(/(?:duration|time|seconds|minutes)[:\s]+(.*?)(?:\.|,|\n|$)/i);
     const focusMatch = content.match(/(?:focus|concentrate|attention|key)[:\s]+(.*?)(?:\.|,|\n|$)/i);
+
+    // Extract tips - look for bullet points, numbered lists, or "tip" keywords
+    const tipMatches = content.match(/(?:tip|hint|note|remember|important)[:\s]+(.*?)(?:\.|,|\n|$)/gi) || [];
+    const bulletTips = content.match(/[-•*]\s+(.*?)(?:\n|$)/gi) || [];
+    const tips = [...tipMatches, ...bulletTips].map(t => t.replace(/^(?:tip|hint|note|remember|important)[:\s]+/i, '').replace(/^[-•*]\s+/, '').trim());
+
+    // Extract verbal steps - look for numbered steps or sequential instructions
+    const stepMatches = content.match(/(?:\d+[.)]\s+|step\s+\d+[:\s]+|first|second|third|then|next|finally)[:\s]+(.*?)(?:\.|,|\n|$)/gi) || [];
+    const verbalSteps = stepMatches.map(s => s.replace(/^(?:\d+[.)]\s+|step\s+\d+[:\s]+|first|second|third|then|next|finally)[:\s]+/i, '').trim());
 
     // Fallback to extracting meaningful phrases
     const sentences = content.split(/[.!?]/).filter(s => s.trim());
@@ -90,9 +99,10 @@ function parseDrillContent(content: string): DrillBreakdown | null {
     return {
       painPoint: painPointMatch?.[1]?.trim() || sentences.find(s => s.includes('problem') || s.includes('issue'))?.trim() || "Improve fundamentals",
       technique: techniqueMatch?.[1]?.trim() || sentences.find(s => s.includes('technique') || s.includes('method'))?.trim() || "Practice proper form",
-      reps: repsMatch?.[1]?.trim() || sentences.find(s => /\d+\s*(?:reps|times|sets)/i.test(s))?.match(/\d+\s*(?:reps|times|sets)/i)?.[0] || "10-15 reps",
       duration: durationMatch?.[1]?.trim() || sentences.find(s => /\d+\s*(?:seconds|minutes)/i.test(s))?.match(/\d+\s*(?:seconds|minutes)/i)?.[0] || "5-10 minutes",
-      focus: focusMatch?.[1]?.trim() || sentences[sentences.length - 1]?.trim() || "Maintain consistency"
+      focus: focusMatch?.[1]?.trim() || sentences[sentences.length - 1]?.trim() || "Maintain consistency",
+      tips: tips.length > 0 ? tips : ["Focus on proper form", "Start slowly and build intensity"],
+      verbalSteps: verbalSteps.length > 0 ? verbalSteps : ["Begin in proper position", "Execute the movement", "Return to starting position"]
     };
   } catch {
     return null;
@@ -125,24 +135,14 @@ function DrillVisual({ breakdown }: { breakdown: DrillBreakdown }) {
         </div>
         
         <div className="flex items-start space-x-3 bg-white p-3 rounded-md border border-orange-100">
-          <Repeat className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" />
-          <div>
-            <h5 className="font-medium text-gray-800 text-sm">Repetitions</h5>
-            <p className="text-gray-600 text-sm">{breakdown.reps}</p>
-          </div>
-        </div>
-        
-        <div className="flex items-start space-x-3 bg-white p-3 rounded-md border border-orange-100">
           <Clock className="w-5 h-5 text-purple-500 flex-shrink-0 mt-0.5" />
           <div>
             <h5 className="font-medium text-gray-800 text-sm">Duration</h5>
             <p className="text-gray-600 text-sm">{breakdown.duration}</p>
           </div>
         </div>
-      </div>
-      
-      <div className="mt-3 bg-white p-3 rounded-md border border-orange-100">
-        <div className="flex items-start space-x-3">
+        
+        <div className="flex items-start space-x-3 bg-white p-3 rounded-md border border-orange-100">
           <CheckCircle className="w-5 h-5 text-orange-500 flex-shrink-0 mt-0.5" />
           <div>
             <h5 className="font-medium text-gray-800 text-sm">Key Focus</h5>
@@ -159,7 +159,6 @@ export default function GuideView() {
   
   // Progress tracking state
   const [completedSections, setCompletedSections] = useState<Set<number>>(new Set());
-  const [drillRepTracking, setDrillRepTracking] = useState<{ [key: number]: number }>({});
   const [totalTimeSpent, setTotalTimeSpent] = useState(0);
   const [sessionStartTime] = useState(Date.now());
 
@@ -210,12 +209,7 @@ export default function GuideView() {
     });
   };
 
-  const updateDrillReps = (sectionIndex: number, reps: number) => {
-    setDrillRepTracking(prev => ({
-      ...prev,
-      [sectionIndex]: (prev[sectionIndex] || 0) + reps
-    }));
-  };
+
 
   const calculateProgress = () => {
     if (!guideData?.guide.content.sections) return 0;
@@ -500,55 +494,43 @@ export default function GuideView() {
                         <div>
                           <DrillVisual breakdown={drillBreakdown} />
                           
-                          {/* Workout Tracking for Drills */}
-                          <div className="mt-4 bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                            <h5 className="font-semibold text-yellow-800 mb-3 flex items-center">
-                              <Target className="w-5 h-5 mr-2" />
-                              Training Log
-                            </h5>
-                            <div className="flex items-center space-x-4">
-                              <div className="flex items-center space-x-2">
-                                <span className="text-sm font-medium text-yellow-700">Reps completed:</span>
-                                <div className="flex items-center space-x-2">
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => updateDrillReps(index, -1)}
-                                    disabled={(drillRepTracking[index] || 0) <= 0}
-                                    className="w-8 h-8 p-0"
-                                  >
-                                    -
-                                  </Button>
-                                  <span className="font-bold text-yellow-800 min-w-[2rem] text-center">
-                                    {drillRepTracking[index] || 0}
-                                  </span>
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => updateDrillReps(index, 1)}
-                                    className="w-8 h-8 p-0"
-                                  >
-                                    +
-                                  </Button>
-                                </div>
+                          {/* Drill Tips and Verbal Steps */}
+                          <div className="mt-4 space-y-3">
+                            {drillBreakdown.tips && drillBreakdown.tips.length > 0 && (
+                              <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                                <h5 className="font-semibold text-green-800 mb-3 flex items-center">
+                                  <CheckCircle className="w-5 h-5 mr-2" />
+                                  Pro Tips
+                                </h5>
+                                <ul className="space-y-2">
+                                  {drillBreakdown.tips.map((tip, tipIndex) => (
+                                    <li key={tipIndex} className="flex items-start">
+                                      <Star className="w-4 h-4 text-green-600 mr-2 mt-0.5 flex-shrink-0" />
+                                      <span className="text-sm text-green-800">{tip}</span>
+                                    </li>
+                                  ))}
+                                </ul>
                               </div>
-                              <Button
-                                variant="default"
-                                size="sm"
-                                onClick={() => updateDrillReps(index, 5)}
-                                className="bg-yellow-600 hover:bg-yellow-700"
-                              >
-                                +5 Reps
-                              </Button>
-                              <Button
-                                variant="default"
-                                size="sm"
-                                onClick={() => updateDrillReps(index, 10)}
-                                className="bg-yellow-600 hover:bg-yellow-700"
-                              >
-                                +10 Reps
-                              </Button>
-                            </div>
+                            )}
+                            
+                            {drillBreakdown.verbalSteps && drillBreakdown.verbalSteps.length > 0 && (
+                              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                                <h5 className="font-semibold text-blue-800 mb-3 flex items-center">
+                                  <Users className="w-5 h-5 mr-2" />
+                                  Step-by-Step Instructions
+                                </h5>
+                                <ol className="space-y-2">
+                                  {drillBreakdown.verbalSteps.map((step, stepIndex) => (
+                                    <li key={stepIndex} className="flex items-start">
+                                      <span className="bg-blue-600 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center mr-3 mt-0.5 flex-shrink-0">
+                                        {stepIndex + 1}
+                                      </span>
+                                      <span className="text-sm text-blue-800">{step}</span>
+                                    </li>
+                                  ))}
+                                </ol>
+                              </div>
+                            )}
                           </div>
                         </div>
                       ) : null;

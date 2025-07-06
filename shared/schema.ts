@@ -146,7 +146,7 @@ export const guides = pgTable("guides", {
   category: varchar("category"),
   tags: text("tags").array(),
   leadTags: text("lead_tags").array(), // Tags applied to leads captured from this guide
-  status: varchar("status").default("draft"), // draft, published, archived
+  status: varchar("status").default("draft"), // draft, published, unlisted, archived
   slug: varchar("slug").unique(),
   views: integer("views").default(0),
   downloads: integer("downloads").default(0),

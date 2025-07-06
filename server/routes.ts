@@ -436,7 +436,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         tags: analysis.keyTips,
         leadTags: processedLeadTags,
         slug: `guide-${Date.now()}`,
-        status: 'published'
+        status: 'draft'
       });
 
       // Step 7: Generate professional landing page copy
@@ -639,6 +639,81 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error tracking guide view:", error);
       res.status(500).json({ message: "Failed to track view" });
+    }
+  });
+
+  // Update guide status with smart tagging for Practice Library
+  app.patch('/api/guides/:id/status', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const guideId = parseInt(req.params.id);
+      const { status } = req.body;
+
+      if (!["draft", "published", "unlisted", "archived"].includes(status)) {
+        return res.status(400).json({ message: "Invalid status" });
+      }
+
+      const guide = await storage.getGuide(guideId);
+      if (!guide) {
+        return res.status(404).json({ message: "Guide not found" });
+      }
+
+      if (guide.userId !== userId) {
+        return res.status(403).json({ message: "Unauthorized" });
+      }
+
+      let updateData: any = { status };
+
+      // If publishing to Practice Library, generate smart tags
+      if (status === "published" && guide.status !== "published") {
+        try {
+          const { generateSmartTags } = await import('./services/smartTagging');
+          const smartTags = await generateSmartTags(
+            guide.title,
+            guide.description || "",
+            guide.content,
+            guide.transcript || ""
+          );
+
+          // Update tags with smart-generated ones
+          updateData.category = smartTags.category;
+          updateData.tags = [
+            ...smartTags.tags,
+            smartTags.skillLevel,
+            ...(smartTags.bodyParts || []),
+            ...(smartTags.techniques || []),
+            ...(smartTags.equipment || [])
+          ].filter((tag, index, self) => self.indexOf(tag) === index); // Remove duplicates
+
+          console.log(`Auto-tagged guide "${guide.title}" for Practice Library:`, {
+            category: smartTags.category,
+            tags: updateData.tags
+          });
+        } catch (error) {
+          console.error("Error generating smart tags:", error);
+          // Continue with status update even if tagging fails
+        }
+      }
+
+      const updatedGuide = await storage.updateGuide(guideId, updateData);
+      
+      let message = "Guide status updated";
+      if (status === "published") {
+        message = "Guide published and added to Practice Library with smart tags!";
+      } else if (status === "unlisted") {
+        message = "Guide unlisted - accessible only via direct link";
+      } else if (status === "draft") {
+        message = "Guide moved to draft";
+      }
+
+      res.json({ 
+        guide: updatedGuide, 
+        message,
+        smartTagsApplied: status === "published" && guide.status !== "published"
+      });
+    } catch (error) {
+      console.error("Error updating guide status:", error);
+      res.status(500).json({ message: "Failed to update guide status" });
     }
   });
 

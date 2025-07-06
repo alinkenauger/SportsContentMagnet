@@ -423,6 +423,7 @@ export class DatabaseStorage implements IStorage {
       })
       .from(guides)
       .leftJoin(brandingSettings, eq(guides.userId, brandingSettings.userId))
+      .where(eq(guides.status, 'published'))
       .orderBy(desc(guides.createdAt));
 
     return guidesWithBranding.map(guide => ({
