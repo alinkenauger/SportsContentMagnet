@@ -41,7 +41,9 @@ import {
   BookOpen,
   Building2,
   User,
-  ArrowRightLeft
+  ArrowRightLeft,
+  MoreHorizontal,
+  ChevronDown
 } from "lucide-react";
 
 interface EditableElement {
@@ -55,10 +57,11 @@ interface EditableElement {
   timestampSeconds?: number;
 }
 
-// PublishControls Component for status management
-function PublishControls({ guide }: { guide: any }) {
+// StatusControls Component - Consolidated dropdown
+function StatusControls({ guide }: { guide: any }) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [isOpen, setIsOpen] = useState(false);
 
   const updateStatusMutation = useMutation({
     mutationFn: async (status: string) => {
@@ -92,97 +95,112 @@ function PublishControls({ guide }: { guide: any }) {
     },
   });
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "published": return "bg-green-100 text-green-800";
-      case "unlisted": return "bg-yellow-100 text-yellow-800"; 
-      case "draft": return "bg-gray-100 text-gray-800";
-      default: return "bg-gray-100 text-gray-800";
-    }
+  const handleStatusChange = (status: string) => {
+    updateStatusMutation.mutate(status);
+    setIsOpen(false);
   };
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case "published": return <Globe className="w-4 h-4" />;
-      case "unlisted": return <EyeOff className="w-4 h-4" />;
-      case "draft": return <Edit3 className="w-4 h-4" />;
-      default: return <Edit3 className="w-4 h-4" />;
+      case 'published':
+        return <Globe className="w-4 h-4" />;
+      case 'unlisted':
+        return <EyeOff className="w-4 h-4" />;
+      case 'draft':
+        return <BookOpen className="w-4 h-4" />;
+      default:
+        return <BookOpen className="w-4 h-4" />;
     }
   };
 
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'published':
+        return 'text-green-600 border-green-600 bg-green-50';
+      case 'unlisted':
+        return 'text-orange-600 border-orange-600 bg-orange-50';
+      case 'draft':
+        return 'text-gray-600 border-gray-600 bg-gray-50';
+      default:
+        return 'text-gray-600 border-gray-600 bg-gray-50';
+    }
+  };
+
+  const getCurrentStatusLabel = () => {
+    switch (guide.status) {
+      case 'published':
+        return 'Published';
+      case 'unlisted':
+        return 'Unlisted';
+      case 'draft':
+        return 'Draft';
+      default:
+        return 'Draft';
+    }
+  };
+
+  const statuses = [
+    { value: 'published', label: 'Published', icon: Globe, description: 'Visible in Practice Library' },
+    { value: 'unlisted', label: 'Unlisted', icon: EyeOff, description: 'Only accessible via link' },
+    { value: 'draft', label: 'Draft', icon: BookOpen, description: 'Private - only you can see' }
+  ];
+
   return (
-    <div className="flex items-center gap-2">
-      <Badge className={getStatusColor(guide.status)}>
+    <div className="relative">
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={() => setIsOpen(!isOpen)}
+        disabled={updateStatusMutation.isPending}
+        className={`flex items-center gap-2 ${getStatusColor(guide.status)}`}
+      >
         {getStatusIcon(guide.status)}
-        <span className="ml-1 capitalize">{guide.status}</span>
-      </Badge>
+        <span>{getCurrentStatusLabel()}</span>
+        <ChevronDown className="w-4 h-4" />
+      </Button>
       
-      {guide.status === "draft" && (
-        <Button
-          size="sm"
-          onClick={() => updateStatusMutation.mutate("published")}
-          disabled={updateStatusMutation.isPending}
-          className="bg-green-600 hover:bg-green-700"
-        >
-          <BookOpen className="w-4 h-4 mr-1" />
-          Publish to Library
-        </Button>
+      {isOpen && (
+        <div className="absolute top-full left-0 mt-1 w-64 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
+          <div className="p-1">
+            {statuses.map((status) => (
+              <button
+                key={status.value}
+                onClick={() => handleStatusChange(status.value)}
+                disabled={updateStatusMutation.isPending}
+                className={`w-full flex items-center gap-3 px-3 py-2 rounded-md hover:bg-gray-50 transition-colors ${
+                  guide.status === status.value ? 'bg-blue-50 text-blue-600' : ''
+                }`}
+              >
+                <status.icon className="w-4 h-4" />
+                <div className="flex-1 text-left">
+                  <div className="font-medium">{status.label}</div>
+                  <div className="text-sm text-gray-500">{status.description}</div>
+                </div>
+                {guide.status === status.value && (
+                  <div className="w-2 h-2 bg-blue-600 rounded-full" />
+                )}
+              </button>
+            ))}
+          </div>
+        </div>
       )}
       
-      {guide.status === "published" && (
-        <>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => updateStatusMutation.mutate("unlisted")}
-            disabled={updateStatusMutation.isPending}
-          >
-            <EyeOff className="w-4 h-4 mr-1" />
-            Unlist
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => updateStatusMutation.mutate("draft")}
-            disabled={updateStatusMutation.isPending}
-          >
-            <Edit3 className="w-4 h-4 mr-1" />
-            Draft
-          </Button>
-        </>
-      )}
-      
-      {guide.status === "unlisted" && (
-        <>
-          <Button
-            size="sm"
-            onClick={() => updateStatusMutation.mutate("published")}
-            disabled={updateStatusMutation.isPending}
-            className="bg-green-600 hover:bg-green-700"
-          >
-            <Globe className="w-4 h-4 mr-1" />
-            Publish
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => updateStatusMutation.mutate("draft")}
-            disabled={updateStatusMutation.isPending}
-          >
-            <Edit3 className="w-4 h-4 mr-1" />
-            Draft
-          </Button>
-        </>
+      {updateStatusMutation.isPending && (
+        <div className="absolute -right-6 top-1/2 transform -translate-y-1/2">
+          <div className="animate-spin w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full" />
+        </div>
       )}
     </div>
   );
 }
 
-// TransferControls Component for guide account transfers
-function TransferControls({ guide }: { guide: any }) {
+// ActionsMenu Component - 3-dots menu for Transfer and Delete
+function ActionsMenu({ guide }: { guide: any }) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [isOpen, setIsOpen] = useState(false);
   const [showTransferDialog, setShowTransferDialog] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [targetBrandId, setTargetBrandId] = useState<string>("");
 
   // Get user's brands for transfer options
@@ -209,6 +227,32 @@ function TransferControls({ guide }: { guide: any }) {
       toast({
         title: "Transfer Failed",
         description: "Failed to transfer guide",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest(`/api/guides/${guide.id}`, "DELETE");
+      return response;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/guides"] });
+      setShowDeleteDialog(false);
+      
+      toast({
+        title: "Guide Deleted",
+        description: "Guide has been permanently removed",
+      });
+      
+      // Redirect to dashboard
+      window.location.href = "/dashboard";
+    },
+    onError: (error) => {
+      toast({
+        title: "Delete Failed",
+        description: "Failed to delete guide",
         variant: "destructive",
       });
     },
@@ -246,16 +290,45 @@ function TransferControls({ guide }: { guide: any }) {
 
   return (
     <>
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={() => setShowTransferDialog(true)}
-        className="flex items-center gap-2"
-      >
-        <ArrowRightLeft className="w-4 h-4" />
-        Transfer
-      </Button>
+      <div className="relative">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setIsOpen(!isOpen)}
+          className="flex items-center justify-center w-8 h-8 p-0"
+        >
+          <MoreHorizontal className="w-4 h-4" />
+        </Button>
+        
+        {isOpen && (
+          <div className="absolute top-full right-0 mt-1 w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
+            <div className="p-1">
+              <button
+                onClick={() => {
+                  setIsOpen(false);
+                  setShowTransferDialog(true);
+                }}
+                className="w-full flex items-center gap-3 px-3 py-2 rounded-md hover:bg-gray-50 transition-colors"
+              >
+                <ArrowRightLeft className="w-4 h-4" />
+                <span>Transfer Guide</span>
+              </button>
+              <button
+                onClick={() => {
+                  setIsOpen(false);
+                  setShowDeleteDialog(true);
+                }}
+                className="w-full flex items-center gap-3 px-3 py-2 rounded-md hover:bg-red-50 hover:text-red-600 transition-colors"
+              >
+                <Trash2 className="w-4 h-4" />
+                <span>Delete Guide</span>
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
 
+      {/* Transfer Dialog */}
       {showTransferDialog && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
@@ -321,9 +394,47 @@ function TransferControls({ guide }: { guide: any }) {
           </div>
         </div>
       )}
+
+      {/* Delete Dialog */}
+      {showDeleteDialog && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <h3 className="text-lg font-semibold mb-4 text-red-600">Delete Guide</h3>
+            
+            <div className="space-y-4">
+              <p className="text-gray-700">
+                Are you sure you want to delete "{guide.title}"? This action cannot be undone.
+              </p>
+
+              <div className="text-sm text-red-600 bg-red-50 p-3 rounded-lg">
+                <strong>Warning:</strong> This will permanently delete the guide, all analytics data, 
+                and any associated landing pages.
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3 mt-6">
+              <Button
+                variant="outline"
+                onClick={() => setShowDeleteDialog(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={() => deleteMutation.mutate()}
+                disabled={deleteMutation.isPending}
+                className="bg-red-600 hover:bg-red-700"
+              >
+                {deleteMutation.isPending ? "Deleting..." : "Delete Guide"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }
+
+
 
 interface ColumnData {
   id: string;
@@ -1552,11 +1663,11 @@ export default function GuideEditorEnhanced() {
                     <p className="text-sm text-slate-600">Create your professional training guide</p>
                   </div>
                   <div className="flex items-center gap-3">
-                    <PublishControls guide={guide} />
-                    <TransferControls guide={guide} />
+                    <StatusControls guide={guide} />
                     <Badge variant="secondary" className="bg-blue-100 text-blue-700">
                       Preview Mode
                     </Badge>
+                    <ActionsMenu guide={guide} />
                   </div>
                 </div>
               </div>
