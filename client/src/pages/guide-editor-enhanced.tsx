@@ -528,32 +528,50 @@ export default function GuideEditorEnhanced() {
     return (
       <div
         key={element.id}
-        className={`group relative border-2 border-dashed transition-colors ${
+        className={`group relative border-2 border-dashed transition-all duration-200 ${
           isActive 
             ? 'border-primary bg-primary/5' 
-            : 'border-transparent hover:border-muted-foreground/30'
-        } ${isDragging ? 'opacity-50' : ''} rounded-lg p-2`}
+            : 'border-transparent hover:border-slate-300 hover:bg-slate-50/50'
+        } ${isDragging ? 'opacity-50 scale-95 rotate-1' : ''} ${
+          !isActive ? 'cursor-grab hover:cursor-grab' : ''
+        } rounded-lg p-2`}
         draggable={!isActive}
-        onDragStart={(e) => !isActive && handleElementDragStart(e, element.id)}
+        onDragStart={(e) => {
+          if (!isActive) {
+            handleElementDragStart(e, element.id);
+            e.currentTarget.style.cursor = 'grabbing';
+          }
+        }}
+        onDragEnd={(e) => {
+          e.currentTarget.style.cursor = 'grab';
+        }}
         onDragOver={handleDragOver}
         onDrop={(e) => handleCanvasDrop(e, undefined, element.columnId, element.parentId)}
       >
         {/* Element Controls */}
-        <div className={`absolute -top-2 -right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity ${isActive ? 'opacity-100' : ''}`}>
+        <div className={`absolute -top-2 -right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-10 ${isActive ? 'opacity-100' : ''}`}>
           <Button
             size="sm"
             variant="ghost"
-            className="h-6 w-6 p-0 bg-background border cursor-grab"
+            className="h-6 w-6 p-0 bg-white border shadow-sm cursor-grab hover:cursor-grabbing hover:bg-slate-50"
+            draggable={!isActive}
+            onDragStart={(e) => {
+              if (!isActive) {
+                e.stopPropagation();
+                handleElementDragStart(e as any, element.id);
+              }
+            }}
+            onMouseDown={(e) => e.stopPropagation()}
           >
-            <GripVertical className="h-3 w-3" />
+            <GripVertical className="h-3 w-3 text-slate-600" />
           </Button>
           <Button
             size="sm"
             variant="ghost"
             onClick={() => setIsEditing(isActive ? null : element.id)}
-            className="h-6 w-6 p-0 bg-background border"
+            className="h-6 w-6 p-0 bg-white border shadow-sm hover:bg-slate-50"
           >
-            <Edit3 className="h-3 w-3" />
+            <Edit3 className="h-3 w-3 text-slate-600" />
           </Button>
           <Button
             size="sm"
@@ -563,7 +581,7 @@ export default function GuideEditorEnhanced() {
               e.stopPropagation();
               deleteElement(element.id);
             }}
-            className="h-6 w-6 p-0 bg-background border text-destructive hover:text-destructive"
+            className="h-6 w-6 p-0 bg-white border shadow-sm text-red-500 hover:text-red-600 hover:bg-red-50"
           >
             <Trash2 className="h-3 w-3" />
           </Button>
@@ -1132,17 +1150,31 @@ export default function GuideEditorEnhanced() {
                 {/* Guide Content Card - Matches guide-view.tsx exactly */}
                 <div className="bg-white rounded-xl shadow-sm p-8 space-y-2">
               {elements.filter(el => !el.parentId).length === 0 ? (
-                <div className="text-center py-16 text-muted-foreground">
+                <div className="text-center py-16 text-slate-500">
                   <Type className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <h3 className="text-lg font-medium mb-2">Start Building Your Guide</h3>
+                  <h3 className="text-lg font-medium mb-2 text-slate-700">Start Building Your Guide</h3>
                   <p className="mb-4">Drag elements from the sidebar to begin creating your guide.</p>
-                  <Button onClick={() => addElement('heading')}>
+                  <Button onClick={() => addElement('heading')} className="bg-primary hover:bg-primary/90">
                     <Plus className="h-4 w-4 mr-2" />
                     Add Your First Element
                   </Button>
                 </div>
               ) : (
                 <>
+                  {/* Drag Instructions */}
+                  <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                    <div className="flex items-center gap-2 text-blue-800">
+                      <GripVertical className="h-4 w-4" />
+                      <span className="text-sm font-medium">Drag & Drop Guide</span>
+                    </div>
+                    <p className="text-xs text-blue-600 mt-1">
+                      • Hover over elements to see drag handles
+                      • Drag elements to reorder them
+                      • Click the edit icon to modify content
+                      • Drop zones appear between elements
+                    </p>
+                  </div>
+
                   {/* Drop zone at top */}
                   <div
                     className={`transition-all duration-200 ${
