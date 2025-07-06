@@ -204,7 +204,7 @@ export default function SalesPage() {
           <h2 className="text-2xl md:text-3xl font-bold mb-8 text-gray-800 max-w-4xl mx-auto">
             <span className="text-red-600">STOP Wasting Time</span> with Generic "Top 10 Tips" PDFs That Don't Convert...
             <br />
-            <span className="text-green-600">START Creating</span> Video-Specific Lead Magnets That Convert at 20%+
+            <span className="text-green-600">START Creating</span> Video-Specific Lead Magnets That Convert Up To 10x More Leads!
           </h2>
           
           <div className="space-y-6 mb-12">
