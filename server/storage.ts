@@ -323,7 +323,7 @@ export class DatabaseStorage implements IStorage {
     await db.delete(brands).where(eq(brands.id, id));
   }
 
-  async setCurrentBrand(userId: string, brandId: number): Promise<void> {
+  async setCurrentBrand(userId: string, brandId: number | null): Promise<void> {
     await db
       .update(users)
       .set({ currentBrandId: brandId })

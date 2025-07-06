@@ -24,7 +24,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (file.mimetype === 'application/pdf' || file.mimetype.startsWith('audio/')) {
         cb(null, true);
       } else {
-        cb(new Error('Only PDF and audio files are allowed'), false);
+        cb(new Error('Only PDF and audio files are allowed') as any, false);
       }
     }
   });
@@ -534,7 +534,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Guide not found" });
       }
 
-      if (!guide.youtubeUrl || !guide.content?.sections) {
+      if (!guide.youtubeUrl || !(guide.content as any)?.sections) {
         return res.status(400).json({ message: "Guide must have YouTube URL and sections for screenshot extraction" });
       }
 
@@ -543,13 +543,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { videoScreenshotService } = await import('./services/videoScreenshotService');
       
       // Map guide sections to screenshot timestamps
-      const timestampData = guide.content.sections.map((section: any) => ({
+      const timestampData = (guide.content as any).sections.map((section: any) => ({
         timestamp: section.timestampSeconds || 0,
         duration: section.duration || 30,
         title: section.title || 'Section'
       }));
       
-      console.log(`Processing ${timestampData.length} timestamps:`, timestampData.map(t => ({ title: t.title, timestamp: t.timestamp })));
+      console.log(`Processing ${timestampData.length} timestamps:`, timestampData.map((t: any) => ({ title: t.title, timestamp: t.timestamp })));
       
       const screenshotResult = await videoScreenshotService.extractScreenshots(guide.youtubeUrl, timestampData);
       
@@ -866,7 +866,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const personalizedContent = await personalizeGuideContent(
         guide?.content as any,
         {
-          firstName: lead.firstName,
+          firstName: lead.firstName || undefined,
           customFieldData: lead.customFieldData as Record<string, any>
         }
       );
@@ -940,10 +940,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const brandingSettings = await storage.getBrandingSettings(userId);
 
       // Re-analyze the actual transcript
-      const analysis = await analyzeVideoContent(guide.transcript, guide.title, guide.description);
+      const analysis = await analyzeVideoContent(guide.transcript || '', guide.title || '', guide.description || '');
       
       // Regenerate guide content based on real transcript
-      const newContent = await generatePracticeGuide(analysis, guide.title, guide.channelTitle, brandingSettings);
+      const newContent = await generatePracticeGuide(analysis, guide.title || '', guide.channelTitle || '', brandingSettings);
 
       // Update the guide with real content
       const updatedGuide = await storage.updateGuide(guideId, {
