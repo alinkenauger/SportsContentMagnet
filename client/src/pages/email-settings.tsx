@@ -257,66 +257,6 @@ export default function EmailSettings() {
         {isEditing && (
           <CardContent>
             <div className="space-y-4">
-              {/* Logo Settings - Only for paid accounts */}
-              <div className="border rounded-lg p-4 bg-muted/50">
-                <h4 className="font-medium mb-3">Email Logo (Paid Feature)</h4>
-                <div className="space-y-3">
-                  <div className="grid grid-cols-2 gap-2">
-                    <Button
-                      variant={logoType === 'default' ? 'default' : 'outline'}
-                      onClick={() => setLogoType('default')}
-                      className="text-left"
-                    >
-                      ConvertMag.net Logo
-                    </Button>
-                    <Button
-                      variant={logoType === 'none' ? 'default' : 'outline'}
-                      onClick={() => setLogoType('none')}
-                      className="text-left"
-                    >
-                      No Logo
-                    </Button>
-                  </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <Button
-                      variant={logoType === 'text' ? 'default' : 'outline'}
-                      onClick={() => setLogoType('text')}
-                      className="text-left"
-                    >
-                      Text Logo
-                    </Button>
-                    <div className="relative">
-                      <Button
-                        variant={logoType === 'custom' ? 'default' : 'outline'}
-                        onClick={() => document.getElementById('logo-upload')?.click()}
-                        disabled={isUploadingLogo}
-                        className="w-full text-left"
-                      >
-                        {isUploadingLogo ? 'Uploading...' : 'Upload Logo'}
-                      </Button>
-                      <input
-                        id="logo-upload"
-                        type="file"
-                        accept="image/*"
-                        onChange={handleLogoUpload}
-                        className="hidden"
-                      />
-                    </div>
-                  </div>
-                  {logoType === 'text' && (
-                    <div className="space-y-2">
-                      <Label htmlFor="text-logo">Text Logo</Label>
-                      <Input
-                        id="text-logo"
-                        value={textLogo}
-                        onChange={(e) => setTextLogo(e.target.value)}
-                        placeholder="Your Company Name"
-                      />
-                    </div>
-                  )}
-                </div>
-              </div>
-
               <div>
                 <Label htmlFor={`template-${emailType.key}`}>Email Template</Label>
                 <Textarea
@@ -456,6 +396,71 @@ export default function EmailSettings() {
         </TabsContent>
 
         <TabsContent value="settings" className="space-y-4">
+          {/* Global Email Logo Settings */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Email Logo (Paid Feature)</CardTitle>
+              <p className="text-sm text-muted-foreground">
+                Choose how your logo appears in all email templates
+              </p>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-3">
+                  <Button
+                    variant={logoType === 'default' ? 'default' : 'outline'}
+                    onClick={() => setLogoType('default')}
+                    className="text-left"
+                  >
+                    ConvertMag.net Logo
+                  </Button>
+                  <Button
+                    variant={logoType === 'none' ? 'default' : 'outline'}
+                    onClick={() => setLogoType('none')}
+                    className="text-left"
+                  >
+                    No Logo
+                  </Button>
+                  <Button
+                    variant={logoType === 'text' ? 'default' : 'outline'}
+                    onClick={() => setLogoType('text')}
+                    className="text-left"
+                  >
+                    Text Logo
+                  </Button>
+                  <div className="relative">
+                    <Button
+                      variant={logoType === 'custom' ? 'default' : 'outline'}
+                      onClick={() => document.getElementById('logo-upload')?.click()}
+                      disabled={isUploadingLogo}
+                      className="w-full text-left"
+                    >
+                      {isUploadingLogo ? 'Uploading...' : 'Upload Logo'}
+                    </Button>
+                    <input
+                      id="logo-upload"
+                      type="file"
+                      accept="image/*"
+                      onChange={handleLogoUpload}
+                      className="hidden"
+                    />
+                  </div>
+                </div>
+                {logoType === 'text' && (
+                  <div className="space-y-2">
+                    <Label htmlFor="text-logo">Text Logo</Label>
+                    <Input
+                      id="text-logo"
+                      value={textLogo}
+                      onChange={(e) => setTextLogo(e.target.value)}
+                      placeholder="Your Company Name"
+                    />
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
           <Card>
             <CardHeader>
               <CardTitle>Email Preferences</CardTitle>
