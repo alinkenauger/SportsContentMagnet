@@ -272,7 +272,7 @@ export default function Dashboard() {
           requestData.title = manualTitle;
         }
         
-        await apiRequest("POST", "/api/guides", requestData);
+        await apiRequest("/api/guides", "POST", requestData);
       }
       
       toast({
