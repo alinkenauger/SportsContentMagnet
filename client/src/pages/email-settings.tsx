@@ -21,8 +21,12 @@ const EMAIL_TYPES = [
     description: 'Sent when someone signs up',
     category: 'system',
     requiredElements: ['username', 'tempPassword', 'loginUrl'],
-    protectedContent: '=== LOGIN CREDENTIALS (REQUIRED - DO NOT DELETE) ===\nUsername: {{username}}\nPassword: {{tempPassword}}\nLogin URL: {{loginUrl}}\n=== END REQUIRED SECTION ===',
-    defaultContent: 'Welcome to ConvertMag.net!\n\nYour account has been successfully created. You can now start transforming your content into high-converting lead magnets.\n\n=== LOGIN CREDENTIALS (REQUIRED - DO NOT DELETE) ===\nUsername: {{username}}\nPassword: {{tempPassword}}\nLogin URL: {{loginUrl}}\n=== END REQUIRED SECTION ===\n\nGet started by creating your first guide from any YouTube video, document, or audio file.\n\nQuestions? Reply to this email for support.\n\nBest regards,\nThe ConvertMag.net Team',
+    systemContent: 'Your login credentials:\nUsername: {{username}}\nPassword: {{tempPassword}}\nLogin URL: {{loginUrl}}',
+    sections: {
+      intro: 'Welcome to {{brandName}}!\n\nYour account has been successfully created. You can now start transforming your content into high-converting lead magnets.',
+      footer: 'Get started by creating your first guide from any YouTube video, document, or audio file.\n\nQuestions? Reply to this email for support.\n\nBest regards,\n{{creatorName}}\n{{brandName}}'
+    },
+    defaultContent: 'Welcome to {{brandName}}!\n\nYour account has been successfully created. You can now start transforming your content into high-converting lead magnets.\n\nGet started by creating your first guide from any YouTube video, document, or audio file.\n\nQuestions? Reply to this email for support.\n\nBest regards,\n{{creatorName}}\n{{brandName}}',
     canDisable: false
   },
   { 
@@ -31,8 +35,12 @@ const EMAIL_TYPES = [
     description: 'Sent when password reset is requested',
     category: 'system',
     requiredElements: ['resetUrl'],
-    protectedContent: '=== PASSWORD RESET (REQUIRED - DO NOT DELETE) ===\nReset your password: {{resetUrl}}\n=== END REQUIRED SECTION ===',
-    defaultContent: 'Password Reset Request\n\nWe received a request to reset your ConvertMag.net password.\n\n=== PASSWORD RESET (REQUIRED - DO NOT DELETE) ===\nReset your password: {{resetUrl}}\n=== END REQUIRED SECTION ===\n\nThis link expires in 24 hours for security reasons.\n\nIf you did not request this reset, please ignore this email.\n\nBest regards,\nThe ConvertMag.net Team',
+    systemContent: 'Reset your password: {{resetUrl}}',
+    sections: {
+      intro: 'Password Reset Request\n\nWe received a request to reset your {{brandName}} password.',
+      footer: 'This link expires in 24 hours for security reasons.\n\nIf you did not request this reset, please ignore this email.\n\nBest regards,\n{{creatorName}}\n{{brandName}}'
+    },
+    defaultContent: 'Password Reset Request\n\nWe received a request to reset your {{brandName}} password.\n\nThis link expires in 24 hours for security reasons.\n\nIf you did not request this reset, please ignore this email.\n\nBest regards,\n{{creatorName}}\n{{brandName}}',
     canDisable: false
   },
   { 
@@ -41,8 +49,12 @@ const EMAIL_TYPES = [
     description: 'Sent when subscription is confirmed',
     category: 'system',
     requiredElements: ['planName', 'amount', 'billingDate', 'manageUrl'],
-    protectedContent: '=== SUBSCRIPTION DETAILS (REQUIRED - DO NOT DELETE) ===\nPlan: {{planName}}\nAmount: ${{amount}}\nNext billing date: {{billingDate}}\nManage subscription: {{manageUrl}}\n=== END REQUIRED SECTION ===',
-    defaultContent: 'Subscription Confirmed - Welcome to Premium!\n\nThank you for upgrading your ConvertMag.net account. You now have access to unlimited lead magnets and advanced features.\n\n=== SUBSCRIPTION DETAILS (REQUIRED - DO NOT DELETE) ===\nPlan: {{planName}}\nAmount: ${{amount}}\nNext billing date: {{billingDate}}\nManage subscription: {{manageUrl}}\n=== END REQUIRED SECTION ===\n\nYour Premium Features Include:\n• Unlimited lead magnet creation\n• Custom branding and logos\n• Advanced analytics and tracking\n• Priority customer support\n• Multiple brand workspaces\n\nStart maximizing your lead generation today!\n\nQuestions about your subscription? Contact our billing support.\n\nThe ConvertMag.net Team',
+    systemContent: 'Subscription Details:\nPlan: {{planName}}\nAmount: ${{amount}}\nNext billing date: {{billingDate}}\nManage subscription: {{manageUrl}}',
+    sections: {
+      intro: 'Subscription Confirmed - Welcome to Premium!\n\nThank you for upgrading your {{brandName}} account. You now have access to unlimited lead magnets and advanced features.',
+      footer: 'Your Premium Features Include:\n• Unlimited lead magnet creation\n• Custom branding and logos\n• Advanced analytics and tracking\n• Priority customer support\n• Multiple brand workspaces\n\nStart maximizing your lead generation today!\n\nQuestions about your subscription? Contact our billing support.\n\n{{creatorName}}\n{{brandName}}'
+    },
+    defaultContent: 'Subscription Confirmed - Welcome to Premium!\n\nThank you for upgrading your {{brandName}} account. You now have access to unlimited lead magnets and advanced features.\n\nYour Premium Features Include:\n• Unlimited lead magnet creation\n• Custom branding and logos\n• Advanced analytics and tracking\n• Priority customer support\n• Multiple brand workspaces\n\nStart maximizing your lead generation today!\n\nQuestions about your subscription? Contact our billing support.\n\n{{creatorName}}\n{{brandName}}',
     canDisable: false
   },
   { 
@@ -51,8 +63,12 @@ const EMAIL_TYPES = [
     description: 'Sent to you when someone signs up',
     category: 'system',
     requiredElements: ['leadName', 'leadEmail', 'guideName', 'captureTime'],
-    protectedContent: '=== LEAD DETAILS (REQUIRED - DO NOT DELETE) ===\nName: {{leadName}}\nEmail: {{leadEmail}}\nGuide: {{guideName}}\nCaptured: {{captureTime}}\n=== END REQUIRED SECTION ===',
-    defaultContent: 'New Lead Captured!\n\nGreat news! Someone just downloaded one of your lead magnets.\n\n=== LEAD DETAILS (REQUIRED - DO NOT DELETE) ===\nName: {{leadName}}\nEmail: {{leadEmail}}\nGuide: {{guideName}}\nCaptured: {{captureTime}}\n=== END REQUIRED SECTION ===\n\nLogin to your dashboard to view full lead details and follow up.\n\nKeep creating amazing content!\n\nThe ConvertMag.net Team',
+    systemContent: 'Lead Details:\nName: {{leadName}}\nEmail: {{leadEmail}}\nGuide: {{guideName}}\nCaptured: {{captureTime}}',
+    sections: {
+      intro: 'New Lead Captured!\n\nGreat news! Someone just downloaded one of your lead magnets.',
+      footer: 'Login to your dashboard to view full lead details and follow up.\n\nKeep creating amazing content!\n\n{{creatorName}}\n{{brandName}}'
+    },
+    defaultContent: 'New Lead Captured!\n\nGreat news! Someone just downloaded one of your lead magnets.\n\nLogin to your dashboard to view full lead details and follow up.\n\nKeep creating amazing content!\n\n{{creatorName}}\n{{brandName}}',
     canDisable: false
   },
   { 
@@ -61,7 +77,11 @@ const EMAIL_TYPES = [
     description: 'Sent when someone downloads a guide',
     category: 'guide',
     requiredElements: ['customerName', 'guideName', 'guideUrl', 'pdfDownloadUrl', 'creatorName', 'brandName', 'brandWebsite'],
-    protectedContent: '=== GUIDE ACCESS (REQUIRED - DO NOT DELETE) ===\nGuide: {{guideName}}\nAccess: {{guideUrl}}\nPDF Download: {{pdfDownloadUrl}}\n=== END REQUIRED SECTION ===',
+    systemContent: null, // No hidden system content for guide delivery - all visible to user
+    sections: {
+      intro: 'Welcome to {{brandName}}!\n\nHi {{customerName}},',
+      footer: 'Thanks so much and enjoy!\n\n{{creatorName}},\n{{brandName}}\n{{brandWebsite}}'
+    },
     defaultContent: 'Welcome to {{brandName}}!\n\nHi {{customerName}},\n\nYour Guide, "{{guideName}}" is available here:\n{{guideUrl}}\n\nYou can also download the PDF of your guide here:\n{{pdfDownloadUrl}}\n\nThanks so much and enjoy!\n\n{{creatorName}},\n{{brandName}}\n{{brandWebsite}}',
     canDisable: true
   },
@@ -261,9 +281,10 @@ export default function EmailSettings() {
         </CardHeader>
         {isEditing && (
           <CardContent>
-            <div className="space-y-4">
+            <div className="space-y-6">
+              {/* Clean Template Editor */}
               <div>
-                <Label htmlFor={`template-${emailType.key}`}>Email Template</Label>
+                <Label htmlFor={`template-${emailType.key}`}>Customizable Email Content</Label>
                 <Textarea
                   id={`template-${emailType.key}`}
                   value={templateContent}
@@ -271,33 +292,69 @@ export default function EmailSettings() {
                   placeholder={emailType.defaultContent || "Enter your email template content here..."}
                   className="min-h-[200px]"
                 />
-                <div className="mt-2 space-y-2">
-                  <p className="text-sm text-muted-foreground">
-                    Available variables for personalization:
+                <p className="text-sm text-muted-foreground mt-2">
+                  Customize the introduction and closing message. System-required elements will be automatically added when emails are sent.
+                </p>
+              </div>
+
+              {/* Show system content that will be automatically added */}
+              {emailType.systemContent && (
+                <div className="bg-blue-50 p-4 rounded-lg">
+                  <h4 className="text-sm font-medium text-blue-800 mb-2">
+                    System Content (Automatically Added)
+                  </h4>
+                  <div className="text-sm text-blue-700 bg-white p-3 rounded border font-mono whitespace-pre-wrap">
+                    {emailType.systemContent}
+                  </div>
+                  <p className="text-xs text-blue-600 mt-2">
+                    This content is automatically inserted into emails and cannot be edited. It ensures compliance and functionality.
                   </p>
-                  <div className="text-xs text-muted-foreground bg-muted/50 p-2 rounded">
-                    Brand: <code>{"{{brandName}}"}</code>, <code>{"{{creatorName}}"}</code>, <code>{"{{brandWebsite}}"}</code><br/>
-                    Customer: <code>{"{{customerName}}"}</code>, <code>{"{{leadEmail}}"}</code><br/>
-                    Guide: <code>{"{{guideName}}"}</code>, <code>{"{{guideUrl}}"}</code>, <code>{"{{pdfDownloadUrl}}"}</code>
+                </div>
+              )}
+
+              {/* Email Preview */}
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <h4 className="text-sm font-medium text-gray-800 mb-2">Email Preview</h4>
+                <div className="bg-white p-4 rounded border text-sm whitespace-pre-wrap font-mono">
+                  {templateContent}
+                  {emailType.systemContent && (
+                    <>
+                      {"\n\n"}
+                      <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs">
+                        [System content will be inserted here automatically]
+                      </span>
+                      {"\n\n"}
+                      {emailType.systemContent}
+                    </>
+                  )}
+                </div>
+              </div>
+
+              {/* Available Variables */}
+              <div className="bg-muted/50 p-3 rounded">
+                <p className="text-sm font-medium mb-2">Available Variables:</p>
+                <div className="text-xs text-muted-foreground grid grid-cols-1 md:grid-cols-3 gap-2">
+                  <div>
+                    <strong>Brand:</strong><br/>
+                    <code>{"{{brandName}}"}</code><br/>
+                    <code>{"{{creatorName}}"}</code><br/>
+                    <code>{"{{brandWebsite}}"}</code>
+                  </div>
+                  <div>
+                    <strong>Customer:</strong><br/>
+                    <code>{"{{customerName}}"}</code><br/>
+                    <code>{"{{leadEmail}}"}</code>
+                  </div>
+                  <div>
+                    <strong>Guide:</strong><br/>
+                    <code>{"{{guideName}}"}</code><br/>
+                    <code>{"{{guideUrl}}"}</code><br/>
+                    <code>{"{{pdfDownloadUrl}}"}</code>
                   </div>
                 </div>
-                {emailType.requiredElements && (
-                  <div className="bg-blue-50 p-3 rounded-lg mt-2">
-                    <p className="text-sm font-medium text-blue-800 mb-1">Required Elements:</p>
-                    <p className="text-sm text-blue-600">
-                      This email must include: {emailType.requiredElements.map((e: string) => `{{${e}}}`).join(', ')}
-                    </p>
-                  </div>
-                )}
-                {emailType.category === 'system' && (
-                  <div className="bg-orange-50 p-3 rounded-lg mt-2">
-                    <p className="text-sm font-medium text-orange-800 mb-1">System Email</p>
-                    <p className="text-sm text-orange-600">
-                      This email is sent automatically by the system. Required elements cannot be removed.
-                    </p>
-                  </div>
-                )}
               </div>
+              
+              {/* Save Buttons */}
               <div className="flex gap-2">
                 <Button onClick={handleSaveTemplate} disabled={updateTemplateMutation.isPending}>
                   {updateTemplateMutation.isPending ? "Saving..." : "Save Template"}
