@@ -36,6 +36,7 @@ export default function Branding() {
   const { toast } = useToast();
   const [formData, setFormData] = useState({
     logoUrl: "",
+    faviconUrl: "",
     primaryColor: "#2563EB",
     secondaryColor: "#10B981",
     accentColor: "#F59E0B",
@@ -96,6 +97,7 @@ export default function Branding() {
     if (brandingSettings) {
       setFormData({
         logoUrl: brandingSettings.logoUrl || "",
+        faviconUrl: brandingSettings.faviconUrl || "",
         primaryColor: brandingSettings.primaryColor || "#2563EB",
         secondaryColor: brandingSettings.secondaryColor || "#10B981",
         accentColor: brandingSettings.accentColor || "#F59E0B",
@@ -122,6 +124,7 @@ export default function Branding() {
   const resetToDefaults = () => {
     setFormData({
       logoUrl: "",
+      faviconUrl: "",
       primaryColor: "#2563EB",
       secondaryColor: "#10B981",
       accentColor: "#F59E0B",
@@ -134,9 +137,6 @@ export default function Branding() {
   const handleSave = () => {
     saveBrandingMutation.mutate(formData);
   };
-
-  const [logoFile, setLogoFile] = useState<File | null>(null);
-  const [logoPreview, setLogoPreview] = useState<string>("");
 
   const logoUploadMutation = useMutation({
     mutationFn: async (file: File) => {
@@ -159,7 +159,7 @@ export default function Branding() {
       setFormData(prev => ({ ...prev, logoUrl }));
       toast({
         title: "Success",
-        description: "Logo uploaded successfully!",
+        description: "Logo uploaded and automatically resized to 200x200px!",
       });
     },
     onError: (error) => {
@@ -167,6 +167,40 @@ export default function Branding() {
       toast({
         title: "Error",
         description: "Failed to upload logo",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const faviconUploadMutation = useMutation({
+    mutationFn: async (file: File) => {
+      const formData = new FormData();
+      formData.append('favicon', file);
+      
+      const response = await fetch('/api/branding/favicon', {
+        method: 'POST',
+        body: formData,
+      });
+      
+      if (!response.ok) {
+        throw new Error('Favicon upload failed');
+      }
+      
+      const data = await response.json();
+      return data.faviconUrl;
+    },
+    onSuccess: (faviconUrl) => {
+      setFormData(prev => ({ ...prev, faviconUrl }));
+      toast({
+        title: "Success",
+        description: "Favicon uploaded and automatically resized to 32x32px!",
+      });
+    },
+    onError: (error) => {
+      console.error('Favicon upload error:', error);
+      toast({
+        title: "Error",
+        description: "Failed to upload favicon",
         variant: "destructive",
       });
     },
@@ -196,17 +230,36 @@ export default function Branding() {
       return;
     }
     
-    setLogoFile(file);
-    
-    // Create preview
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      setLogoPreview(e.target?.result as string);
-    };
-    reader.readAsDataURL(file);
-    
-    // Upload the file
+    // Upload the file - it will be automatically resized
     logoUploadMutation.mutate(file);
+  };
+
+  const handleFaviconUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast({
+        title: "Error",
+        description: "Please select a valid image file",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    // Validate file size (5MB limit)
+    if (file.size > 5 * 1024 * 1024) {
+      toast({
+        title: "Error",
+        description: "Image must be smaller than 5MB",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    // Upload the file - it will be automatically resized
+    faviconUploadMutation.mutate(file);
   };
 
   return (
@@ -305,7 +358,44 @@ export default function Branding() {
                           {logoUploadMutation.isPending ? "Uploading..." : "Upload Logo"}
                         </Button>
                         <p className="text-xs text-muted-foreground mt-1">
-                          Recommended: 200x200px, PNG or SVG format. Max 5MB.
+                          Any size image accepted - automatically resized to 200x200px. Max 5MB.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label>Favicon</Label>
+                    <div className="mt-1 flex items-center space-x-4">
+                      {formData.faviconUrl ? (
+                        <img 
+                          src={formData.faviconUrl} 
+                          alt="Favicon preview" 
+                          className="w-8 h-8 object-contain rounded border border-border"
+                        />
+                      ) : (
+                        <div className="w-8 h-8 bg-muted rounded flex items-center justify-center">
+                          <Upload className="w-3 h-3 text-muted-foreground" />
+                        </div>
+                      )}
+                      <div className="flex-1">
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={handleFaviconUpload}
+                          className="hidden"
+                          id="favicon-upload"
+                        />
+                        <Button 
+                          variant="outline" 
+                          onClick={() => document.getElementById('favicon-upload')?.click()}
+                          disabled={faviconUploadMutation.isPending}
+                        >
+                          <Upload className="w-4 h-4 mr-2" />
+                          {faviconUploadMutation.isPending ? "Uploading..." : "Upload Favicon"}
+                        </Button>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Any size image accepted - automatically resized to 32x32px. Max 5MB.
                         </p>
                       </div>
                     </div>

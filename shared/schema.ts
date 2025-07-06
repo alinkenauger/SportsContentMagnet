@@ -118,6 +118,7 @@ export const brandingSettings = pgTable("branding_settings", {
   userId: varchar("user_id").references(() => users.id).notNull(),
   brandId: integer("brand_id").references(() => brands.id), // nullable for migration
   logoUrl: varchar("logo_url"),
+  faviconUrl: varchar("favicon_url"),
   primaryColor: varchar("primary_color").default("#2563EB"),
   secondaryColor: varchar("secondary_color").default("#10B981"),
   accentColor: varchar("accent_color").default("#F59E0B"),

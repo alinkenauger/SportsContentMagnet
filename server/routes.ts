@@ -11,6 +11,9 @@ import { insertGuideSchema, insertLandingPageSchema, insertLeadSchema, insertBra
 import QRCode from 'qrcode';
 import multer from 'multer';
 import { StorageCostManager } from "./services/storageManager";
+import fs from 'fs';
+import path from 'path';
+import sharp from 'sharp';
 // import pdf from 'pdf-parse'; // Temporarily disabled due to module issues
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -1217,7 +1220,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Logo upload endpoint
+  // Logo upload endpoint with automatic resizing
   app.post('/api/branding/logo', isAuthenticated, logoUpload.single('logo'), async (req: any, res) => {
     try {
       const userId = req.user.claims?.sub || req.user.id;
@@ -1226,23 +1229,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "No file uploaded" });
       }
 
-      // Create a unique filename
+      // Create a unique filename with PNG extension (since we'll convert all logos to PNG)
       const timestamp = Date.now();
-      const fileName = `logo-${userId}-${timestamp}.${req.file.originalname.split('.').pop()}`;
+      const fileName = `logo-${userId}-${timestamp}.png`;
       const filePath = `public/uploads/logos/${fileName}`;
 
-      // Save file to public directory
-      const fs = require('fs');
-      const path = require('path');
-      
       // Ensure uploads directory exists
       const uploadDir = path.join(process.cwd(), 'public', 'uploads', 'logos');
       if (!fs.existsSync(uploadDir)) {
         fs.mkdirSync(uploadDir, { recursive: true });
       }
 
-      // Save the file
-      fs.writeFileSync(path.join(process.cwd(), filePath), req.file.buffer);
+      // Process image with automatic resizing to 200x200 with transparent background
+      const processedBuffer = await sharp(req.file.buffer)
+        .resize(200, 200, {
+          fit: 'contain',
+          background: { r: 0, g: 0, b: 0, alpha: 0 } // Transparent background
+        })
+        .png()
+        .toBuffer();
+
+      // Save the processed file
+      fs.writeFileSync(path.join(process.cwd(), filePath), processedBuffer);
 
       // Return the URL
       const logoUrl = `/uploads/logos/${fileName}`;
@@ -1250,6 +1258,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error uploading logo:", error);
       res.status(500).json({ message: "Failed to upload logo" });
+    }
+  });
+
+  // Favicon upload endpoint with automatic resizing
+  app.post('/api/branding/favicon', isAuthenticated, logoUpload.single('favicon'), async (req: any, res) => {
+    try {
+      const userId = req.user.claims?.sub || req.user.id;
+      
+      if (!req.file) {
+        return res.status(400).json({ message: "No file uploaded" });
+      }
+
+      // Create a unique filename with PNG extension
+      const timestamp = Date.now();
+      const fileName = `favicon-${userId}-${timestamp}.png`;
+      const filePath = `public/uploads/favicons/${fileName}`;
+
+      // Ensure uploads directory exists
+      const uploadDir = path.join(process.cwd(), 'public', 'uploads', 'favicons');
+      if (!fs.existsSync(uploadDir)) {
+        fs.mkdirSync(uploadDir, { recursive: true });
+      }
+
+      // Process image with automatic resizing to 32x32 for favicon
+      const processedBuffer = await sharp(req.file.buffer)
+        .resize(32, 32, {
+          fit: 'cover'
+        })
+        .png()
+        .toBuffer();
+
+      // Save the processed file
+      fs.writeFileSync(path.join(process.cwd(), filePath), processedBuffer);
+
+      // Return the URL
+      const faviconUrl = `/uploads/favicons/${fileName}`;
+      res.json({ faviconUrl });
+    } catch (error) {
+      console.error("Error uploading favicon:", error);
+      res.status(500).json({ message: "Failed to upload favicon" });
     }
   });
 

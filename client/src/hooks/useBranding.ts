@@ -11,6 +11,7 @@ export function useBranding() {
     brandingSettings,
     isLoading,
     logoUrl: brandingSettings?.logoUrl,
+    faviconUrl: brandingSettings?.faviconUrl,
     companyName: brandingSettings?.companyName || "VidMagnet",
     primaryColor: brandingSettings?.primaryColor || "#2563EB",
     secondaryColor: brandingSettings?.secondaryColor || "#10B981",
