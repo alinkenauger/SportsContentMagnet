@@ -245,7 +245,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/dashboard/stats', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const currentBrandId = req.user.currentBrandId;
+      // Get current brand from database
+      const user = await storage.getUser(userId);
+      const currentBrandId = user?.currentBrandId;
       const stats = await storage.getAnalyticsByUser(userId, currentBrandId);
       res.json(stats);
     } catch (error) {
