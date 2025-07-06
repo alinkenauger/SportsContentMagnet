@@ -1282,14 +1282,19 @@ export default function GuideEditorEnhanced() {
               </div>
             </div>
 
-            {/* YouTube Video Player Section */}
-            {guide?.youtubeVideoId && (
-              <div className="px-8 pt-6 pb-4">
-                <div className="max-w-4xl mx-auto">
-                  <div className="bg-white rounded-xl shadow-sm p-6">
+
+
+            {/* Main Guide Content Area */}
+            <div className="px-8 py-8">
+              <div className="max-w-4xl mx-auto">
+
+                
+                {/* YouTube Video Player for Timestamp Navigation */}
+                {guide?.youtubeVideoId && (
+                  <div className="mb-6 bg-white rounded-xl shadow-sm p-6">
                     <h3 className="text-lg font-semibold text-slate-800 mb-4 flex items-center gap-2">
                       <Play className="h-5 w-5 text-blue-600" />
-                      Source Video
+                      Source Video - Click timestamp buttons to navigate
                     </h3>
                     <div className="relative aspect-video rounded-lg overflow-hidden bg-slate-100">
                       <iframe
@@ -1302,36 +1307,9 @@ export default function GuideEditorEnhanced() {
                         allowFullScreen
                       />
                     </div>
-                    {guide.channelTitle && (
-                      <p className="text-sm text-slate-600 mt-3">
-                        From: {guide.channelTitle}
-                      </p>
-                    )}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Main Guide Content Area */}
-            <div className="px-8 py-8">
-              <div className="max-w-4xl mx-auto">
-                {/* YouTube Video Player */}
-                {guide?.youtubeVideoId && (
-                  <div className="mb-8 bg-white rounded-xl shadow-sm p-6">
-                    <h3 className="text-lg font-semibold mb-4 text-slate-800">Source Video</h3>
-                    <div className="aspect-video bg-black rounded-lg overflow-hidden">
-                      <iframe
-                        id="youtube-player"
-                        src={`https://www.youtube.com/embed/${guide.youtubeVideoId}?enablejsapi=1`}
-                        title="YouTube video player"
-                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                        allowFullScreen
-                        className="w-full h-full"
-                      />
-                    </div>
                   </div>
                 )}
-                
+
                 {/* Guide Content Card - Matches guide-view.tsx exactly */}
                 <div className="bg-white rounded-xl shadow-sm p-8 space-y-2">
               {elements.filter(el => !el.parentId).length === 0 ? (
