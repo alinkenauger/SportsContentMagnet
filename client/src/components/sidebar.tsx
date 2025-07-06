@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { useBrands, useSetCurrentBrand, useClearCurrentBrand } from "@/hooks/useBrands";
+import { useBranding } from "@/hooks/useBranding";
 import { useToast } from "@/hooks/use-toast";
 import type { Brand } from "@shared/schema";
 
@@ -36,6 +37,7 @@ export default function Sidebar() {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isSpacePickerOpen, setIsSpacePickerOpen] = useState(false);
   const { brands } = useBrands();
+  const { brandingSettings, logoUrl, companyName } = useBranding();
   const { toast } = useToast();
   const setCurrentBrandMutation = useSetCurrentBrand();
   const clearCurrentBrandMutation = useClearCurrentBrand();
@@ -51,10 +53,18 @@ export default function Sidebar() {
       {/* Logo */}
       <div className="p-6 relative">
         <div className="flex items-center space-x-3">
-          <div className="w-8 h-8 gradient-primary rounded-lg flex items-center justify-center flex-shrink-0">
-            <Video className="w-4 h-4 text-white" />
-          </div>
-          {!isCollapsed && <h1 className="text-xl font-bold text-sidebar-foreground">VidMagnet</h1>}
+          {logoUrl ? (
+            <img 
+              src={logoUrl} 
+              alt="Logo" 
+              className="w-8 h-8 object-contain flex-shrink-0"
+            />
+          ) : (
+            <div className="w-8 h-8 gradient-primary rounded-lg flex items-center justify-center flex-shrink-0">
+              <Video className="w-4 h-4 text-white" />
+            </div>
+          )}
+          {!isCollapsed && <h1 className="text-xl font-bold text-sidebar-foreground">{companyName}</h1>}
         </div>
 
         

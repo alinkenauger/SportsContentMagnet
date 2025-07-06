@@ -2,18 +2,29 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Video, Users, TrendingUp, Zap } from "lucide-react";
 import GoogleAuthButton from "@/components/google-auth-button";
+import { useBranding } from "@/hooks/useBranding";
 
 export default function Landing() {
+  const { logoUrl, companyName } = useBranding();
+  
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 dark:from-slate-900 dark:to-blue-950">
       {/* Header */}
       <header className="container mx-auto px-6 py-8">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 gradient-primary rounded-lg flex items-center justify-center">
-              <Video className="w-6 h-6 text-white" />
-            </div>
-            <h1 className="text-2xl font-bold text-foreground">VidMagnet</h1>
+            {logoUrl ? (
+              <img 
+                src={logoUrl} 
+                alt="Logo" 
+                className="w-10 h-10 object-contain"
+              />
+            ) : (
+              <div className="w-10 h-10 gradient-primary rounded-lg flex items-center justify-center">
+                <Video className="w-6 h-6 text-white" />
+              </div>
+            )}
+            <h1 className="text-2xl font-bold text-foreground">{companyName}</h1>
           </div>
           <Button onClick={() => window.location.href = '/api/login'}>
             Sign In

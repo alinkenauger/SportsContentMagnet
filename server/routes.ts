@@ -30,6 +30,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Logo upload with specific configuration
+  const logoUpload = multer({
+    storage: multer.memoryStorage(),
+    limits: {
+      fileSize: 5 * 1024 * 1024, // 5MB limit for logos
+    },
+    fileFilter: (req, file, cb) => {
+      // Accept only image files
+      if (file.mimetype.startsWith('image/')) {
+        cb(null, true);
+      } else {
+        cb(new Error('Only image files are allowed') as any, false);
+      }
+    }
+  });
+
   // Use Google OAuth as primary authentication
   setupGoogleAuth(app);
   // Keep Replit Auth as backup/alternative
@@ -1192,7 +1208,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Branding settings routes
   app.get('/api/branding', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.claims?.sub || req.user.id;
       const settings = await storage.getBrandingSettings(userId);
       res.json(settings);
     } catch (error) {
@@ -1201,9 +1217,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Logo upload endpoint
+  app.post('/api/branding/logo', isAuthenticated, logoUpload.single('logo'), async (req: any, res) => {
+    try {
+      const userId = req.user.claims?.sub || req.user.id;
+      
+      if (!req.file) {
+        return res.status(400).json({ message: "No file uploaded" });
+      }
+
+      // Create a unique filename
+      const timestamp = Date.now();
+      const fileName = `logo-${userId}-${timestamp}.${req.file.originalname.split('.').pop()}`;
+      const filePath = `public/uploads/logos/${fileName}`;
+
+      // Save file to public directory
+      const fs = require('fs');
+      const path = require('path');
+      
+      // Ensure uploads directory exists
+      const uploadDir = path.join(process.cwd(), 'public', 'uploads', 'logos');
+      if (!fs.existsSync(uploadDir)) {
+        fs.mkdirSync(uploadDir, { recursive: true });
+      }
+
+      // Save the file
+      fs.writeFileSync(path.join(process.cwd(), filePath), req.file.buffer);
+
+      // Return the URL
+      const logoUrl = `/uploads/logos/${fileName}`;
+      res.json({ logoUrl });
+    } catch (error) {
+      console.error("Error uploading logo:", error);
+      res.status(500).json({ message: "Failed to upload logo" });
+    }
+  });
+
   app.post('/api/branding', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.claims?.sub || req.user.id;
       const settingsData = insertBrandingSettingsSchema.parse({
         ...req.body,
         userId

@@ -135,11 +135,78 @@ export default function Branding() {
     saveBrandingMutation.mutate(formData);
   };
 
-  const handleLogoUpload = () => {
-    toast({
-      title: "Logo Upload",
-      description: "Logo upload functionality will be available soon",
-    });
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [logoPreview, setLogoPreview] = useState<string>("");
+
+  const logoUploadMutation = useMutation({
+    mutationFn: async (file: File) => {
+      const formData = new FormData();
+      formData.append('logo', file);
+      
+      const response = await fetch('/api/branding/logo', {
+        method: 'POST',
+        body: formData,
+      });
+      
+      if (!response.ok) {
+        throw new Error('Logo upload failed');
+      }
+      
+      const data = await response.json();
+      return data.logoUrl;
+    },
+    onSuccess: (logoUrl) => {
+      setFormData(prev => ({ ...prev, logoUrl }));
+      toast({
+        title: "Success",
+        description: "Logo uploaded successfully!",
+      });
+    },
+    onError: (error) => {
+      console.error('Logo upload error:', error);
+      toast({
+        title: "Error",
+        description: "Failed to upload logo",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleLogoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast({
+        title: "Error",
+        description: "Please select a valid image file",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    // Validate file size (5MB limit)
+    if (file.size > 5 * 1024 * 1024) {
+      toast({
+        title: "Error",
+        description: "Image must be smaller than 5MB",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    setLogoFile(file);
+    
+    // Create preview
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      setLogoPreview(e.target?.result as string);
+    };
+    reader.readAsDataURL(file);
+    
+    // Upload the file
+    logoUploadMutation.mutate(file);
   };
 
   return (
@@ -222,12 +289,23 @@ export default function Branding() {
                         </div>
                       )}
                       <div className="flex-1">
-                        <Button variant="outline" onClick={handleLogoUpload}>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={handleLogoUpload}
+                          className="hidden"
+                          id="logo-upload"
+                        />
+                        <Button 
+                          variant="outline" 
+                          onClick={() => document.getElementById('logo-upload')?.click()}
+                          disabled={logoUploadMutation.isPending}
+                        >
                           <Upload className="w-4 h-4 mr-2" />
-                          Upload Logo
+                          {logoUploadMutation.isPending ? "Uploading..." : "Upload Logo"}
                         </Button>
                         <p className="text-xs text-muted-foreground mt-1">
-                          Recommended: 200x200px, PNG or SVG format
+                          Recommended: 200x200px, PNG or SVG format. Max 5MB.
                         </p>
                       </div>
                     </div>

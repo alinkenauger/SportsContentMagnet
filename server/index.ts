@@ -6,8 +6,9 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
-// Serve static files for screenshots
+// Serve static files for screenshots and uploads
 app.use('/screenshots', express.static('public/screenshots'));
+app.use('/uploads', express.static('public/uploads'));
 
 app.use((req, res, next) => {
   const start = Date.now();
