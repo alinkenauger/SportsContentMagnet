@@ -26,7 +26,7 @@ const EMAIL_TYPES = [
       intro: 'Welcome to {{brandName}}!\n\nYour account has been successfully created. You can now start transforming your content into high-converting lead magnets.',
       footer: 'Get started by creating your first guide from any YouTube video, document, or audio file.\n\nQuestions? Reply to this email for support.\n\nBest regards,\n{{creatorName}}\n{{brandName}}'
     },
-    defaultContent: 'Welcome to {{brandName}}!\n\nYour account has been successfully created. You can now start transforming your content into high-converting lead magnets.\n\nGet started by creating your first guide from any YouTube video, document, or audio file.\n\nQuestions? Reply to this email for support.\n\nBest regards,\n{{creatorName}}\n{{brandName}}',
+    defaultContent: 'Welcome to {{brandName}}!\n\nYour account has been successfully created. You can now start transforming your content into high-converting lead magnets.\n\nYour account login details are provided below!\n\nGet started by creating your first guide from any YouTube video, document, or audio file.\n\nQuestions? Reply to this email for support.\n\nBest regards,\n{{creatorName}}\n{{brandName}}',
     canDisable: false
   },
   { 
@@ -40,7 +40,7 @@ const EMAIL_TYPES = [
       intro: 'Password Reset Request\n\nWe received a request to reset your {{brandName}} password.',
       footer: 'This link expires in 24 hours for security reasons.\n\nIf you did not request this reset, please ignore this email.\n\nBest regards,\n{{creatorName}}\n{{brandName}}'
     },
-    defaultContent: 'Password Reset Request\n\nWe received a request to reset your {{brandName}} password.\n\nThis link expires in 24 hours for security reasons.\n\nIf you did not request this reset, please ignore this email.\n\nBest regards,\n{{creatorName}}\n{{brandName}}',
+    defaultContent: 'Password Reset Request\n\nWe received a request to reset your {{brandName}} password.\n\nYour password reset link is provided below.\n\nThis link expires in 24 hours for security reasons.\n\nIf you did not request this reset, please ignore this email.\n\nBest regards,\n{{creatorName}}\n{{brandName}}',
     canDisable: false
   },
   { 
@@ -54,7 +54,7 @@ const EMAIL_TYPES = [
       intro: 'Subscription Confirmed - Welcome to Premium!\n\nThank you for upgrading your {{brandName}} account. You now have access to unlimited lead magnets and advanced features.',
       footer: 'Your Premium Features Include:\n• Unlimited lead magnet creation\n• Custom branding and logos\n• Advanced analytics and tracking\n• Priority customer support\n• Multiple brand workspaces\n\nStart maximizing your lead generation today!\n\nQuestions about your subscription? Contact our billing support.\n\n{{creatorName}}\n{{brandName}}'
     },
-    defaultContent: 'Subscription Confirmed - Welcome to Premium!\n\nThank you for upgrading your {{brandName}} account. You now have access to unlimited lead magnets and advanced features.\n\nYour Premium Features Include:\n• Unlimited lead magnet creation\n• Custom branding and logos\n• Advanced analytics and tracking\n• Priority customer support\n• Multiple brand workspaces\n\nStart maximizing your lead generation today!\n\nQuestions about your subscription? Contact our billing support.\n\n{{creatorName}}\n{{brandName}}',
+    defaultContent: 'Subscription Confirmed - Welcome to Premium!\n\nThank you for upgrading your {{brandName}} account. You now have access to unlimited lead magnets and advanced features.\n\nYour subscription details and billing information are provided below.\n\nYour Premium Features Include:\n• Unlimited lead magnet creation\n• Custom branding and logos\n• Advanced analytics and tracking\n• Priority customer support\n• Multiple brand workspaces\n\nStart maximizing your lead generation today!\n\nQuestions about your subscription? Contact our billing support.\n\n{{creatorName}}\n{{brandName}}',
     canDisable: false
   },
   { 
@@ -68,7 +68,7 @@ const EMAIL_TYPES = [
       intro: 'New Lead Captured!\n\nGreat news! Someone just downloaded one of your lead magnets.',
       footer: 'Login to your dashboard to view full lead details and follow up.\n\nKeep creating amazing content!\n\n{{creatorName}}\n{{brandName}}'
     },
-    defaultContent: 'New Lead Captured!\n\nGreat news! Someone just downloaded one of your lead magnets.\n\nLogin to your dashboard to view full lead details and follow up.\n\nKeep creating amazing content!\n\n{{creatorName}}\n{{brandName}}',
+    defaultContent: 'New Lead Captured!\n\nGreat news! Someone just downloaded one of your lead magnets.\n\nThe lead details are provided below:\n\nLogin to your dashboard to view full lead details and follow up.\n\nKeep creating amazing content!\n\n{{creatorName}}\n{{brandName}}',
     canDisable: false
   },
   { 

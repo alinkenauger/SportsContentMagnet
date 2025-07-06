@@ -107,6 +107,14 @@ ConvertMag.net is a comprehensive SAAS application that transforms ANY video, au
 
 ```
 Changelog:
+- July 06, 2025. Enhanced email template system with clean separation of user content and system requirements:
+  * Redesigned template editor to separate user-customizable content from system-required elements
+  * Removed all "=== REQUIRED - DO NOT DELETE ===" sections that clients would see in emails
+  * System content (login credentials, reset links, billing details) automatically injected at send-time
+  * Added natural reference lines in templates mentioning system content below (e.g., "Your login details are provided below")
+  * Clean email preview showing exactly what recipients will receive
+  * Professional, brand-focused emails without confusing system messages
+  * Template editor only shows customizable intro/footer content, hiding technical requirements from users
 - July 06, 2025. Built complete signup system with email notifications and CRM integration:
   * Created comprehensive sales page with professional design and compelling problem statement
   * Added powerful messaging about lead magnets dying and ConvertMag.net as the solution
