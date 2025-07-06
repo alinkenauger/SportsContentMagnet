@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Check, Star, Users, Zap, Crown, Play, ArrowRight, CheckCircle, Target, TrendingUp, Shield, Clock, Mail, Phone } from "lucide-react";
+import { Check, Star, Users, Zap, Crown, Play, ArrowRight, CheckCircle, Target, TrendingUp, Shield, Clock, Mail, Phone, Video } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { z } from "zod";
@@ -561,6 +561,92 @@ export default function SalesPage() {
                   </p>
                 </CardContent>
               </Card>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* CRM & Email Marketing Integration Section */}
+      <section className="bg-white py-16">
+        <div className="container mx-auto px-4">
+          <div className="max-w-4xl mx-auto">
+            <div className="text-center mb-12">
+              <h2 className="text-3xl font-bold mb-4">Seamless Integrations</h2>
+              <p className="text-xl text-gray-600">
+                We fully integrate with top CRMs and Email marketing Tools and Zapier
+              </p>
+            </div>
+            
+            <div className="grid md:grid-cols-3 gap-8">
+              <Card className="border-0 shadow-lg hover:shadow-xl transition-shadow">
+                <CardHeader>
+                  <CardTitle className="text-xl flex items-center">
+                    <Mail className="h-6 w-6 mr-3 text-blue-600" />
+                    Email Marketing
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-gray-600 mb-4">
+                    Connect with your favorite email marketing platforms for seamless lead nurturing and automated follow-up sequences.
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    <Badge variant="outline">Mailchimp</Badge>
+                    <Badge variant="outline">ConvertKit</Badge>
+                    <Badge variant="outline">ActiveCampaign</Badge>
+                    <Badge variant="outline">GetResponse</Badge>
+                  </div>
+                </CardContent>
+              </Card>
+              
+              <Card className="border-0 shadow-lg hover:shadow-xl transition-shadow">
+                <CardHeader>
+                  <CardTitle className="text-xl flex items-center">
+                    <Users className="h-6 w-6 mr-3 text-green-600" />
+                    CRM Systems
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-gray-600 mb-4">
+                    Sync leads directly to your CRM for comprehensive customer relationship management and sales tracking.
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    <Badge variant="outline">HubSpot</Badge>
+                    <Badge variant="outline">Salesforce</Badge>
+                    <Badge variant="outline">Pipedrive</Badge>
+                    <Badge variant="outline">High Level</Badge>
+                  </div>
+                </CardContent>
+              </Card>
+              
+              <Card className="border-0 shadow-lg hover:shadow-xl transition-shadow">
+                <CardHeader>
+                  <CardTitle className="text-xl flex items-center">
+                    <Zap className="h-6 w-6 mr-3 text-purple-600" />
+                    Zapier & Automation
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-gray-600 mb-4">
+                    Connect to 5,000+ apps through Zapier. Automate your entire lead generation and nurturing workflow.
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    <Badge variant="outline">Zapier</Badge>
+                    <Badge variant="outline">Webhooks</Badge>
+                    <Badge variant="outline">API Access</Badge>
+                    <Badge variant="outline">Custom Triggers</Badge>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+            
+            <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-2xl p-8 mt-12 text-center">
+              <h3 className="text-2xl font-bold mb-4">Complete Marketing Stack Integration</h3>
+              <p className="text-lg text-gray-700 mb-6">
+                ConvertMag.net fits seamlessly into your existing marketing workflow. No need to change tools or learn new systems.
+              </p>
+              <p className="text-gray-600">
+                Set up integrations in minutes, not hours. Your leads flow directly where you need them, when you need them.
+              </p>
             </div>
           </div>
         </div>
