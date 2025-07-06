@@ -1093,6 +1093,7 @@ export default function Dashboard() {
                                 variant="ghost"
                                 size="sm"
                                 className="text-gray-600 hover:text-gray-700 hover:bg-gray-50"
+                                onClick={() => window.open(`/guide-editor/${guide.id}`, '_blank')}
                               >
                                 <Edit className="w-4 h-4" />
                               </Button>
@@ -1100,6 +1101,7 @@ export default function Dashboard() {
                                 variant="ghost"
                                 size="sm"
                                 className="text-purple-600 hover:text-purple-700 hover:bg-purple-50"
+                                onClick={() => window.open(`/analytics?guide=${guide.id}`, '_blank')}
                               >
                                 <BarChart3 className="w-4 h-4" />
                               </Button>
