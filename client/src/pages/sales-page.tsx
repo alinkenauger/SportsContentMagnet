@@ -477,8 +477,8 @@ export default function SalesPage() {
                     <div className="text-red-600 font-semibold text-center">$300-500 per guide</div>
                   </div>
                   <div className="bg-white rounded-lg p-4 shadow-sm">
-                    <div className="font-bold text-gray-800">Landing Page Design</div>
-                    <div className="text-red-600 font-semibold">$200-400 per page</div>
+                    <div className="font-bold text-gray-800 text-center">Landing Page Design</div>
+                    <div className="text-red-600 font-semibold text-center">$200-400 per page</div>
                   </div>
                   <div className="bg-white rounded-lg p-4 shadow-sm">
                     <div className="font-bold text-gray-800">Funnel Integration</div>
