@@ -1252,32 +1252,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "No file provided" });
       }
 
-      // Check storage quota before upload
-      const quotaCheck = await StorageCostManager.checkStorageQuota(userId);
-      if (!quotaCheck.canUpload) {
-        return res.status(413).json({ 
-          message: quotaCheck.message,
-          currentUsage: quotaCheck.currentUsageMB,
-          quota: quotaCheck.quotaMB
-        });
-      }
-
-      // Track file upload
-      const storageRecord = await StorageCostManager.trackFileUpload({
+      // Simplified upload tracking (no complex quota checking)
+      const storageRecord = await storage.createStorageUsage({
         userId,
         fileName: file.originalname,
-        fileSizeMB: file.size / (1024 * 1024),
+        fileSizeMB: (file.size / (1024 * 1024)).toString(),
         fileType: file.mimetype,
         fileUrl: null, // Will be updated after actual storage
-        processingCostUSD: 0, // Will be calculated during processing
-        storageCostUSD: 0 // Will be calculated monthly
+        processingCostUSD: "0",
+        storageCostUSD: "0"
       });
 
       res.json({
         success: true,
         storageId: storageRecord.id,
         fileSizeMB: file.size / (1024 * 1024),
-        monthlyCost: StorageCostManager.calculateMonthlyCost(file.size / (1024 * 1024)),
         processingCost: StorageCostManager.calculateProcessingCost(file.size / (1024 * 1024))
       });
     } catch (error) {

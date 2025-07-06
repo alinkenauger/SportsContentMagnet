@@ -387,22 +387,23 @@ export class DatabaseStorage implements IStorage {
   }
 
   async searchGuides(userId: string, query?: string, category?: string): Promise<Guide[]> {
-    let queryBuilder = db
-      .select()
-      .from(guides)
-      .where(eq(guides.userId, userId));
+    let conditions = [eq(guides.userId, userId)];
 
     if (query) {
-      queryBuilder = queryBuilder.where(
+      conditions.push(
         sql`${guides.title} ILIKE ${'%' + query + '%'} OR ${guides.description} ILIKE ${'%' + query + '%'}`
       );
     }
 
     if (category) {
-      queryBuilder = queryBuilder.where(eq(guides.category, category));
+      conditions.push(eq(guides.category, category));
     }
 
-    return await queryBuilder.orderBy(desc(guides.createdAt));
+    return await db
+      .select()
+      .from(guides)
+      .where(and(...conditions))
+      .orderBy(desc(guides.createdAt));
   }
 
   async getPublicGuides() {
@@ -427,8 +428,8 @@ export class DatabaseStorage implements IStorage {
     return guidesWithBranding.map(guide => ({
       id: guide.id,
       title: guide.title,
-      description: guide.description,
-      thumbnailUrl: guide.thumbnailUrl,
+      description: guide.description || '',
+      thumbnailUrl: guide.thumbnailUrl || '',
       category: guide.category || '',
       tags: guide.tags || [],
       views: guide.views || 0,
@@ -609,11 +610,13 @@ export class DatabaseStorage implements IStorage {
       .from(leads)
       .where(eq(leads.guideId, guideId));
 
-    const conversionRate = guide.views > 0 ? (conversions.count / guide.views) * 100 : 0;
+    const views = guide.views || 0;
+    const downloads = guide.downloads || 0;
+    const conversionRate = views > 0 ? (conversions.count / views) * 100 : 0;
 
     return {
-      views: guide.views,
-      downloads: guide.downloads,
+      views,
+      downloads,
       conversions: conversions.count,
       conversionRate: Number(conversionRate.toFixed(2)),
     };
