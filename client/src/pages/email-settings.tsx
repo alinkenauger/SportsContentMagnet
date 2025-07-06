@@ -77,8 +77,11 @@ const INTEGRATION_PROVIDERS = [
 
 export default function EmailSettings() {
   const { user } = useAuth();
-  const { brands, currentBrand } = useBrands();
+  const { brands } = useBrands();
   const { toast } = useToast();
+  
+  // Get current brand from user's currentBrandId
+  const currentBrand = brands.find(brand => brand.id === (user as any)?.currentBrandId);
   const [activeTab, setActiveTab] = useState('templates');
   const [editingTemplate, setEditingTemplate] = useState<string | null>(null);
   const [templateContent, setTemplateContent] = useState('');
@@ -273,9 +276,9 @@ export default function EmailSettings() {
                     Available variables for personalization:
                   </p>
                   <div className="text-xs text-muted-foreground bg-muted/50 p-2 rounded">
-                    Brand: <code>{{brandName}}</code>, <code>{{creatorName}}</code>, <code>{{brandWebsite}}</code><br/>
-                    Customer: <code>{{customerName}}</code>, <code>{{leadEmail}}</code><br/>
-                    Guide: <code>{{guideName}}</code>, <code>{{guideUrl}}</code>, <code>{{pdfDownloadUrl}}</code>
+                    Brand: <code>{"{{brandName}}"}</code>, <code>{"{{creatorName}}"}</code>, <code>{"{{brandWebsite}}"}</code><br/>
+                    Customer: <code>{"{{customerName}}"}</code>, <code>{"{{leadEmail}}"}</code><br/>
+                    Guide: <code>{"{{guideName}}"}</code>, <code>{"{{guideUrl}}"}</code>, <code>{"{{pdfDownloadUrl}}"}</code>
                   </div>
                 </div>
                 {emailType.requiredElements && (
