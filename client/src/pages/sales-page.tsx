@@ -854,11 +854,11 @@ export default function SalesPage() {
       </section>
       
       {/* Examples Section */}
-      <section className="bg-gradient-to-r from-gray-50 to-white py-16">
+      <section className="bg-gradient-to-r from-green-600 to-emerald-600 py-16">
         <div className="container mx-auto px-4">
           <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold mb-4">See The Magic In Action</h2>
-            <p className="text-xl text-gray-600">
+            <h2 className="text-3xl font-bold mb-4 text-white">See The Magic In Action</h2>
+            <p className="text-xl text-green-100">
               Watch how any content transforms into high-converting lead magnets in minutes
             </p>
           </div>
