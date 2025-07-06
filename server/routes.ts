@@ -501,7 +501,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
     } catch (error) {
-      console.error("Error creating guide:", error);
+      console.error("=== GUIDE CREATION ERROR ===");
+      console.error("Error details:", error);
+      console.error("Error name:", (error as Error).name);
+      console.error("Error message:", (error as Error).message);
+      console.error("Error stack:", (error as Error).stack);
+      console.error("Request body:", req.body);
+      console.error("========================");
       res.status(500).json({ message: "Failed to create guide: " + (error as Error).message });
     }
   });
