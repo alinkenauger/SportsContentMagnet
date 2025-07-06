@@ -17,7 +17,7 @@ export default function Landing() {
               <img 
                 src={logoUrl} 
                 alt="Logo" 
-                className="h-10 w-auto object-contain"
+                className="h-16 w-auto object-contain"
               />
             ) : (
               <div className="w-10 h-10 gradient-primary rounded-lg flex items-center justify-center">

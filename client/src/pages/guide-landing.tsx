@@ -166,7 +166,7 @@ export default function GuideLanding() {
               <img 
                 src={brandingSettings.logoUrl} 
                 alt="Logo" 
-                className="h-12 w-auto object-contain"
+                className="h-24 w-auto object-contain"
               />
             ) : (
               <div className="text-2xl font-bold text-gray-800">
