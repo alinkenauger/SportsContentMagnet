@@ -735,6 +735,7 @@ export default function SalesPage() {
                   <li>• Just gate existing YouTube videos behind opt-ins</li>
                   <li>• No new value created for leads</li>
                   <li>• Only works with YouTube content</li>
+                  <li>• No connection between guide and source content</li>
                   <li>• Focuses on "trending" vs educational content</li>
                   <li>• Generic templates with no customization</li>
                   <li>• Basically just content theft</li>
@@ -747,6 +748,7 @@ export default function SalesPage() {
                   <li>• Creates 100% original, valuable guides</li>
                   <li>• Leads get fresh educational content</li>
                   <li>• Works with ALL content types</li>
+                  <li>• <strong>Smart Timestamping</strong> - Click to jump to exact moments in source content</li>
                   <li>• Focuses on knowledge extraction & education</li>
                   <li>• Complete customization with AI prompting</li>
                   <li>• Builds genuine value and trust</li>
@@ -754,7 +756,7 @@ export default function SalesPage() {
               </div>
             </div>
             
-            <div className="grid md:grid-cols-3 gap-8">
+            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
               <Card className="border-0 shadow-lg hover:shadow-xl transition-shadow">
                 <CardHeader>
                   <CardTitle className="text-xl flex items-center">
@@ -765,6 +767,21 @@ export default function SalesPage() {
                 <CardContent>
                   <p className="text-gray-600">
                     Our AI actually understands your content and creates educational materials that add real value to your audience.
+                  </p>
+                </CardContent>
+              </Card>
+              
+              <Card className="border-2 border-yellow-500 shadow-xl hover:shadow-2xl transition-shadow">
+                <CardHeader>
+                  <CardTitle className="text-xl flex items-center">
+                    <Clock className="h-6 w-6 mr-3 text-yellow-600" />
+                    Smart Timestamping
+                  </CardTitle>
+                  <Badge className="bg-yellow-100 text-yellow-800 text-xs">EXCLUSIVE</Badge>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-gray-600">
+                    Refer back to exact timestamps of high value details and information in a click, allowing your source video to be part of the guide as well!
                   </p>
                 </CardContent>
               </Card>
