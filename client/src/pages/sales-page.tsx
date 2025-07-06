@@ -723,10 +723,10 @@ export default function SalesPage() {
                     <img 
                       src="/attached_assets/mqdefault_1751825204492.jpg" 
                       alt="YouTube Golf Video Thumbnail" 
-                      className="w-full max-w-[280px] mx-auto rounded-lg shadow-lg"
+                      className="w-full max-w-[280px] mx-auto rounded-lg shadow-2xl border-2 border-gray-200 hover:shadow-3xl transition-shadow duration-300"
                     />
                     <div className="absolute -right-2 top-1/2 transform -translate-y-1/2">
-                      <div className="bg-blue-500 text-white px-3 py-1 rounded-full text-sm font-semibold flex items-center">
+                      <div className="bg-blue-500 text-white px-3 py-1 rounded-full text-sm font-semibold flex items-center shadow-lg">
                         <ArrowRight className="h-4 w-4 mr-1" />
                         Instantly Converts To
                       </div>

@@ -9,6 +9,8 @@ app.use(express.urlencoded({ extended: false }));
 // Serve static files for screenshots and uploads
 app.use('/screenshots', express.static('public/screenshots'));
 app.use('/uploads', express.static('public/uploads'));
+// Serve static files for attached assets
+app.use('/attached_assets', express.static('attached_assets'));
 
 app.use((req, res, next) => {
   const start = Date.now();
