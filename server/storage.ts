@@ -372,10 +372,22 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateUserPassword(userId: string, hashedPassword: string): Promise<void> {
+    // Clear temp password when user changes their password (no longer first-time user)
     await db
       .update(users)
       .set({
         tempPassword: hashedPassword,
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, userId));
+  }
+
+  async clearTempPasswordFlag(userId: string): Promise<void> {
+    // Mark user as no longer first-time by clearing temp password flag
+    await db
+      .update(users)
+      .set({
+        tempPassword: null,
         updatedAt: new Date(),
       })
       .where(eq(users.id, userId));

@@ -23,6 +23,11 @@ const resetPasswordSchema = z.object({
   password: z.string().min(8, "Password must be at least 8 characters"),
 });
 
+const changePasswordSchema = z.object({
+  currentPassword: z.string().min(1, "Current password is required"),
+  newPassword: z.string().min(8, "New password must be at least 8 characters"),
+});
+
 function generateTempPassword(): string {
   const chars = 'ABCDEFGHJKMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789';
   let password = '';
@@ -120,24 +125,26 @@ export function registerAuthRoutes(app: Express) {
       // Provide appropriate response based on email delivery status
       if (emailSent) {
         res.status(201).json({
-          message: "Account created successfully! Check your email for login instructions.",
+          message: "Account created successfully! Check your email for login instructions, then log in immediately to get started.",
           user: {
             id: newUser.id,
             email: newUser.email,
             firstName: newUser.firstName,
             lastName: newUser.lastName,
           },
+          nextStep: "checkEmailAndLogin"
         });
       } else {
         res.status(201).json({
-          message: `Account created successfully! Your temporary password is: ${tempPassword} - Please save this password to log in.`,
+          message: `Account created! Use this password to log in immediately: ${tempPassword}`,
           user: {
             id: newUser.id,
             email: newUser.email,
             firstName: newUser.firstName,
             lastName: newUser.lastName,
           },
-          tempPassword: tempPassword, // Include in response when email fails
+          tempPassword: tempPassword,
+          nextStep: "loginImmediately"
         });
       }
 
@@ -245,6 +252,57 @@ export function registerAuthRoutes(app: Express) {
 
       res.status(500).json({
         message: "Failed to reset password. Please try again.",
+      });
+    }
+  });
+
+  // Change password route (for authenticated users)
+  app.post("/api/auth/change-password", async (req: any, res) => {
+    try {
+      if (!req.user || !req.user.claims || !req.user.claims.sub) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+
+      const { currentPassword, newPassword } = changePasswordSchema.parse(req.body);
+      const userId = req.user.claims.sub;
+
+      // Get user from database
+      const user = await storage.getUserById(userId);
+      if (!user || !user.tempPassword) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      // Verify current password
+      const isValidPassword = await bcrypt.compare(currentPassword, user.tempPassword);
+      if (!isValidPassword) {
+        return res.status(400).json({ 
+          message: "Current password is incorrect" 
+        });
+      }
+
+      // Hash new password
+      const hashedNewPassword = await bcrypt.hash(newPassword, 12);
+
+      // Update user password and clear temp password flag
+      await storage.updateUserPassword(userId, hashedNewPassword);
+      await storage.clearTempPasswordFlag(userId);
+
+      res.json({
+        message: "Password changed successfully",
+      });
+
+    } catch (error) {
+      console.error('Change password error:', error);
+      
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({
+          message: "Invalid input data",
+          errors: error.errors,
+        });
+      }
+
+      res.status(500).json({
+        message: "Failed to change password. Please try again.",
       });
     }
   });

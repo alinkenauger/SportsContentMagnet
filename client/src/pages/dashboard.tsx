@@ -9,6 +9,7 @@ import StatsCard from "@/components/stats-card";
 import GuideCard from "@/components/guide-card";
 import ProcessingModal from "@/components/processing-modal";
 import GoogleAuthButton from "@/components/google-auth-button";
+import FirstTimeUserSetup from "@/components/first-time-user-setup";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -39,6 +40,7 @@ export default function Dashboard() {
   const [isProcessingFile, setIsProcessingFile] = useState(false);
   const [columnWidths, setColumnWidths] = useState([35, 20, 15, 15, 15]);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [showFirstTimeSetup, setShowFirstTimeSetup] = useState(false);
   const tableRef = useRef<HTMLTableElement>(null);
   const notificationsRef = useRef<HTMLDivElement>(null);
 
@@ -59,6 +61,20 @@ export default function Dashboard() {
   });
 
   const unreadCount = notifications.filter(n => !n.read).length;
+
+  // Check if user is first-time (has temp password) - detect when user data is available
+  useEffect(() => {
+    if (user && user.tempPassword && !showFirstTimeSetup) {
+      setShowFirstTimeSetup(true);
+    }
+  }, [user, showFirstTimeSetup]);
+
+  // Handle first-time setup completion
+  const handleFirstTimeSetupComplete = () => {
+    setShowFirstTimeSetup(false);
+    // Refresh user data to ensure tempPassword is cleared
+    window.location.reload();
+  };
 
   // Function to mark notification as read
   const markAsRead = async (notificationId: number) => {
@@ -1213,6 +1229,17 @@ export default function Dashboard() {
         isTranscribing={isTranscribing}
         transcriptionProgress={transcriptionProgress}
       />
+      
+      {/* First Time User Setup Modal */}
+      {showFirstTimeSetup && user && (
+        <FirstTimeUserSetup
+          user={{
+            firstName: user.firstName || 'User',
+            email: user.email || '',
+          }}
+          onComplete={handleFirstTimeSetupComplete}
+        />
+      )}
     </div>
   );
 }
