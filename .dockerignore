@@ -1,0 +1,87 @@
+# Exclude unnecessary files from deployment image
+node_modules
+.git
+.gitignore
+.replit
+.vscode
+*.log
+*.lock
+package-lock.json
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Development tools
+.eslintrc*
+.prettierrc*
+tsconfig.json
+vite.config.ts
+tailwind.config.ts
+postcss.config.js
+components.json
+
+# Build artifacts that will be rebuilt
+dist
+build
+.next
+.cache
+.parcel-cache
+
+# Test files
+__tests__
+**/*.test.js
+**/*.test.ts
+**/*.spec.js
+**/*.spec.ts
+coverage
+jest.config.js
+
+# Documentation
+*.md
+README*
+CHANGELOG*
+LICENSE*
+docs/
+documentation/
+
+# IDE and editor files
+.idea
+.vscode
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.temp
+
+# Large static assets that should be in external storage
+attached_assets/
+external_storage/
+uploads/
+public/uploads/
+static/uploads/
+
+# Dev dependencies artifacts
+tsx
+drizzle-kit
+@types/*
+typescript
+autoprefixer
+postcss
+tailwindcss
+vite
+esbuild
