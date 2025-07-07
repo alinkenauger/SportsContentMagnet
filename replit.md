@@ -107,6 +107,13 @@ ConvertMag.net is a comprehensive SAAS application that transforms ANY video, au
 
 ```
 Changelog:
+- July 06, 2025. Enhanced pricing page with annual billing options and improved internal UX:
+  * Added monthly/yearly billing toggle with 17% savings on annual plans (2 months free)
+  * Redesigned pricing page for logged-in users showing current plan status vs upgrade options
+  * Current plan cards highlighted with green styling and "You Already Own This" messaging
+  * Billing cycle-aware pricing calculations with savings indicators
+  * Enhanced stats card icons with brighter, more visible colors (solid backgrounds with white icons)
+  * Improved navigation organization with Settings submenu containing Pricing, Team, and Email Settings
 - July 06, 2025. Enhanced email template system with clean separation of user content and system requirements:
   * Redesigned template editor to separate user-customizable content from system-required elements
   * Removed all "=== REQUIRED - DO NOT DELETE ===" sections that clients would see in emails

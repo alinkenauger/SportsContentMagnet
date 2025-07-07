@@ -39,11 +39,11 @@ export default function StatsCard({
               {typeof value === 'number' ? value.toLocaleString() : value}
             </p>
           </div>
-          <div className={`w-12 h-12 ${iconColor.includes('primary') ? 'bg-blue-100 dark:bg-blue-950' : 
-                          iconColor.includes('secondary') ? 'bg-emerald-100 dark:bg-emerald-950' :
-                          iconColor.includes('accent') ? 'bg-amber-100 dark:bg-amber-950' :
-                          'bg-purple-100 dark:bg-purple-950'} rounded-lg flex items-center justify-center`}>
-            <Icon className={`${iconColor} text-xl`} />
+          <div className={`w-12 h-12 ${iconColor.includes('primary') ? 'bg-blue-500 dark:bg-blue-600' : 
+                          iconColor.includes('secondary') ? 'bg-emerald-500 dark:bg-emerald-600' :
+                          iconColor.includes('accent') ? 'bg-amber-500 dark:bg-amber-600' :
+                          'bg-purple-500 dark:bg-purple-600'} rounded-lg flex items-center justify-center shadow-lg`}>
+            <Icon className="text-white text-xl" />
           </div>
         </div>
         {change && (

@@ -48,6 +48,7 @@ export default function Pricing() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [isSubscribing, setIsSubscribing] = useState<string | null>(null);
+  const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly');
 
   const { data: plans = [], isLoading: plansLoading } = useQuery<SubscriptionPlan[]>({
     queryKey: ["/api/subscription/plans"],
@@ -58,8 +59,11 @@ export default function Pricing() {
   });
 
   const subscribeMutation = useMutation({
-    mutationFn: async (planId: number) => {
-      return apiRequest("POST", "/api/subscription/create", { planId });
+    mutationFn: async ({ planId, billingCycle }: { planId: number; billingCycle: 'monthly' | 'yearly' }) => {
+      return apiRequest("POST", "/api/subscription/create", { 
+        planId,
+        billingCycle
+      });
     },
     onSuccess: () => {
       toast({
@@ -81,7 +85,7 @@ export default function Pricing() {
 
   const handleSubscribe = async (plan: SubscriptionPlan) => {
     setIsSubscribing(plan.name);
-    subscribeMutation.mutate(plan.id);
+    subscribeMutation.mutate({ planId: plan.id, billingCycle });
   };
 
   const formatFeature = (feature: string) => {
@@ -115,6 +119,37 @@ export default function Pricing() {
     return currentSubscription?.planId === planId;
   };
 
+  const calculatePrice = (monthlyPrice: string) => {
+    const price = parseFloat(monthlyPrice);
+    if (price === 0) return "0"; // Free plan
+    
+    if (billingCycle === 'yearly') {
+      return (price * 10).toFixed(0); // 10 months = 2 months free
+    }
+    return monthlyPrice;
+  };
+
+  const getPriceLabel = (monthlyPrice: string) => {
+    const price = parseFloat(monthlyPrice);
+    if (price === 0) return "Free";
+    
+    if (billingCycle === 'yearly') {
+      return `$${calculatePrice(monthlyPrice)} / year`;
+    }
+    return `$${monthlyPrice} / month`;
+  };
+
+  const getSavingsText = (monthlyPrice: string) => {
+    const price = parseFloat(monthlyPrice);
+    if (price === 0 || billingCycle === 'monthly') return null;
+    
+    const monthlyTotal = price * 12;
+    const yearlyPrice = price * 10;
+    const savings = monthlyTotal - yearlyPrice;
+    
+    return `Save $${savings.toFixed(0)} per year`;
+  };
+
   if (plansLoading) {
     return (
       <div className="container mx-auto p-6">
@@ -128,10 +163,42 @@ export default function Pricing() {
   return (
     <div className="container mx-auto p-6 space-y-8">
       <div className="text-center space-y-4">
-        <h1 className="text-4xl font-bold">Choose Your Plan</h1>
+        <h1 className="text-4xl font-bold">Manage Your Subscription</h1>
         <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-          Transform your content into high-converting lead magnets with our flexible pricing options
+          {currentSubscription?.plan ? 
+            `You're currently on the ${currentSubscription.plan.displayName} plan. Upgrade anytime to unlock more features.` :
+            'Choose a plan that fits your content creation needs'
+          }
         </p>
+      </div>
+
+      {/* Billing Cycle Toggle */}
+      <div className="flex justify-center mb-8">
+        <div className="bg-gray-100 p-1 rounded-lg inline-flex">
+          <button
+            onClick={() => setBillingCycle('monthly')}
+            className={`px-6 py-2 rounded-md text-sm font-medium transition-all ${
+              billingCycle === 'monthly'
+                ? 'bg-white text-gray-900 shadow-sm'
+                : 'text-gray-600 hover:text-gray-900'
+            }`}
+          >
+            Monthly
+          </button>
+          <button
+            onClick={() => setBillingCycle('yearly')}
+            className={`px-6 py-2 rounded-md text-sm font-medium transition-all relative ${
+              billingCycle === 'yearly'
+                ? 'bg-white text-gray-900 shadow-sm'
+                : 'text-gray-600 hover:text-gray-900'
+            }`}
+          >
+            Yearly
+            <span className="absolute -top-2 -right-2 bg-green-500 text-white text-xs px-2 py-1 rounded-full">
+              Save 17%
+            </span>
+          </button>
+        </div>
       </div>
 
       <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
@@ -143,11 +210,20 @@ export default function Pricing() {
           return (
             <Card 
               key={plan.id} 
-              className={`relative transition-all duration-200 hover:shadow-lg ${
-                isPopular ? 'border-purple-200 shadow-lg scale-105' : ''
+              className={`relative transition-all duration-200 ${
+                isCurrentPlan(plan.id) 
+                  ? 'border-green-300 bg-green-50 shadow-lg' 
+                  : 'hover:shadow-lg'
+              } ${
+                isPopular && !isCurrentPlan(plan.id) ? 'border-purple-200 shadow-lg scale-105' : ''
               } ${isEnterprise ? 'border-amber-200' : ''}`}
             >
-              {isPopular && (
+              {isCurrentPlan(plan.id) && (
+                <Badge className="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-green-600">
+                  Current Plan
+                </Badge>
+              )}
+              {isPopular && !isCurrentPlan(plan.id) && (
                 <Badge className="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-purple-600">
                   Most Popular
                 </Badge>
@@ -161,20 +237,25 @@ export default function Pricing() {
                 <div>
                   <CardTitle className="text-2xl">{plan.displayName}</CardTitle>
                   <CardDescription className="mt-2">
-                    {plan.name === 'free' && "Perfect for trying out VidMagnet"}
-                    {plan.name === 'personal' && "Best for individual creators"}
-                    {plan.name === 'business' && "Perfect for teams and agencies"}
+                    {plan.name === 'free' && (isCurrentPlan(plan.id) ? "Your current plan" : "Perfect for trying out ConvertMag")}
+                    {plan.name === 'personal' && (isCurrentPlan(plan.id) ? "Your current plan" : "Upgrade for unlimited leads & custom branding")}
+                    {plan.name === 'business' && (isCurrentPlan(plan.id) ? "Your current plan" : "Scale with multiple brands & team management")}
                   </CardDescription>
                 </div>
 
                 <div className="space-y-1">
                   <div className="text-4xl font-bold">
-                    ${plan.price}
+                    ${calculatePrice(plan.price)}
                     {plan.name === 'business' && <span className="text-lg text-muted-foreground">/brand</span>}
                   </div>
                   <div className="text-sm text-muted-foreground">
-                    per {plan.billingCycle}
+                    per {billingCycle === 'yearly' ? 'year' : 'month'}
                   </div>
+                  {getSavingsText(plan.price) && (
+                    <div className="text-sm text-green-600 font-medium">
+                      {getSavingsText(plan.price)}
+                    </div>
+                  )}
                 </div>
               </CardHeader>
 
@@ -231,9 +312,10 @@ export default function Pricing() {
                       Processing...
                     </div>
                   ) : isCurrentPlan(plan.id) ? (
-                    "Current Plan"
-                  ) : plan.name === 'free' ? (
-                    "Get Started Free"
+                    <div className="flex items-center gap-2">
+                      <Check className="w-4 h-4" />
+                      You Already Own This
+                    </div>
                   ) : (
                     `Upgrade to ${plan.displayName}`
                   )}
