@@ -53,7 +53,7 @@ export default function BillingManagement() {
   const { data: subscriptionStatus, isLoading: statusLoading } = useQuery({
     queryKey: ['/api/stripe/subscription-status'],
     queryFn: async () => {
-      const response = await apiRequest('GET', '/api/stripe/subscription-status');
+      const response = await apiRequest('/api/stripe/subscription-status', 'GET');
       return response.json() as Promise<SubscriptionStatus>;
     }
   });
@@ -61,14 +61,14 @@ export default function BillingManagement() {
   const { data: plans } = useQuery({
     queryKey: ['/api/subscription/plans'],
     queryFn: async () => {
-      const response = await apiRequest('GET', '/api/subscription/plans');
+      const response = await apiRequest('/api/subscription/plans', 'GET');
       return response.json() as Promise<SubscriptionPlan[]>;
     }
   });
 
   const changePlanMutation = useMutation({
     mutationFn: async ({ planName, billingCycle }: { planName: string; billingCycle: string }) => {
-      const response = await apiRequest('POST', '/api/stripe/change-plan', {
+      const response = await apiRequest('/api/stripe/change-plan', 'POST', {
         newPlanName: planName,
         newBillingCycle: billingCycle
       });
@@ -93,7 +93,7 @@ export default function BillingManagement() {
 
   const manageBrandsMutation = useMutation({
     mutationFn: async (additionalBrands: number) => {
-      const response = await apiRequest('POST', '/api/stripe/manage-brands', {
+      const response = await apiRequest('/api/stripe/manage-brands', 'POST', {
         additionalBrands
       });
       return response.json();
@@ -117,7 +117,7 @@ export default function BillingManagement() {
 
   const pauseAccountMutation = useMutation({
     mutationFn: async () => {
-      const response = await apiRequest('POST', '/api/stripe/pause-account');
+      const response = await apiRequest('/api/stripe/pause-account', 'POST');
       return response.json();
     },
     onSuccess: () => {
@@ -139,7 +139,7 @@ export default function BillingManagement() {
 
   const resumeAccountMutation = useMutation({
     mutationFn: async () => {
-      const response = await apiRequest('POST', '/api/stripe/resume-account');
+      const response = await apiRequest('/api/stripe/resume-account', 'POST');
       return response.json();
     },
     onSuccess: () => {
@@ -161,7 +161,7 @@ export default function BillingManagement() {
   const handleManageBilling = async () => {
     setIsLoading(true);
     try {
-      const response = await apiRequest('POST', '/api/stripe/create-portal-session', {});
+      const response = await apiRequest('/api/stripe/customer-portal', 'POST');
       const { url } = await response.json();
       
       if (url) {
