@@ -178,18 +178,18 @@ export default function SalesPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50">
+    <div className="min-h-screen bg-white">
       {/* Header/Navigation */}
-      <header className="container mx-auto px-4 py-6">
+      <header className="container mx-auto px-4 py-6 border-b border-gray-200">
         <div className="flex items-center justify-between">
           <div className="flex items-center">
             <h1 className="text-2xl font-bold text-gray-900">ConvertMag.net</h1>
           </div>
           <div className="flex items-center space-x-4">
             <Button 
-              variant="ghost" 
+              variant="outline" 
               size="lg"
-              className="text-gray-700 hover:text-gray-900 font-semibold"
+              className="text-gray-700 hover:text-gray-900 font-semibold border-gray-300"
               onClick={() => window.location.href = "/login"}
             >
               Login
@@ -198,7 +198,7 @@ export default function SalesPage() {
               <DialogTrigger asChild>
                 <Button 
                   size="lg" 
-                  className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white px-6 py-3 text-lg font-bold shadow-lg transform hover:scale-105 transition-all duration-300"
+                  className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 text-lg font-bold"
                 >
                   Get Started for Free
                   <ArrowRight className="ml-2 h-4 w-4" />
@@ -315,93 +315,46 @@ export default function SalesPage() {
       </header>
 
       {/* Hero Section */}
-      <section className="container mx-auto px-4 pt-8 pb-0">
+      <section className="container mx-auto px-4 pt-12 pb-16">
         <div className="text-center max-w-4xl mx-auto">
-          <div className="bg-red-600 text-white px-6 py-3 rounded-full mb-6 inline-block animate-pulse">
-            ⚠️ YOUR LEAD MAGNETS ARE DYING (AND YOUR COMPETITORS KNOW IT)
+          <div className="bg-red-600 text-white px-6 py-2 rounded-lg mb-8 inline-block">
+            <strong>⚠️ YOUR LEAD MAGNETS ARE DYING (AND YOUR COMPETITORS KNOW IT)</strong>
           </div>
           
-          <h1 className="text-5xl md:text-7xl font-black mb-4 leading-tight">
-            <span className="text-gray-900">ConvertMag.net Can </span>
-            <span className="bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">10x Lead Flow</span>
-            <span className="block text-gray-900 mt-2">From The Same Traffic...</span>
+          <h1 className="text-4xl md:text-6xl font-bold mb-6 leading-tight text-gray-900">
+            ConvertMag.net Can <span className="text-green-600">10x Your Lead Flow</span> From The Same Traffic
           </h1>
           
-          <p className="text-2xl md:text-3xl font-bold text-gray-700 mb-12">
-            ... and instantly create your high converting funnels for you.
+          <p className="text-xl md:text-2xl text-gray-600 mb-12">
+            Instantly create high-converting funnels from any content in minutes
           </p>
           
-          {/* Large Video Player */}
-          <div className="w-full mb-16 relative" style={{ maxWidth: 'min(1200px, 90vw)', marginLeft: 'auto', marginRight: 'auto' }}>
-            <div className="relative bg-black rounded-2xl overflow-hidden shadow-2xl border-4 border-blue-200">
-              <div className="aspect-video bg-gradient-to-br from-gray-900 to-black flex items-center justify-center">
-                <div className="text-center">
-                  <div className="w-32 h-32 bg-blue-600 bg-opacity-20 rounded-full flex items-center justify-center mx-auto mb-6 cursor-pointer hover:bg-opacity-30 transition-all duration-500 backdrop-blur-sm border-2 border-blue-400">
-                    <Play className="h-16 w-16 text-white ml-2" />
-                  </div>
-                  <h3 className="text-white text-3xl font-bold mb-3">Watch ConvertMag.net Create 10X Results</h3>
-                  <p className="text-blue-200 text-lg mb-4">See the complete transformation process in under 3 minutes</p>
-                  <div className="flex items-center justify-center space-x-8 text-sm text-gray-300">
-                    <div className="flex items-center">
-                      <div className="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
-                      Live Demo
-                    </div>
-                    <div className="flex items-center">
-                      <div className="w-2 h-2 bg-blue-500 rounded-full mr-2"></div>
-                      3:24 Duration
-                    </div>
-                    <div className="flex items-center">
-                      <div className="w-2 h-2 bg-purple-500 rounded-full mr-2"></div>
-                      Real Results
-                    </div>
-                  </div>
-                </div>
-              </div>
+          {/* Video Demo Section */}
+          <div className="bg-gray-100 rounded-xl p-8 mb-12">
+            <div className="text-center">
+              <h3 className="text-2xl font-bold text-gray-900 mb-4">Watch ConvertMag.net Create 10X Results</h3>
+              <p className="text-lg text-gray-600 mb-6">See the complete transformation process in under 3 minutes</p>
               
-              {/* Video Controls Bar */}
-              <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black to-transparent p-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-4">
-                    <button className="text-white hover:text-blue-400 transition-colors">
-                      <Play className="h-6 w-6" />
-                    </button>
-                    <div className="text-white text-sm">0:00 / 3:24</div>
-                  </div>
-                  <div className="flex items-center space-x-4">
-                    <button className="text-white hover:text-blue-400 transition-colors">
-                      <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 14.142M8.464 15.536a5 5 0 01-7.072 0" />
-                      </svg>
-                    </button>
-                    <button className="text-white hover:text-blue-400 transition-colors">
-                      <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V6a2 2 0 012-2h2M4 16v2a2 2 0 002 2h2M16 4h2a2 2 0 012 2v2M16 20h2a2 2 0 002-2v-2" />
-                      </svg>
-                    </button>
-                  </div>
-                </div>
-                <div className="mt-2 bg-gray-600 rounded-full h-1">
-                  <div className="bg-blue-500 h-1 rounded-full" style={{ width: '0%' }}></div>
-                </div>
-              </div>
-            </div>
-            
-            {/* Video Description */}
-            <div className="mt-6 text-center">
-              <p className="text-lg text-gray-600 mb-4">
-                Watch the complete process: YouTube video → Landing page + Interactive guide in under 5 minutes
-              </p>
-              <div className="flex justify-center space-x-6 text-sm text-gray-500">
+              <Button 
+                size="lg" 
+                className="bg-green-600 hover:bg-green-700 text-white px-8 py-4 text-lg font-bold mb-6"
+                onClick={() => setShowVideoDemo(true)}
+              >
+                <Play className="mr-2 h-5 w-5" />
+                Watch Demo Video
+              </Button>
+              
+              <div className="flex justify-center space-x-8 text-sm text-gray-600">
                 <div className="flex items-center">
-                  <Check className="h-4 w-4 text-green-500 mr-2" />
+                  <Check className="h-4 w-4 text-green-600 mr-2" />
                   No editing required
                 </div>
                 <div className="flex items-center">
-                  <Check className="h-4 w-4 text-green-500 mr-2" />
+                  <Check className="h-4 w-4 text-green-600 mr-2" />
                   Fully automated
                 </div>
                 <div className="flex items-center">
-                  <Check className="h-4 w-4 text-green-500 mr-2" />
+                  <Check className="h-4 w-4 text-green-600 mr-2" />
                   18% conversion rate
                 </div>
               </div>

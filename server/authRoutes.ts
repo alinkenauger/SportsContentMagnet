@@ -368,6 +368,17 @@ export function registerAuthRoutes(app: Express) {
       // Update user with password
       await storage.updateUserPassword(user.id, hashedPassword);
 
+      // Automatically log the user in after account completion
+      req.session.userId = user.id;
+      req.session.user = {
+        id: user.id,
+        email: user.email!,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        profileImageUrl: user.profileImageUrl,
+        role: user.role,
+      };
+
       // Send welcome email now that account is complete
       try {
         await emailService.sendWelcomeEmail({
@@ -383,13 +394,14 @@ export function registerAuthRoutes(app: Express) {
       }
 
       res.status(200).json({
-        message: "Account setup completed successfully! You can now log in.",
+        message: "Account setup completed successfully! Welcome to ConvertMag.net!",
         user: {
           id: user.id,
           email: user.email,
           firstName: user.firstName,
           lastName: user.lastName,
         },
+        authenticated: true,
       });
 
     } catch (error) {

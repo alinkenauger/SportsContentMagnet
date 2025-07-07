@@ -107,6 +107,12 @@ ConvertMag.net is a comprehensive SAAS application that transforms ANY video, au
 
 ```
 Changelog:
+- July 07, 2025. Fixed complete-account flow to properly authenticate users after password setup:
+  * Updated complete-account endpoint to automatically log users in after password creation
+  * Added session creation and user authentication in backend after successful password setup
+  * Fixed frontend redirect with proper delay to allow authentication state to update
+  * Users now seamlessly go from account setup directly to dashboard without authentication issues
+  * Eliminated broken page redirect and improved user onboarding experience
 - January 07, 2025. DEPLOYMENT SOLUTION FINAL: Fixed deployment failures by completely removing problematic packages:
   * Removed pyproject.toml containing openai-whisper/PyTorch dependencies causing build failures
   * Eliminated 5.4GB UV cache directory with NVIDIA CUDA libraries and Python ML packages

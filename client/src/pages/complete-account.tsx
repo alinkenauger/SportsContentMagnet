@@ -45,9 +45,12 @@ export default function CompleteAccount() {
     onSuccess: () => {
       toast({
         title: "Account Setup Complete!",
-        description: "Welcome to ConvertMag.net! You can now start creating lead magnets.",
+        description: "Welcome to ConvertMag.net! You're now logged in.",
       });
-      window.location.href = "/dashboard";
+      // Small delay to allow authentication state to update, then redirect
+      setTimeout(() => {
+        window.location.href = "/dashboard";
+      }, 1000);
     },
     onError: (error: any) => {
       toast({
