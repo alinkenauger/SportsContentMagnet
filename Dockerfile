@@ -1,18 +1,14 @@
-# Multi-stage Dockerfile for production optimization
-# Stage 1: Build stage with all dependencies
+# Multi-stage Dockerfile for ConvertMag.net
+# Stage 1: Build stage
 FROM node:20-alpine AS builder
 
-# Install system dependencies for native modules
-RUN apk add --no-cache python3 make g++ cairo-dev pango-dev libjpeg-turbo-dev giflib-dev
-
-# Set working directory
 WORKDIR /app
 
 # Copy package files
-COPY package.json package-lock.json* ./
+COPY package.json ./
 
-# Install ALL dependencies (including dev) for building
-RUN npm ci --include=dev
+# Install ALL dependencies (needed for build)
+RUN npm ci
 
 # Copy source code
 COPY . .
@@ -20,62 +16,36 @@ COPY . .
 # Build the application
 RUN npm run build
 
-# Stage 2: Production stage with minimal dependencies
-FROM node:20-alpine AS production
+# Stage 2: Production stage
+FROM node:20-alpine
 
-# Install only essential system dependencies
-RUN apk add --no-cache \
-    python3 \
-    ffmpeg \
-    chromium \
-    nss \
-    freetype \
-    freetype-dev \
-    harfbuzz \
-    ca-certificates \
-    ttf-freefont \
-    && rm -rf /var/cache/apk/*
-
-# Set Puppeteer to use system Chromium
-ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
-    PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
-
-# Create non-root user
-RUN addgroup -g 1001 -S nodejs && \
-    adduser -S nodejs -u 1001
-
-# Set working directory
 WORKDIR /app
 
 # Copy package files
-COPY package.json package-lock.json* ./
+COPY package.json ./
 
 # Install only production dependencies
-RUN npm ci --only=production --no-cache && \
-    npm cache clean --force
+RUN npm ci --only=production && npm cache clean --force
 
 # Copy built application from builder stage
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/client/dist ./client/dist
 
-# Copy essential configuration files
-COPY --from=builder /app/drizzle.config.ts ./
-COPY --from=builder /app/tailwind.config.ts ./
-COPY --from=builder /app/postcss.config.js ./
-COPY --from=builder /app/vite.config.ts ./
+# Copy necessary files
+COPY server ./server
+COPY shared ./shared
+COPY public ./public
+COPY .env* ./
 
-# Change ownership to nodejs user
-RUN chown -R nodejs:nodejs /app
+# Clean up any remaining cache or temp files
+RUN rm -rf /tmp/* /var/cache/apk/* /root/.npm
 
-# Switch to non-root user
+# Create non-root user
+RUN addgroup -g 1001 -S nodejs && adduser -S nodejs -u 1001
 USER nodejs
 
 # Expose port
 EXPOSE 5000
-
-# Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD node -e "require('http').get('http://localhost:5000/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })"
 
 # Start the application
 CMD ["node", "dist/index.js"]
