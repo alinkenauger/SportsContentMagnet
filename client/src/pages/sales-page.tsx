@@ -131,6 +131,7 @@ export default function SalesPage() {
   const { toast } = useToast();
   const [isSignUpOpen, setIsSignUpOpen] = useState(false);
   const [showVideoDemo, setShowVideoDemo] = useState(false);
+  const [userAlreadyExists, setUserAlreadyExists] = useState(false);
 
   useEffect(() => {
     document.title = "ConvertMag.net - Transform Any Content into Lead Magnets";
@@ -165,15 +166,21 @@ export default function SalesPage() {
       window.location.href = '/complete-account';
     },
     onError: (error: any) => {
-      toast({
-        title: "Sign Up Failed",
-        description: error.message || "Something went wrong. Please try again.",
-        variant: "destructive",
-      });
+      // Check if user already exists
+      if (error.message && error.message.includes("already exists")) {
+        setUserAlreadyExists(true);
+      } else {
+        toast({
+          title: "Sign Up Failed",
+          description: error.message || "Something went wrong. Please try again.",
+          variant: "destructive",
+        });
+      }
     },
   });
 
   const handleSignUp = (data: SignUpData) => {
+    setUserAlreadyExists(false); // Reset state
     signUpMutation.mutate(data);
   };
 
@@ -212,102 +219,139 @@ export default function SalesPage() {
                   </DialogDescription>
                 </DialogHeader>
                 
-                <Form {...form}>
-                  <form onSubmit={form.handleSubmit(handleSignUp)} className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <FormField
-                        control={form.control}
-                        name="firstName"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>First Name</FormLabel>
-                            <FormControl>
-                              <Input placeholder="John" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={form.control}
-                        name="lastName"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Last Name</FormLabel>
-                            <FormControl>
-                              <Input placeholder="Doe" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
+{userAlreadyExists ? (
+                  <div className="text-center space-y-4">
+                    <div className="bg-green-50 border border-green-200 rounded-lg p-6">
+                      <h3 className="text-lg font-bold text-green-800 mb-2">🎉 Good News! You Already Have An Account!</h3>
+                      <p className="text-green-700 mb-4">
+                        We found an existing account with this email address. You can log in right away!
+                      </p>
+                      <div className="space-y-3">
+                        <Button 
+                          className="w-full bg-green-600 hover:bg-green-700 text-white"
+                          onClick={() => window.location.href = "/login"}
+                        >
+                          Click Here to Login
+                        </Button>
+                        <p className="text-sm text-gray-600">
+                          Don't know your password? No problem! 
+                          <br />
+                          <Button 
+                            variant="link" 
+                            className="text-blue-600 hover:text-blue-800 p-0 h-auto font-semibold"
+                            onClick={() => window.location.href = "/login?forgot=true"}
+                          >
+                            Click "Forgot Password" on the login page
+                          </Button>
+                        </p>
+                      </div>
                     </div>
-                    
-                    <FormField
-                      control={form.control}
-                      name="email"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Email Address</FormLabel>
-                          <FormControl>
-                            <Input type="email" placeholder="john@example.com" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <FormField
-                      control={form.control}
-                      name="phone"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Phone (Optional)</FormLabel>
-                          <FormControl>
-                            <Input type="tel" placeholder="+1 (555) 123-4567" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <FormField
-                      control={form.control}
-                      name="company"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Company/Brand (Optional)</FormLabel>
-                          <FormControl>
-                            <Input placeholder="Your Company" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <FormField
-                      control={form.control}
-                      name="niche"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Content Niche (Optional)</FormLabel>
-                          <FormControl>
-                            <Input placeholder="Fitness, Cooking, Coding, etc." {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
                     <Button 
-                      type="submit" 
-                      className="w-full bg-gradient-to-r from-blue-600 to-purple-600"
-                      disabled={signUpMutation.isPending}
+                      variant="outline"
+                      onClick={() => setUserAlreadyExists(false)}
+                      className="w-full"
                     >
-                      {signUpMutation.isPending ? "Creating Account..." : "Create Free Account"}
+                      Try Different Email
                     </Button>
-                  </form>
-                </Form>
+                  </div>
+                ) : (
+                  <Form {...form}>
+                    <form onSubmit={form.handleSubmit(handleSignUp)} className="space-y-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <FormField
+                          control={form.control}
+                          name="firstName"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>First Name</FormLabel>
+                              <FormControl>
+                                <Input placeholder="John" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name="lastName"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Last Name</FormLabel>
+                              <FormControl>
+                                <Input placeholder="Doe" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                      
+                      <FormField
+                        control={form.control}
+                        name="email"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Email Address</FormLabel>
+                            <FormControl>
+                              <Input type="email" placeholder="john@example.com" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <FormField
+                        control={form.control}
+                        name="phone"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Phone (Optional)</FormLabel>
+                            <FormControl>
+                              <Input type="tel" placeholder="+1 (555) 123-4567" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <FormField
+                        control={form.control}
+                        name="company"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Company/Brand (Optional)</FormLabel>
+                            <FormControl>
+                              <Input placeholder="Your Company" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <FormField
+                        control={form.control}
+                        name="niche"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Content Niche (Optional)</FormLabel>
+                            <FormControl>
+                              <Input placeholder="Fitness, Cooking, Coding, etc." {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <Button 
+                        type="submit" 
+                        className="w-full bg-gradient-to-r from-blue-600 to-purple-600"
+                        disabled={signUpMutation.isPending}
+                      >
+                        {signUpMutation.isPending ? "Creating Account..." : "Create Free Account"}
+                      </Button>
+                    </form>
+                  </Form>
+                )}
               </DialogContent>
             </Dialog>
           </div>
@@ -497,6 +541,21 @@ export default function SalesPage() {
                   </DialogContent>
                 </Dialog>
               </div>
+            </div>
+            
+            {/* CTA Button after Discovery */}
+            <div className="text-center mt-12">
+              <Dialog open={isSignUpOpen} onOpenChange={setIsSignUpOpen}>
+                <DialogTrigger asChild>
+                  <Button 
+                    size="lg" 
+                    className="bg-green-600 hover:bg-green-700 text-white px-8 py-4 text-xl font-bold"
+                  >
+                    Start Free Account Now
+                    <ArrowRight className="ml-2 h-5 w-5" />
+                  </Button>
+                </DialogTrigger>
+              </Dialog>
             </div>
           </div>
         </div>
@@ -1262,6 +1321,22 @@ export default function SalesPage() {
                 </p>
               </div>
             </div>
+            
+            {/* CTA Button after How It Works */}
+            <div className="text-center mt-12">
+              <Dialog open={isSignUpOpen} onOpenChange={setIsSignUpOpen}>
+                <DialogTrigger asChild>
+                  <Button 
+                    size="lg" 
+                    className="bg-red-600 hover:bg-red-700 text-white px-8 py-4 text-xl font-bold"
+                  >
+                    🚀 Try It Free - 5 Minutes Setup
+                    <ArrowRight className="ml-2 h-5 w-5" />
+                  </Button>
+                </DialogTrigger>
+              </Dialog>
+              <p className="text-gray-600 text-sm mt-2">No credit card required • Cancel anytime</p>
+            </div>
           </div>
         </div>
       </section>
@@ -1477,6 +1552,22 @@ export default function SalesPage() {
               </CardContent>
             </Card>
           ))}
+          
+          {/* CTA Button after Features */}
+          <div className="text-center mt-16">
+            <Dialog open={isSignUpOpen} onOpenChange={setIsSignUpOpen}>
+              <DialogTrigger asChild>
+                <Button 
+                  size="lg" 
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-12 py-6 text-xl font-bold shadow-lg"
+                >
+                  ⚡ Get These Features Now - FREE
+                  <ArrowRight className="ml-2 h-5 w-5" />
+                </Button>
+              </DialogTrigger>
+            </Dialog>
+            <p className="text-gray-600 text-sm mt-3">Join thousands of creators • No setup fees • Cancel anytime</p>
+          </div>
         </div>
       </section>
       {/* Testimonials Section */}
@@ -1583,8 +1674,8 @@ export default function SalesPage() {
             </Button>
           </div>
           
-          <div className="mt-8 text-sm opacity-75">
-            <Check className="inline h-4 w-4 mr-2" />
+          <div className="mt-8 text-sm text-gray-600">
+            <Check className="inline h-4 w-4 mr-2 text-green-600" />
             Setup takes less than 2 minutes • No credit card required
           </div>
         </div>
