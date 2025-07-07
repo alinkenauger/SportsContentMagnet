@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
+import Sidebar from "@/components/sidebar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -80,15 +81,21 @@ export default function Leads() {
   const conversionRate = totalLeads > 0 ? ((totalLeads / (totalLeads * 10)) * 100).toFixed(1) : "0"; // Mock calculation
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="p-6">
+    <div className="flex h-screen bg-background">
+      <Sidebar />
+      <div className="flex-1 flex flex-col">
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-foreground mb-2">Lead Management</h1>
-          <p className="text-muted-foreground">
-            Manage and track all leads captured from your guides and landing pages.
-          </p>
-        </div>
+        <header className="bg-card border-b border-border px-6 py-4">
+          <div>
+            <h2 className="text-2xl font-bold text-foreground">Lead Management</h2>
+            <p className="text-muted-foreground mt-1">
+              Manage and track all leads captured from your guides and landing pages.
+            </p>
+          </div>
+        </header>
+
+        {/* Main Content */}
+        <div className="flex-1 overflow-auto p-6">
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
@@ -353,6 +360,7 @@ export default function Leads() {
             )}
           </CardContent>
         </Card>
+        </div>
       </div>
     </div>
   );

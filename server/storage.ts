@@ -1528,7 +1528,7 @@ export class DatabaseStorage implements IStorage {
     return await db
       .select()
       .from(promptTemplates)
-      .where(eq(promptTemplates.isGlobal, true))
+      .where(eq(promptTemplates.type, 'global'))
       .orderBy(promptTemplates.name);
   }
 
@@ -1592,7 +1592,7 @@ export class DatabaseStorage implements IStorage {
 
     if (query) {
       conditions.push(
-        sql`(${mediaAssets.filename} ILIKE ${`%${query}%`} OR ${mediaAssets.originalName} ILIKE ${`%${query}%`})`
+        sql`(${mediaAssets.name} ILIKE ${`%${query}%`} OR ${mediaAssets.description} ILIKE ${`%${query}%`})`
       );
     }
 
