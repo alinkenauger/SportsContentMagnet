@@ -82,7 +82,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { EmailService } = await import('./services/emailService');
       const emailService = new EmailService();
       
-      console.log('Testing email delivery to:', email);
+
       const result = await emailService.sendGuideDeliveryEmail(
         { email, firstName: 'Test User' },
         'Test Guide',
@@ -96,7 +96,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         email: email
       });
     } catch (error) {
-      console.error('Test email error:', error);
+      console.error('Email delivery failed:', error);
       res.status(500).json({ error: 'Failed to send test email', details: error.message });
     }
   });
@@ -2283,29 +2283,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json({ received: true });
   });
 
-  // Get customer portal session
-  app.post('/api/stripe/create-portal-session', isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.claims.sub;
-      const user = await storage.getUser(userId);
-      
-      if (!user?.stripeCustomerId) {
-        return res.status(400).json({ message: "No Stripe customer found" });
-      }
-
-      const portalSession = await stripe.billingPortal.sessions.create({
-        customer: user.stripeCustomerId,
-        return_url: `${req.headers.origin}/settings?tab=billing`,
-      });
-
-      res.json({ url: portalSession.url });
-    } catch (error) {
-      console.error('Error creating portal session:', error);
-      res.status(500).json({ message: "Failed to create portal session" });
-    }
-  });
-
-  // Alternative customer portal endpoint (for backward compatibility)
+  // Customer portal session (consolidated endpoint)
   app.post('/api/stripe/customer-portal', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
@@ -2317,7 +2295,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const portalSession = await stripe.billingPortal.sessions.create({
         customer: user.stripeCustomerId,
-        return_url: `${req.headers.origin}/settings`,
+        return_url: `${req.headers.origin}/settings?tab=billing`,
       });
 
       res.json({ url: portalSession.url });

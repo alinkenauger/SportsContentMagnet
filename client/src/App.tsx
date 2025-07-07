@@ -31,7 +31,7 @@ import SalesPage from "@/pages/sales-page";
 import Subscribe from "@/pages/subscribe";
 import ResetPassword from "@/pages/reset-password";
 import EmailSettings from "@/pages/email-settings";
-import TestBilling from "@/pages/test-billing";
+
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -62,7 +62,7 @@ function Router() {
           <Route path="/subscribe" component={Subscribe} />
           <Route path="/admin" component={AdminDashboard} />
           <Route path="/test-transcription" component={TranscriptionTest} />
-          <Route path="/test-billing" component={TestBilling} />
+
         </>
       )}
       
