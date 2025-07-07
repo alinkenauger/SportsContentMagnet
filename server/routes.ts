@@ -2305,6 +2305,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Alternative customer portal endpoint (for backward compatibility)
+  app.post('/api/stripe/customer-portal', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (!user?.stripeCustomerId) {
+        return res.status(400).json({ message: "No Stripe customer record found. Please create a subscription first." });
+      }
+
+      const portalSession = await stripe.billingPortal.sessions.create({
+        customer: user.stripeCustomerId,
+        return_url: `${req.headers.origin}/settings`,
+      });
+
+      res.json({ url: portalSession.url });
+    } catch (error) {
+      console.error('Error creating portal session:', error);
+      res.status(500).json({ message: "Failed to create portal session" });
+    }
+  });
+
   // Get current subscription status
   app.get('/api/stripe/subscription-status', isAuthenticated, async (req: any, res) => {
     try {
