@@ -756,40 +756,7 @@ export default function CreateGuide() {
               </CardContent>
             </Card>
 
-            {/* Alternative Methods */}
-            <Card className="border-blue-200 bg-blue-50">
-              <CardHeader>
-                <CardTitle className="flex items-center space-x-2 text-blue-800">
-                  <Info className="w-5 h-5" />
-                  <span>Video Won't Work? Try These Alternatives</span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3 text-blue-700">
-                  <div className="flex items-start space-x-3">
-                    <Mic className="w-5 h-5 mt-0.5" />
-                    <div>
-                      <p className="font-medium">Audio Upload (Recommended)</p>
-                      <p className="text-sm">Download your video's audio and upload it for perfect AI transcription</p>
-                    </div>
-                  </div>
-                  <div className="flex items-start space-x-3">
-                    <FileText className="w-5 h-5 mt-0.5" />
-                    <div>
-                      <p className="font-medium">Manual Transcript</p>
-                      <p className="text-sm">Copy/paste any transcript or notes you have from your content</p>
-                    </div>
-                  </div>
-                  <div className="flex items-start space-x-3">
-                    <Upload className="w-5 h-5 mt-0.5" />
-                    <div>
-                      <p className="font-medium">Multiple Formats</p>
-                      <p className="text-sm">Upload PDFs, documents, or any other content for analysis</p>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+
 
             {/* How It Works */}
             <Card>
