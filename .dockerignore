@@ -1,11 +1,18 @@
 # CRITICAL: Exclude ALL cache and Python files (5.4GB+)
+.cache
 .cache/**
+.pythonlibs
 .pythonlibs/**
+__pycache__
 __pycache__/**
 *.pyc
 *.pyo
 *.pyd
 .Python
+.uv
+.uv/**
+*/uv/**
+**/uv/**
 
 # Development and version control
 .git/**

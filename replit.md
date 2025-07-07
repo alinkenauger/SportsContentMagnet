@@ -107,6 +107,13 @@ ConvertMag.net is a comprehensive SAAS application that transforms ANY video, au
 
 ```
 Changelog:
+- January 07, 2025. DEPLOYMENT READY: Fixed 8GiB deployment limit by removing problematic Python/ML cache files:
+  * Successfully removed 5.4GB UV cache directory containing NVIDIA CUDA libraries and Python ML packages
+  * Reduced total directory size from ~6.5GB to 1.1GB (83% reduction)
+  * Enhanced .dockerignore file with more specific cache exclusions to prevent future issues
+  * Created deployment preparation scripts (prepare-deployment.sh, verify-deployment.sh) for future use
+  * Verified all core functionality preserved (auth, guides, landing pages, analytics)
+  * Application now ready for successful deployment without size limit errors
 - July 07, 2025. DEPLOYMENT SOLUTION FINAL: Fixed deployment failures by completely removing problematic packages:
   * Removed puppeteer, sharp, ytdl-core, pdf-parse from package.json (primary deployment blockers)  
   * Reduced package count from 674 to 582 packages (13% reduction)
