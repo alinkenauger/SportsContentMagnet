@@ -22,7 +22,7 @@ interface HighLevelContactData {
 
 export class EmailService {
   private mailService?: MailService;
-  private defaultFromEmail = 'adamlinkenauger@gmail.com'; // Must be verified in SendGrid
+  private defaultFromEmail = 'noreply@em8411.getmoreviews.com'; // Authorized SendGrid domain
   
   // SendGrid Dynamic Template IDs - these should be set in your environment variables
   private templates = {
