@@ -104,6 +104,85 @@ export default function Leads() {
       description: `${label} copied to clipboard`,
     });
   };
+
+  // Export leads to CSV
+  const exportLeadsToCSV = () => {
+    if (!filteredLeads || filteredLeads.length === 0) {
+      toast({
+        title: "No data to export",
+        description: "There are no leads to export with the current filters.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Define CSV headers
+    const headers = [
+      'Name',
+      'Email', 
+      'Phone',
+      'Source Guide',
+      'Tags',
+      'Date Captured',
+      'Custom Fields'
+    ];
+
+    // Convert leads data to CSV rows
+    const csvRows = filteredLeads.map((lead: any) => {
+      const guide = guides?.find((g: any) => g.id === lead.guideId);
+      const fullName = lead.firstName && lead.lastName 
+        ? `${lead.firstName} ${lead.lastName}`
+        : lead.firstName || 'Anonymous';
+      
+      const tags = lead.tags && lead.tags.length > 0 
+        ? lead.tags.join('; ') 
+        : '';
+      
+      const customFields = lead.customFieldData && Object.keys(lead.customFieldData).length > 0
+        ? Object.entries(lead.customFieldData)
+            .map(([key, value]) => `${key}: ${value}`)
+            .join('; ')
+        : '';
+
+      return [
+        `"${fullName}"`,
+        `"${lead.email || ''}"`,
+        `"${lead.phone || ''}"`,
+        `"${guide?.title || 'Unknown Guide'}"`,
+        `"${tags}"`,
+        `"${lead.createdAt ? format(new Date(lead.createdAt), "MMM d, yyyy") : ''}"`,
+        `"${customFields}"`
+      ];
+    });
+
+    // Combine headers and data
+    const csvContent = [
+      headers.join(','),
+      ...csvRows.map(row => row.join(','))
+    ].join('\n');
+
+    // Create and download the file
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    
+    // Generate filename with current date and filter info
+    const dateStr = format(new Date(), 'yyyy-MM-dd');
+    const filterInfo = sourceFilter !== 'all' ? `_${sourceFilter}` : '';
+    const filename = `leads_export_${dateStr}${filterInfo}.csv`;
+    
+    link.setAttribute('download', filename);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    toast({
+      title: "Export Complete!",
+      description: `${filteredLeads.length} leads exported to ${filename}`,
+    });
+  };
   const newLeads = leads?.filter((lead: any) => {
     const leadDate = new Date(lead.createdAt);
     const yesterday = new Date();
@@ -224,7 +303,12 @@ export default function Leads() {
                 </SelectContent>
               </Select>
 
-              <Button variant="outline" className="flex items-center space-x-2">
+              <Button 
+                variant="outline" 
+                className="flex items-center space-x-2"
+                onClick={exportLeadsToCSV}
+                disabled={!filteredLeads || filteredLeads.length === 0}
+              >
                 <Download className="w-4 h-4" />
                 <span>Export</span>
               </Button>

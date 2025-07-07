@@ -107,6 +107,12 @@ ConvertMag.net is a comprehensive SAAS application that transforms ANY video, au
 
 ```
 Changelog:
+- July 07, 2025. Enhanced leads management with CSV export functionality:
+  * Added comprehensive lead export feature to export leads as CSV files
+  * Export includes all lead data: name, email, phone, source guide, tags, date captured, custom fields
+  * Export respects current filters and generates timestamped filenames
+  * Button properly disabled when no leads are available to export
+  * Provides user feedback with success notifications and error handling
 - July 07, 2025. Fixed signup flow to handle email delivery failures gracefully:
   * Updated signup process to provide temp password directly when email delivery fails
   * Prevents users from being locked out of accounts when SendGrid is not working
