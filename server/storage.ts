@@ -1406,6 +1406,202 @@ export class DatabaseStorage implements IStorage {
       ));
     return brandUser?.role || null;
   }
+
+  // Knowledge Base Collections operations
+  async createKnowledgebaseCollection(collection: InsertKnowledgebaseCollection): Promise<KnowledgebaseCollection> {
+    const [result] = await db
+      .insert(knowledgebaseCollections)
+      .values(collection)
+      .returning();
+    return result;
+  }
+
+  async getKnowledgebaseCollections(userId: string, brandId?: number | null): Promise<KnowledgebaseCollection[]> {
+    return await db
+      .select()
+      .from(knowledgebaseCollections)
+      .where(and(
+        eq(knowledgebaseCollections.userId, userId),
+        brandId ? eq(knowledgebaseCollections.brandId, brandId) : sql`${knowledgebaseCollections.brandId} IS NULL`
+      ))
+      .orderBy(desc(knowledgebaseCollections.createdAt));
+  }
+
+  async updateKnowledgebaseCollection(id: number, collection: Partial<InsertKnowledgebaseCollection>): Promise<KnowledgebaseCollection> {
+    const [result] = await db
+      .update(knowledgebaseCollections)
+      .set({
+        ...collection,
+        updatedAt: new Date(),
+      })
+      .where(eq(knowledgebaseCollections.id, id))
+      .returning();
+    return result;
+  }
+
+  async deleteKnowledgebaseCollection(id: number): Promise<void> {
+    await db
+      .delete(knowledgebaseCollections)
+      .where(eq(knowledgebaseCollections.id, id));
+  }
+
+  // Knowledge Base Usage Settings operations
+  async getKnowledgebaseUsageSettings(userId: string, brandId?: number | null): Promise<KnowledgebaseUsageSettings | undefined> {
+    const [settings] = await db
+      .select()
+      .from(knowledgebaseUsageSettings)
+      .where(and(
+        eq(knowledgebaseUsageSettings.userId, userId),
+        brandId ? eq(knowledgebaseUsageSettings.brandId, brandId) : sql`${knowledgebaseUsageSettings.brandId} IS NULL`
+      ));
+    return settings;
+  }
+
+  async upsertKnowledgebaseUsageSettings(settings: InsertKnowledgebaseUsageSettings): Promise<KnowledgebaseUsageSettings> {
+    const [result] = await db
+      .insert(knowledgebaseUsageSettings)
+      .values(settings)
+      .onConflictDoUpdate({
+        target: [knowledgebaseUsageSettings.userId, knowledgebaseUsageSettings.brandId],
+        set: {
+          ...settings,
+          updatedAt: new Date(),
+        },
+      })
+      .returning();
+    return result;
+  }
+
+  // Enhanced Knowledgebase operations with collections support
+  async getActiveKnowledgebaseEntries(userId: string, brandId?: number | null): Promise<KnowledgebaseEntry[]> {
+    // This method respects usage settings - for now just return active entries
+    return this.getKnowledgebaseEntries(userId, brandId);
+  }
+
+  // Prompt template operations with global inheritance
+  async createPromptTemplate(template: InsertPromptTemplate): Promise<PromptTemplate> {
+    const [result] = await db
+      .insert(promptTemplates)
+      .values(template)
+      .returning();
+    return result;
+  }
+
+  async getPromptTemplates(userId: string, brandId?: number | null): Promise<PromptTemplate[]> {
+    return await db
+      .select()
+      .from(promptTemplates)
+      .where(and(
+        eq(promptTemplates.userId, userId),
+        brandId ? eq(promptTemplates.brandId, brandId) : sql`${promptTemplates.brandId} IS NULL`
+      ))
+      .orderBy(desc(promptTemplates.createdAt));
+  }
+
+  async getPromptTemplate(id: number): Promise<PromptTemplate | undefined> {
+    const [template] = await db
+      .select()
+      .from(promptTemplates)
+      .where(eq(promptTemplates.id, id));
+    return template;
+  }
+
+  async updatePromptTemplate(id: number, template: Partial<InsertPromptTemplate>): Promise<PromptTemplate> {
+    const [result] = await db
+      .update(promptTemplates)
+      .set({
+        ...template,
+        updatedAt: new Date(),
+      })
+      .where(eq(promptTemplates.id, id))
+      .returning();
+    return result;
+  }
+
+  async deletePromptTemplate(id: number): Promise<void> {
+    await db
+      .delete(promptTemplates)
+      .where(eq(promptTemplates.id, id));
+  }
+
+  async getPredefinedTemplates(): Promise<PromptTemplate[]> {
+    return await db
+      .select()
+      .from(promptTemplates)
+      .where(eq(promptTemplates.isGlobal, true))
+      .orderBy(promptTemplates.name);
+  }
+
+  // Media asset operations with global inheritance
+  async createMediaAsset(asset: InsertMediaAsset): Promise<MediaAsset> {
+    const [result] = await db
+      .insert(mediaAssets)
+      .values(asset)
+      .returning();
+    return result;
+  }
+
+  async getMediaAssets(userId: string, brandId?: number | null, folder?: string): Promise<MediaAsset[]> {
+    const conditions = [
+      eq(mediaAssets.userId, userId),
+      brandId ? eq(mediaAssets.brandId, brandId) : sql`${mediaAssets.brandId} IS NULL`
+    ];
+
+    if (folder) {
+      conditions.push(eq(mediaAssets.folder, folder));
+    }
+
+    return await db
+      .select()
+      .from(mediaAssets)
+      .where(and(...conditions))
+      .orderBy(desc(mediaAssets.createdAt));
+  }
+
+  async getMediaAsset(id: number): Promise<MediaAsset | undefined> {
+    const [asset] = await db
+      .select()
+      .from(mediaAssets)
+      .where(eq(mediaAssets.id, id));
+    return asset;
+  }
+
+  async updateMediaAsset(id: number, asset: Partial<InsertMediaAsset>): Promise<MediaAsset> {
+    const [result] = await db
+      .update(mediaAssets)
+      .set({
+        ...asset,
+        updatedAt: new Date(),
+      })
+      .where(eq(mediaAssets.id, id))
+      .returning();
+    return result;
+  }
+
+  async deleteMediaAsset(id: number): Promise<void> {
+    await db
+      .delete(mediaAssets)
+      .where(eq(mediaAssets.id, id));
+  }
+
+  async searchMediaAssets(userId: string, query?: string, brandId?: number | null): Promise<MediaAsset[]> {
+    const conditions = [
+      eq(mediaAssets.userId, userId),
+      brandId ? eq(mediaAssets.brandId, brandId) : sql`${mediaAssets.brandId} IS NULL`
+    ];
+
+    if (query) {
+      conditions.push(
+        sql`(${mediaAssets.filename} ILIKE ${`%${query}%`} OR ${mediaAssets.originalName} ILIKE ${`%${query}%`})`
+      );
+    }
+
+    return await db
+      .select()
+      .from(mediaAssets)
+      .where(and(...conditions))
+      .orderBy(desc(mediaAssets.createdAt));
+  }
 }
 
 export const storage = new DatabaseStorage();

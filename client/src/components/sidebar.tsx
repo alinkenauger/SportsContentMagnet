@@ -95,7 +95,7 @@ export default function Sidebar() {
             return (
               <li key={item.name}>
                 <Link href={item.href}>
-                  <a
+                  <div
                     className={`sidebar-nav-item ${
                       isActive ? "sidebar-nav-item-active" : "sidebar-nav-item-inactive"
                     } ${isCollapsed ? 'justify-center' : ''}`}
@@ -103,7 +103,7 @@ export default function Sidebar() {
                   >
                     <item.icon className="w-5 h-5 flex-shrink-0" />
                     {!isCollapsed && <span>{item.name}</span>}
-                  </a>
+                  </div>
                 </Link>
               </li>
             );
@@ -135,14 +135,14 @@ export default function Sidebar() {
                   return (
                     <li key={item.name}>
                       <Link href={item.href}>
-                        <a
+                        <div
                           className={`sidebar-nav-item ${
                             isActive ? "sidebar-nav-item-active" : "sidebar-nav-item-inactive"
                           } text-sm py-2`}
                         >
                           <item.icon className="w-4 h-4 flex-shrink-0" />
                           <span>{item.name}</span>
-                        </a>
+                        </div>
                       </Link>
                     </li>
                   );
