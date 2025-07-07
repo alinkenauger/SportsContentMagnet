@@ -1,11 +1,16 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, CreditCard, Calendar, FileText, ExternalLink, Settings } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Separator } from "@/components/ui/separator";
+import { Loader2, CreditCard, Calendar, FileText, ExternalLink, Settings, ArrowUpDown, Plus, Minus, Building2, Pause, Play, AlertTriangle } from "lucide-react";
 import { Link } from "wouter";
 
 interface SubscriptionStatus {
@@ -14,17 +19,142 @@ interface SubscriptionStatus {
   currentPeriodEnd?: number;
   cancelAtPeriodEnd?: boolean;
   billingCycle?: string;
+  additionalBrands?: number;
+  accountStatus?: string;
+  pausedAt?: string;
+}
+
+interface SubscriptionPlan {
+  id: number;
+  name: string;
+  displayName: string;
+  price: string;
+  currency: string;
+  billingCycle: string;
+  maxLeads: number | null;
+  maxVisits: number | null;
+  maxBrands: number;
+  customBranding: boolean;
+  whiteLabeling: boolean;
+  features: string[];
 }
 
 export default function BillingManagement() {
   const [isLoading, setIsLoading] = useState(false);
+  const [isChangePlanOpen, setIsChangePlanOpen] = useState(false);
+  const [isBrandManagementOpen, setIsBrandManagementOpen] = useState(false);
+  const [isPauseDialogOpen, setIsPauseDialogOpen] = useState(false);
+  const [selectedPlan, setSelectedPlan] = useState('');
+  const [selectedBillingCycle, setSelectedBillingCycle] = useState('monthly');
+  const [additionalBrands, setAdditionalBrands] = useState(0);
   const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   const { data: subscriptionStatus, isLoading: statusLoading } = useQuery({
     queryKey: ['/api/stripe/subscription-status'],
     queryFn: async () => {
       const response = await apiRequest('GET', '/api/stripe/subscription-status');
       return response.json() as Promise<SubscriptionStatus>;
+    }
+  });
+
+  const { data: plans } = useQuery({
+    queryKey: ['/api/subscription/plans'],
+    queryFn: async () => {
+      const response = await apiRequest('GET', '/api/subscription/plans');
+      return response.json() as Promise<SubscriptionPlan[]>;
+    }
+  });
+
+  const changePlanMutation = useMutation({
+    mutationFn: async ({ planName, billingCycle }: { planName: string; billingCycle: string }) => {
+      const response = await apiRequest('POST', '/api/stripe/change-plan', {
+        newPlanName: planName,
+        newBillingCycle: billingCycle
+      });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/stripe/subscription-status'] });
+      toast({
+        title: "Plan Updated",
+        description: "Your subscription plan has been updated successfully.",
+      });
+      setIsChangePlanOpen(false);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update plan. Please try again.",
+        variant: "destructive",
+      });
+    }
+  });
+
+  const manageBrandsMutation = useMutation({
+    mutationFn: async (additionalBrands: number) => {
+      const response = await apiRequest('POST', '/api/stripe/manage-brands', {
+        additionalBrands
+      });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/stripe/subscription-status'] });
+      toast({
+        title: "Brands Updated",
+        description: "Your brand allocation has been updated successfully.",
+      });
+      setIsBrandManagementOpen(false);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update brands. Please try again.",
+        variant: "destructive",
+      });
+    }
+  });
+
+  const pauseAccountMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest('POST', '/api/stripe/pause-account');
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/stripe/subscription-status'] });
+      toast({
+        title: "Account Paused",
+        description: "Your account will be paused at the end of the current billing period.",
+      });
+      setIsPauseDialogOpen(false);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to pause account. Please try again.",
+        variant: "destructive",
+      });
+    }
+  });
+
+  const resumeAccountMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest('POST', '/api/stripe/resume-account');
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/stripe/subscription-status'] });
+      toast({
+        title: "Account Resumed",
+        description: "Your subscription has been reactivated successfully.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to resume account. Please try again.",
+        variant: "destructive",
+      });
     }
   });
 
@@ -83,6 +213,44 @@ export default function BillingManagement() {
   };
 
   const isActivePaidPlan = subscriptionStatus?.status === 'active' && subscriptionStatus?.plan !== 'free';
+  
+  const handlePlanChange = () => {
+    if (!selectedPlan) return;
+    changePlanMutation.mutate({
+      planName: selectedPlan,
+      billingCycle: selectedBillingCycle
+    });
+  };
+
+  const handleBrandManagement = () => {
+    manageBrandsMutation.mutate(additionalBrands);
+  };
+
+  const calculatePlanPrice = (basePrice: string, cycle: string) => {
+    const price = parseFloat(basePrice);
+    return cycle === 'yearly' ? (price * 10).toFixed(2) : basePrice;
+  };
+
+  const calculateBrandAddonPrice = (brands: number, cycle: string) => {
+    const monthlyPrice = brands * 33;
+    return cycle === 'yearly' ? (monthlyPrice * 10).toFixed(2) : monthlyPrice.toFixed(2);
+  };
+
+  const getTotalBrands = () => {
+    const planBrands = subscriptionStatus?.plan === 'business' ? 3 : 
+                     subscriptionStatus?.plan === 'personal' ? 0 : 0;
+    return planBrands + (subscriptionStatus?.additionalBrands || 0);
+  };
+
+  const handlePauseAccount = () => {
+    pauseAccountMutation.mutate();
+  };
+
+  const handleResumeAccount = () => {
+    resumeAccountMutation.mutate();
+  };
+
+  const isPaused = subscriptionStatus?.accountStatus === 'paused' || subscriptionStatus?.cancelAtPeriodEnd;
 
   return (
     <Card>
@@ -182,56 +350,344 @@ export default function BillingManagement() {
           </div>
         </div>
 
-        {/* Billing Management */}
+        {/* Subscription Management */}
         {isActivePaidPlan && (
           <div className="space-y-4">
-            <h3 className="font-semibold">Billing Management</h3>
-            <div className="grid gap-4 md:grid-cols-2">
-              <Card>
+            <h3 className="font-semibold">Subscription Management</h3>
+            <div className="grid gap-4 md:grid-cols-3">
+              {/* Plan Change */}
+              <Dialog open={isChangePlanOpen} onOpenChange={setIsChangePlanOpen}>
+                <DialogTrigger asChild>
+                  <Card className="cursor-pointer hover:shadow-md transition-shadow">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-base flex items-center gap-2">
+                        <ArrowUpDown className="w-4 h-4" />
+                        Change Plan
+                      </CardTitle>
+                      <CardDescription>
+                        Upgrade, downgrade, or switch billing cycle
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <Button variant="outline" className="w-full">
+                        <ArrowUpDown className="w-4 h-4 mr-2" />
+                        Modify Subscription
+                      </Button>
+                    </CardContent>
+                  </Card>
+                </DialogTrigger>
+                <DialogContent className="max-w-md">
+                  <DialogHeader>
+                    <DialogTitle>Change Subscription Plan</DialogTitle>
+                    <DialogDescription>
+                      Select a new plan and billing cycle. Changes will be prorated automatically.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="plan">Plan</Label>
+                      <Select value={selectedPlan} onValueChange={setSelectedPlan}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select a plan" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {plans?.filter(p => p.name !== 'free').map(plan => (
+                            <SelectItem key={plan.id} value={plan.name}>
+                              {plan.displayName} - ${plan.price}/month
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="cycle">Billing Cycle</Label>
+                      <Select value={selectedBillingCycle} onValueChange={setSelectedBillingCycle}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="monthly">Monthly</SelectItem>
+                          <SelectItem value="yearly">Yearly (Save 17%)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {selectedPlan && (
+                      <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                        <div className="text-sm">
+                          <div className="font-medium">New Price:</div>
+                          <div className="text-lg font-bold">
+                            ${calculatePlanPrice(
+                              plans?.find(p => p.name === selectedPlan)?.price || '0',
+                              selectedBillingCycle
+                            )}
+                            <span className="text-sm font-normal">
+                              /{selectedBillingCycle === 'yearly' ? 'year' : 'month'}
+                            </span>
+                          </div>
+                          {selectedBillingCycle === 'yearly' && (
+                            <div className="text-xs text-green-600">
+                              Save ${((parseFloat(plans?.find(p => p.name === selectedPlan)?.price || '0') * 12) - 
+                                     (parseFloat(plans?.find(p => p.name === selectedPlan)?.price || '0') * 10)).toFixed(2)} per year
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="flex gap-2 pt-4">
+                      <Button variant="outline" onClick={() => setIsChangePlanOpen(false)} className="flex-1">
+                        Cancel
+                      </Button>
+                      <Button 
+                        onClick={handlePlanChange}
+                        disabled={!selectedPlan || changePlanMutation.isPending}
+                        className="flex-1"
+                      >
+                        {changePlanMutation.isPending ? (
+                          <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                        ) : null}
+                        Update Plan
+                      </Button>
+                    </div>
+                  </div>
+                </DialogContent>
+              </Dialog>
+
+              {/* Brand Management (Business Only) */}
+              {subscriptionStatus?.plan === 'business' && (
+                <Dialog open={isBrandManagementOpen} onOpenChange={setIsBrandManagementOpen}>
+                  <DialogTrigger asChild>
+                    <Card className="cursor-pointer hover:shadow-md transition-shadow">
+                      <CardHeader className="pb-3">
+                        <CardTitle className="text-base flex items-center gap-2">
+                          <Building2 className="w-4 h-4" />
+                          Manage Brands
+                        </CardTitle>
+                        <CardDescription>
+                          Add or remove additional brand workspaces
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="text-sm text-gray-600 dark:text-gray-300 mb-2">
+                          Current: {getTotalBrands()} brands
+                        </div>
+                        <Button variant="outline" className="w-full">
+                          <Building2 className="w-4 h-4 mr-2" />
+                          Modify Brands
+                        </Button>
+                      </CardContent>
+                    </Card>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-md">
+                    <DialogHeader>
+                      <DialogTitle>Manage Brand Workspaces</DialogTitle>
+                      <DialogDescription>
+                        Your Business plan includes 3 brands. Add additional brands for $33/month each.
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <Label>Additional Brands</Label>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setAdditionalBrands(Math.max(0, additionalBrands - 1))}
+                            disabled={additionalBrands <= 0}
+                          >
+                            <Minus className="w-4 h-4" />
+                          </Button>
+                          <Input
+                            type="number"
+                            min="0"
+                            max="10"
+                            value={additionalBrands}
+                            onChange={(e) => setAdditionalBrands(Math.max(0, parseInt(e.target.value) || 0))}
+                            className="text-center w-20"
+                          />
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setAdditionalBrands(Math.min(10, additionalBrands + 1))}
+                            disabled={additionalBrands >= 10}
+                          >
+                            <Plus className="w-4 h-4" />
+                          </Button>
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          Total brands: {3 + additionalBrands} (3 included + {additionalBrands} additional)
+                        </div>
+                      </div>
+
+                      {additionalBrands > 0 && (
+                        <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                          <div className="text-sm">
+                            <div className="font-medium">Additional Cost:</div>
+                            <div className="text-lg font-bold">
+                              +${calculateBrandAddonPrice(additionalBrands, subscriptionStatus?.billingCycle || 'monthly')}
+                              <span className="text-sm font-normal">
+                                /{subscriptionStatus?.billingCycle === 'yearly' ? 'year' : 'month'}
+                              </span>
+                            </div>
+                            <div className="text-xs text-gray-500">
+                              ${additionalBrands * 33}/month per additional brand
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      <div className="flex gap-2 pt-4">
+                        <Button variant="outline" onClick={() => setIsBrandManagementOpen(false)} className="flex-1">
+                          Cancel
+                        </Button>
+                        <Button 
+                          onClick={handleBrandManagement}
+                          disabled={manageBrandsMutation.isPending || additionalBrands === (subscriptionStatus?.additionalBrands || 0)}
+                          className="flex-1"
+                        >
+                          {manageBrandsMutation.isPending ? (
+                            <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                          ) : null}
+                          Update Brands
+                        </Button>
+                      </div>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+              )}
+
+              {/* Payment & Billing */}
+              <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={handleManageBilling}>
                 <CardHeader className="pb-3">
                   <CardTitle className="text-base flex items-center gap-2">
                     <CreditCard className="w-4 h-4" />
-                    Payment Methods
+                    Payment & Billing
                   </CardTitle>
                   <CardDescription>
-                    Update your payment information and billing details
+                    Manage payment methods and view invoices
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <Button 
                     variant="outline" 
                     className="w-full"
-                    onClick={handleManageBilling}
                     disabled={isLoading}
                   >
-                    <CreditCard className="w-4 h-4 mr-2" />
-                    Manage Payment Methods
+                    {isLoading ? (
+                      <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                    ) : (
+                      <Settings className="w-4 h-4 mr-2" />
+                    )}
+                    Manage Billing
                   </Button>
                 </CardContent>
               </Card>
+            </div>
 
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-base flex items-center gap-2">
-                    <FileText className="w-4 h-4" />
-                    Billing History
-                  </CardTitle>
-                  <CardDescription>
-                    View and download your invoices and receipts
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <Button 
-                    variant="outline" 
-                    className="w-full"
-                    onClick={handleManageBilling}
-                    disabled={isLoading}
-                  >
-                    <FileText className="w-4 h-4 mr-2" />
-                    View Invoices
-                  </Button>
-                </CardContent>
-              </Card>
+            {/* Account Control */}
+            <Separator />
+            <div className="space-y-4">
+              <h3 className="font-semibold text-red-600 dark:text-red-400">Account Control</h3>
+              
+              {isPaused ? (
+                /* Resume Account Card */
+                <Card className="border-green-200 bg-green-50 dark:bg-green-950 dark:border-green-800">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-base flex items-center gap-2 text-green-700 dark:text-green-300">
+                      <Play className="w-4 h-4" />
+                      Account Paused
+                    </CardTitle>
+                    <CardDescription className="text-green-600 dark:text-green-400">
+                      {subscriptionStatus?.cancelAtPeriodEnd 
+                        ? "Your subscription will end at the current billing period. You can resume anytime."
+                        : "Your account is currently paused. All data is preserved and you can resume anytime."
+                      }
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <Button 
+                      onClick={handleResumeAccount}
+                      disabled={resumeAccountMutation.isPending}
+                      className="bg-green-600 hover:bg-green-700 text-white"
+                    >
+                      {resumeAccountMutation.isPending ? (
+                        <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                      ) : (
+                        <Play className="w-4 h-4 mr-2" />
+                      )}
+                      Resume Subscription
+                    </Button>
+                  </CardContent>
+                </Card>
+              ) : (
+                /* Pause Account Dialog */
+                <Dialog open={isPauseDialogOpen} onOpenChange={setIsPauseDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Card className="border-orange-200 hover:border-orange-300 cursor-pointer transition-colors">
+                      <CardHeader className="pb-3">
+                        <CardTitle className="text-base flex items-center gap-2 text-orange-700 dark:text-orange-300">
+                          <Pause className="w-4 h-4" />
+                          Pause Account
+                        </CardTitle>
+                        <CardDescription className="text-orange-600 dark:text-orange-400">
+                          Temporarily pause your subscription while preserving all your data
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <Button variant="outline" className="border-orange-300 text-orange-700 hover:bg-orange-50">
+                          <Pause className="w-4 h-4 mr-2" />
+                          Pause My Account
+                        </Button>
+                      </CardContent>
+                    </Card>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-md">
+                    <DialogHeader>
+                      <DialogTitle className="flex items-center gap-2 text-orange-700">
+                        <AlertTriangle className="w-5 h-5" />
+                        Pause Account
+                      </DialogTitle>
+                      <DialogDescription>
+                        This will pause your subscription and limit your account to free tier access. 
+                        All your guides, leads, and settings will be preserved.
+                      </DialogDescription>
+                    </DialogHeader>
+                    
+                    <div className="space-y-4">
+                      <div className="p-4 bg-orange-50 dark:bg-orange-950 rounded-lg border border-orange-200 dark:border-orange-800">
+                        <h4 className="font-semibold text-orange-800 dark:text-orange-200 mb-2">What happens when you pause:</h4>
+                        <ul className="text-sm text-orange-700 dark:text-orange-300 space-y-1">
+                          <li>• Subscription billing stops at the end of current period</li>
+                          <li>• Account limited to free tier features (50 leads, 500 visits)</li>
+                          <li>• All guides, leads, and brand settings preserved</li>
+                          <li>• You can resume your subscription anytime</li>
+                        </ul>
+                      </div>
+
+                      <div className="flex gap-2 pt-4">
+                        <Button variant="outline" onClick={() => setIsPauseDialogOpen(false)} className="flex-1">
+                          Cancel
+                        </Button>
+                        <Button 
+                          onClick={handlePauseAccount}
+                          disabled={pauseAccountMutation.isPending}
+                          variant="destructive"
+                          className="flex-1"
+                        >
+                          {pauseAccountMutation.isPending ? (
+                            <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                          ) : (
+                            <Pause className="w-4 h-4 mr-2" />
+                          )}
+                          Pause Account
+                        </Button>
+                      </div>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+              )}
             </div>
           </div>
         )}

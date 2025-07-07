@@ -107,6 +107,16 @@ ConvertMag.net is a comprehensive SAAS application that transforms ANY video, au
 
 ```
 Changelog:
+- July 07, 2025. Implemented comprehensive subscription management system with account pausing and payment controls:
+  * Added complete plan change functionality allowing users to upgrade/downgrade between Personal and Business plans
+  * Implemented billing cycle switching (monthly/yearly) with automatic 17% savings on annual plans
+  * Built brand add-on management for Business accounts ($33/month per additional brand beyond 3 included)
+  * Added account pausing feature that downgrades to free tier while preserving all data (guides, leads, settings)
+  * Created account resume functionality to reactivate paused subscriptions with original plan/billing cycle
+  * Enhanced Stripe customer portal integration for payment method updates and invoice management
+  * Updated database schema with account status tracking and pause timestamps
+  * Built comprehensive billing management UI with intuitive dialogs for all subscription operations
+  * Added proper proration handling for all plan changes and real-time subscription status updates
 - July 07, 2025. Applied comprehensive deployment optimization fixes to resolve 8GiB limit issue:
   * Created .dockerignore file to exclude unnecessary files from deployment image (530MB+ savings)
   * Added multi-stage Dockerfile with production-only dependencies and Alpine Linux base

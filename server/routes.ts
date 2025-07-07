@@ -2312,21 +2312,286 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const user = await storage.getUser(userId);
       
       if (!user?.stripeSubscriptionId) {
-        return res.json({ status: 'none', plan: 'free' });
+        return res.json({ 
+          status: 'none', 
+          plan: 'free',
+          billingCycle: 'monthly',
+          additionalBrands: user?.additionalBrands || 0
+        });
       }
 
       const subscription = await stripe.subscriptions.retrieve(user.stripeSubscriptionId);
       
       res.json({
         status: subscription.status,
-        plan: subscription.metadata?.planName || 'unknown',
+        plan: subscription.metadata?.planName || user.subscriptionTier,
         currentPeriodEnd: subscription.current_period_end,
         cancelAtPeriodEnd: subscription.cancel_at_period_end,
-        billingCycle: subscription.items.data[0]?.price?.recurring?.interval || 'month'
+        billingCycle: subscription.items.data[0]?.price?.recurring?.interval || user.billingCycle || 'month',
+        additionalBrands: user?.additionalBrands || 0,
+        accountStatus: user?.accountStatus || 'active',
+        pausedAt: user?.pausedAt
       });
     } catch (error) {
       console.error('Error getting subscription status:', error);
       res.status(500).json({ message: "Failed to get subscription status" });
+    }
+  });
+
+  // Change subscription plan
+  app.post('/api/stripe/change-plan', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { newPlanName, newBillingCycle } = req.body;
+      const user = await storage.getUser(userId);
+
+      if (!user?.stripeSubscriptionId) {
+        return res.status(400).json({ message: "No active subscription found" });
+      }
+
+      // Get the new plan details
+      const plans = await storage.getSubscriptionPlans();
+      const newPlan = plans.find(p => p.name === newPlanName);
+      if (!newPlan) {
+        return res.status(404).json({ message: "Plan not found" });
+      }
+
+      // Calculate new price
+      const newPrice = newBillingCycle === 'yearly' ? 
+        (parseFloat(newPlan.price) * 10).toFixed(2) : // 2 months free on yearly
+        newPlan.price;
+
+      const subscription = await stripe.subscriptions.retrieve(user.stripeSubscriptionId);
+      
+      // Update the subscription
+      const updatedSubscription = await stripe.subscriptions.update(user.stripeSubscriptionId, {
+        items: [{
+          id: subscription.items.data[0].id,
+          price_data: {
+            currency: newPlan.currency.toLowerCase(),
+            product_data: {
+              name: `${newPlan.displayName} Plan`,
+              description: `ConvertMag.net ${newPlan.displayName} ${newBillingCycle} subscription`,
+            },
+            unit_amount: Math.round(parseFloat(newPrice) * 100),
+            recurring: {
+              interval: newBillingCycle === 'yearly' ? 'year' : 'month',
+            },
+          },
+        }],
+        metadata: {
+          userId: userId,
+          planName: newPlanName,
+          billingCycle: newBillingCycle
+        },
+        proration_behavior: 'always_invoice'
+      });
+
+      // Update user in database
+      await storage.updateUser(userId, {
+        subscriptionTier: newPlanName,
+        billingCycle: newBillingCycle
+      });
+
+      res.json({ success: true, subscription: updatedSubscription });
+    } catch (error) {
+      console.error('Error changing plan:', error);
+      res.status(500).json({ message: "Failed to change plan" });
+    }
+  });
+
+  // Add/remove additional brands
+  app.post('/api/stripe/manage-brands', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { additionalBrands } = req.body; // Number of additional brands beyond plan limit
+      const user = await storage.getUser(userId);
+
+      if (!user?.stripeSubscriptionId || user.subscriptionTier !== 'business') {
+        return res.status(400).json({ message: "Business subscription required for additional brands" });
+      }
+
+      const brandAddonPrice = 33; // $33 per additional brand per month
+      const currentAdditionalBrands = user.additionalBrands || 0;
+      
+      if (additionalBrands === currentAdditionalBrands) {
+        return res.json({ message: "No change needed" });
+      }
+
+      const subscription = await stripe.subscriptions.retrieve(user.stripeSubscriptionId);
+      const isYearly = user.billingCycle === 'yearly';
+      const addonAmount = isYearly ? brandAddonPrice * 10 * 100 : brandAddonPrice * 100; // Convert to cents
+
+      // Find existing addon item
+      const existingAddonItem = subscription.items.data.find(item => 
+        item.price.metadata?.type === 'brand_addon'
+      );
+
+      let subscriptionItems = [...subscription.items.data];
+
+      if (additionalBrands > 0) {
+        const addonItem = {
+          price_data: {
+            currency: 'usd',
+            product_data: {
+              name: 'Additional Brand',
+              description: `Extra brand workspace for ConvertMag.net`,
+            },
+            unit_amount: addonAmount,
+            recurring: {
+              interval: isYearly ? 'year' : 'month' as 'year' | 'month',
+            },
+            metadata: {
+              type: 'brand_addon'
+            }
+          },
+          quantity: additionalBrands,
+        };
+
+        if (existingAddonItem) {
+          // Update existing addon
+          subscriptionItems = subscriptionItems.map(item => 
+            item.id === existingAddonItem.id 
+              ? { id: item.id, ...addonItem }
+              : { id: item.id }
+          );
+        } else {
+          // Add new addon
+          subscriptionItems.push(addonItem);
+        }
+      } else if (existingAddonItem) {
+        // Remove addon
+        subscriptionItems = subscriptionItems.filter(item => item.id !== existingAddonItem.id);
+        await stripe.subscriptionItems.del(existingAddonItem.id);
+      }
+
+      // Update subscription
+      if (additionalBrands > 0) {
+        await stripe.subscriptions.update(user.stripeSubscriptionId, {
+          items: subscriptionItems,
+          proration_behavior: 'always_invoice'
+        });
+      }
+
+      // Update user in database
+      await storage.updateUser(userId, {
+        additionalBrands: additionalBrands
+      });
+
+      res.json({ success: true, additionalBrands });
+    } catch (error) {
+      console.error('Error managing brands:', error);
+      res.status(500).json({ message: "Failed to manage brands" });
+    }
+  });
+
+  // Pause account (downgrade to free but preserve data)
+  app.post('/api/stripe/pause-account', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+
+      if (!user?.stripeSubscriptionId) {
+        return res.status(400).json({ message: "No active subscription to pause" });
+      }
+
+      // Cancel the Stripe subscription at period end
+      await stripe.subscriptions.update(user.stripeSubscriptionId, {
+        cancel_at_period_end: true,
+        metadata: {
+          ...user,
+          pausedByUser: 'true',
+          originalPlan: user.subscriptionTier,
+          originalBillingCycle: user.billingCycle || 'monthly'
+        }
+      });
+
+      // Update user status to paused
+      await storage.updateUser(userId, {
+        accountStatus: 'paused',
+        pausedAt: new Date()
+      });
+
+      res.json({ success: true, message: "Account will be paused at the end of current billing period" });
+    } catch (error) {
+      console.error('Error pausing account:', error);
+      res.status(500).json({ message: "Failed to pause account" });
+    }
+  });
+
+  // Resume account (reactivate subscription)
+  app.post('/api/stripe/resume-account', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+
+      if (!user?.stripeCustomerId) {
+        return res.status(400).json({ message: "No customer record found" });
+      }
+
+      // Get the most recent subscription to check metadata
+      const subscriptions = await stripe.subscriptions.list({
+        customer: user.stripeCustomerId,
+        limit: 1
+      });
+
+      let originalPlan = 'personal'; // Default fallback
+      let originalBillingCycle = 'monthly'; // Default fallback
+
+      if (subscriptions.data.length > 0) {
+        const lastSub = subscriptions.data[0];
+        originalPlan = lastSub.metadata?.originalPlan || 'personal';
+        originalBillingCycle = lastSub.metadata?.originalBillingCycle || 'monthly';
+      }
+
+      // Get the plan details
+      const plans = await storage.getSubscriptionPlans();
+      const plan = plans.find(p => p.name === originalPlan);
+      if (!plan) {
+        return res.status(404).json({ message: "Original plan not found" });
+      }
+
+      // Calculate price
+      const price = originalBillingCycle === 'yearly' ? 
+        (parseFloat(plan.price) * 10).toFixed(2) : 
+        plan.price;
+
+      // Create new subscription
+      const newSubscription = await stripe.subscriptions.create({
+        customer: user.stripeCustomerId,
+        items: [{
+          price_data: {
+            currency: plan.currency.toLowerCase(),
+            product_data: {
+              name: `${plan.displayName} Plan`,
+              description: `ConvertMag.net ${plan.displayName} ${originalBillingCycle} subscription`,
+            },
+            unit_amount: Math.round(parseFloat(price) * 100),
+            recurring: {
+              interval: originalBillingCycle === 'yearly' ? 'year' : 'month',
+            },
+          },
+        }],
+        metadata: {
+          userId: userId,
+          planName: originalPlan,
+          billingCycle: originalBillingCycle
+        }
+      });
+
+      // Update user record
+      await storage.updateUser(userId, {
+        accountStatus: 'active',
+        subscriptionTier: originalPlan,
+        billingCycle: originalBillingCycle,
+        stripeSubscriptionId: newSubscription.id,
+        pausedAt: null
+      });
+
+      res.json({ success: true, subscription: newSubscription });
+    } catch (error) {
+      console.error('Error resuming account:', error);
+      res.status(500).json({ message: "Failed to resume account" });
     }
   });
 

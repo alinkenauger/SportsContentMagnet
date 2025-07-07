@@ -44,6 +44,10 @@ export const users = pgTable("users", {
   subscriptionTier: varchar("subscription_tier").default("free"), // 'free', 'basic', 'pro', 'enterprise'
   stripeCustomerId: varchar("stripe_customer_id"), // Stripe customer ID
   stripeSubscriptionId: varchar("stripe_subscription_id"), // Stripe subscription ID
+  billingCycle: varchar("billing_cycle").default("monthly"), // 'monthly', 'yearly'
+  additionalBrands: integer("additional_brands").default(0), // Extra brands beyond plan limit
+  accountStatus: varchar("account_status").default("active"), // 'active', 'paused', 'suspended'
+  pausedAt: timestamp("paused_at"), // When account was paused
   storageQuotaGB: decimal("storage_quota_gb", { precision: 10, scale: 2 }).default("1.0"), // GB storage limit
   storageUsedMB: decimal("storage_used_mb", { precision: 12, scale: 2 }).default("0"), // MB currently used
   monthlyStorageCostUSD: decimal("monthly_storage_cost_usd", { precision: 8, scale: 2 }).default("0"), // Monthly storage bill
