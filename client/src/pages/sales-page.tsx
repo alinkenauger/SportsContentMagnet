@@ -363,7 +363,7 @@ export default function SalesPage() {
                 </div>
               </div>
               
-              <div className="flex justify-center space-x-8 text-sm text-gray-600">
+              <div className="flex justify-center space-x-8 text-sm text-gray-600 mb-8">
                 <div className="flex items-center">
                   <Check className="h-4 w-4 text-green-600 mr-2" />
                   No editing required
@@ -376,6 +376,126 @@ export default function SalesPage() {
                   <Check className="h-4 w-4 text-green-600 mr-2" />
                   18% conversion rate
                 </div>
+              </div>
+              
+              {/* Action Button Right Below Video */}
+              <div className="flex justify-center">
+                <Dialog open={isSignUpOpen} onOpenChange={setIsSignUpOpen}>
+                  <DialogTrigger asChild>
+                    <Button 
+                      size="lg" 
+                      className="bg-green-600 hover:bg-green-700 text-white px-8 py-4 text-xl font-bold"
+                    >
+                      Start Free Account
+                      <ArrowRight className="ml-2 h-5 w-5" />
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                      <DialogTitle>Start Your Free Account</DialogTitle>
+                      <DialogDescription>
+                        Get started with ConvertMag.net in less than 60 seconds
+                      </DialogDescription>
+                    </DialogHeader>
+                    
+                    <Form {...form}>
+                      <form onSubmit={form.handleSubmit(handleSignUp)} className="space-y-4">
+                        <div className="grid grid-cols-2 gap-4">
+                          <FormField
+                            control={form.control}
+                            name="firstName"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>First Name</FormLabel>
+                                <FormControl>
+                                  <Input placeholder="John" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={form.control}
+                            name="lastName"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Last Name</FormLabel>
+                                <FormControl>
+                                  <Input placeholder="Doe" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+                        
+                        <FormField
+                          control={form.control}
+                          name="email"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Email Address</FormLabel>
+                              <FormControl>
+                                <Input type="email" placeholder="john@example.com" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        
+                        <FormField
+                          control={form.control}
+                          name="phone"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Phone (Optional)</FormLabel>
+                              <FormControl>
+                                <Input type="tel" placeholder="+1 (555) 123-4567" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        
+                        <FormField
+                          control={form.control}
+                          name="company"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Company/Brand (Optional)</FormLabel>
+                              <FormControl>
+                                <Input placeholder="Your Company" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        
+                        <FormField
+                          control={form.control}
+                          name="niche"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Content Niche (Optional)</FormLabel>
+                              <FormControl>
+                                <Input placeholder="Fitness, Cooking, Coding, etc." {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        
+                        <Button 
+                          type="submit" 
+                          className="w-full bg-gradient-to-r from-blue-600 to-purple-600"
+                          disabled={signUpMutation.isPending}
+                        >
+                          {signUpMutation.isPending ? "Creating Account..." : "Create Free Account"}
+                        </Button>
+                      </form>
+                    </Form>
+                  </DialogContent>
+                </Dialog>
               </div>
             </div>
           </div>
@@ -537,128 +657,11 @@ export default function SalesPage() {
           
           {/* Clear Call to Action Buttons */}
           <div className="max-w-2xl mx-auto mb-12">
-            <div className="flex flex-col sm:flex-row gap-6 justify-center items-center">
-              <Dialog open={isSignUpOpen} onOpenChange={setIsSignUpOpen}>
-                <DialogTrigger asChild>
-                  <Button 
-                    size="lg" 
-                    className="bg-green-600 hover:bg-green-700 text-white px-8 py-4 text-xl font-bold w-full sm:w-auto"
-                  >
-                    Start Free Account
-                    <ArrowRight className="ml-2 h-5 w-5" />
-                  </Button>
-                </DialogTrigger>
-              <DialogContent className="sm:max-w-md">
-                <DialogHeader>
-                  <DialogTitle>Start Your Free Account</DialogTitle>
-                  <DialogDescription>
-                    Get started with ConvertMag.net in less than 60 seconds
-                  </DialogDescription>
-                </DialogHeader>
-                
-                <Form {...form}>
-                  <form onSubmit={form.handleSubmit(handleSignUp)} className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <FormField
-                        control={form.control}
-                        name="firstName"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>First Name</FormLabel>
-                            <FormControl>
-                              <Input placeholder="John" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={form.control}
-                        name="lastName"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Last Name</FormLabel>
-                            <FormControl>
-                              <Input placeholder="Doe" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-                    
-                    <FormField
-                      control={form.control}
-                      name="email"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Email Address</FormLabel>
-                          <FormControl>
-                            <Input type="email" placeholder="john@example.com" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <FormField
-                      control={form.control}
-                      name="phone"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Phone (Optional)</FormLabel>
-                          <FormControl>
-                            <Input type="tel" placeholder="+1 (555) 123-4567" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <FormField
-                      control={form.control}
-                      name="company"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Company/Brand (Optional)</FormLabel>
-                          <FormControl>
-                            <Input placeholder="Your Company" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <FormField
-                      control={form.control}
-                      name="niche"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Content Niche (Optional)</FormLabel>
-                          <FormControl>
-                            <Input placeholder="Fitness, Cooking, Coding, etc." {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <Button 
-                      type="submit" 
-                      className="w-full bg-gradient-to-r from-blue-600 to-purple-600"
-                      disabled={signUpMutation.isPending}
-                    >
-                      {signUpMutation.isPending ? "Creating Account..." : "Create Free Account"}
-                    </Button>
-                  </form>
-                </Form>
-              </DialogContent>
-            </Dialog>
-              
+            <div className="flex justify-center">
               <Button 
                 variant="outline" 
                 size="lg"
-                className="border-2 border-gray-400 text-gray-700 hover:bg-gray-50 px-8 py-4 text-lg font-semibold w-full sm:w-auto"
+                className="border-2 border-gray-400 text-gray-700 hover:bg-gray-50 px-8 py-4 text-lg font-semibold"
                 onClick={() => setShowVideoDemo(true)}
               >
                 <Play className="mr-2 h-5 w-5" />
