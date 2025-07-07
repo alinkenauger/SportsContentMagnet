@@ -7,6 +7,24 @@ import { setupAuth, isAuthenticated } from "./replitAuth";
 import { setupGoogleAuth, isGoogleAuthenticated } from "./googleAuth";
 import { analyzeVideoContent, generatePracticeGuide, personalizeGuideContent } from "./services/openai";
 import { getYouTubeVideoData, transcribeVideo } from "./services/youtube";
+// Conditional import for deployment optimization
+let generateGuidePDF: any = null;
+let generatePDFFilename: any = null;
+let isPDFGenerationEnabled: () => boolean = () => false;
+
+try {
+  const pdfModule = await import('./services/pdfGenerator');
+  generateGuidePDF = pdfModule.generateGuidePDF;
+  generatePDFFilename = pdfModule.generatePDFFilename;
+  const featureFlagsModule = await import('./services/featureFlags');
+  isPDFGenerationEnabled = featureFlagsModule.isPDFGenerationEnabled;
+} catch (error) {
+  console.log('PDF generation not available - using lightweight mode');
+  // Use lightweight PDF generator
+  const pdfLiteModule = await import('./services/pdfGenerator-lite');
+  generateGuidePDF = pdfLiteModule.generateGuidePDF;
+  generatePDFFilename = pdfLiteModule.generatePDFFilename;
+}
 import { EmailService } from "./services/emailService";
 import { insertGuideSchema, insertLandingPageSchema, insertLeadSchema, insertBrandingSettingsSchema, insertTrainingSettingsSchema, insertKnowledgebaseEntrySchema, brandUsers, subscriptionPlans } from "@shared/schema";
 import { db } from "./db";
@@ -16,7 +34,20 @@ import multer from 'multer';
 import { StorageCostManager } from "./services/storageManager";
 import fs from 'fs';
 import path from 'path';
-import { getServiceConfiguration } from './services/deploymentChecker';
+// Conditional import for deployment optimization
+let sharp: any = null;
+let isImageProcessingEnabled: () => boolean = () => false;
+
+try {
+  const sharpModule = await import('sharp');
+  sharp = sharpModule.default;
+  const featureFlagsModule = await import('./services/featureFlags');
+  isImageProcessingEnabled = featureFlagsModule.isImageProcessingEnabled;
+} catch (error) {
+  console.log('Heavy packages not available - using lightweight mode');
+  // Use lightweight image processor
+  const { processImage, processImageToFile } = await import('./services/imageProcessor-lite');
+}
 import { registerAuthRoutes } from "./authRoutes";
 import Stripe from "stripe";
 // import pdf from 'pdf-parse'; // Temporarily disabled due to module issues
@@ -30,33 +61,6 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
 });
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Get deployment configuration
-  const serviceConfig = getServiceConfiguration();
-
-  // Conditional imports based on deployment mode
-  let sharp: any = null;
-  let processImage: any = null;
-  let processImageToFile: any = null;
-  let generateGuidePDF: any = null;
-  let generatePDFFilename: any = null;
-
-  if (serviceConfig.useLightweightImage) {
-    const imageModule = await import('./services/imageProcessor-lite');
-    processImage = imageModule.processImage;
-    processImageToFile = imageModule.processImageToFile;
-  } else {
-    sharp = (await import('sharp')).default;
-  }
-
-  if (serviceConfig.useLightweightPDF) {
-    const pdfModule = await import('./services/pdfGenerator-lite');
-    generateGuidePDF = pdfModule.generateGuidePDF;
-    generatePDFFilename = pdfModule.generatePDFFilename;
-  } else {
-    const pdfModule = await import('./services/pdfGenerator');
-    generateGuidePDF = pdfModule.generateGuidePDF;
-    generatePDFFilename = pdfModule.generatePDFFilename;
-  }
   // Health check endpoint for Docker
   app.get('/health', (req, res) => {
     res.status(200).json({ status: 'healthy', timestamp: new Date().toISOString() });
@@ -1015,11 +1019,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get branding settings
       const branding = await storage.getBrandingSettings(userId);
       
-      // Generate PDF (automatically uses lightweight service in deployment)
-      if (serviceConfig.useLightweightPDF) {
-        // In lightweight mode, provide helpful message
+      // Generate PDF
+      if (!isPDFGenerationEnabled()) {
         return res.status(503).json({ 
-          message: "PDF generation is temporarily disabled. Please contact support for alternative download options or access your guide via the web interface." 
+          message: "PDF generation is temporarily disabled. Please contact support for alternative download options." 
         });
       }
 
@@ -1410,21 +1413,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Process image with automatic resizing to 200x200 with transparent background
       let processedBuffer: Buffer;
-      if (serviceConfig.useLightweightImage) {
-        processedBuffer = await processImage(req.file.buffer, {
-          width: 200,
-          height: 200,
-          fit: 'contain',
-          background: { r: 0, g: 0, b: 0, alpha: 0 }
-        });
-      } else {
+      if (isImageProcessingEnabled()) {
         processedBuffer = await sharp(req.file.buffer)
           .resize(200, 200, {
             fit: 'contain',
-            background: { r: 0, g: 0, b: 0, alpha: 0 }
+            background: { r: 0, g: 0, b: 0, alpha: 0 } // Transparent background
           })
           .png()
           .toBuffer();
+      } else {
+        // Fallback: use original buffer (no resizing in deployment)
+        processedBuffer = req.file.buffer;
       }
 
       // Save the processed file
@@ -1461,19 +1460,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Process image with automatic resizing to 32x32 for favicon
       let processedBuffer: Buffer;
-      if (serviceConfig.useLightweightImage) {
-        processedBuffer = await processImage(req.file.buffer, {
-          width: 32,
-          height: 32,
-          fit: 'cover'
-        });
-      } else {
+      if (isImageProcessingEnabled()) {
         processedBuffer = await sharp(req.file.buffer)
           .resize(32, 32, {
             fit: 'cover'
           })
           .png()
           .toBuffer();
+      } else {
+        // Fallback: use original buffer (no resizing in deployment)
+        processedBuffer = req.file.buffer;
       }
 
       // Save the processed file
@@ -2191,14 +2187,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Resize and save logo
-      if (serviceConfig.useLightweightImage) {
-        await processImageToFile(req.file.buffer, logoPath, {
-          width: 200,
-          height: 200,
-          fit: 'contain',
-          background: { r: 255, g: 255, b: 255, alpha: 0 }
-        });
-      } else {
+      if (isImageProcessingEnabled()) {
         await sharp(req.file.buffer)
           .resize(200, 200, { 
             fit: 'contain',
@@ -2206,6 +2195,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           })
           .png()
           .toFile(logoPath);
+      } else {
+        // Fallback: save original image without resizing
+        fs.writeFileSync(logoPath, req.file.buffer);
       }
 
       const logoUrl = `/logos/${filename}`;
@@ -2744,5 +2736,3 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const httpServer = createServer(app);
   return httpServer;
 }
-
-
