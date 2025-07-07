@@ -5,12 +5,14 @@ import { storage } from "./storage";
 const ADMIN_USER_IDS = [
   "38750665", // Your user ID - replace with your actual ID
   // Add more admin user IDs here as needed
+  // Example: "user_id_2", "user_id_3"
 ];
 
 // List of admin email addresses as fallback
 const ADMIN_EMAILS = [
   "adamlinkenauger@gmail.com", // Your email - replace with your actual email
   // Add more admin emails here as needed
+  // Example: "teammate@company.com", "admin@company.com"
 ];
 
 /**
