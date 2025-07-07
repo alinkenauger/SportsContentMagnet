@@ -21,6 +21,20 @@ else
     echo "✅ Python libs removed"
 fi
 
+if [ -f "pyproject.toml" ]; then
+    echo "❌ pyproject.toml exists (will cause PyTorch/Whisper installation failure)"
+    exit 1
+else
+    echo "✅ pyproject.toml removed"
+fi
+
+if [ -f "uv.lock" ]; then
+    echo "❌ uv.lock exists (will cause Python dependency installation)"
+    exit 1
+else
+    echo "✅ uv.lock removed"
+fi
+
 # Check essential files exist
 if [ ! -f "package.json" ]; then
     echo "❌ package.json missing"

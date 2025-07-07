@@ -85,12 +85,15 @@ documentation/**
 *.pdf
 DEPLOYMENT*.md
 
-# Python specific
+# Python specific - DEPLOYMENT CRITICAL
 pyproject.toml
 poetry.lock
 Pipfile
 Pipfile.lock
 requirements*.txt
+uv.lock
+.uv
+.uv/**
 uv.lock
 server/**/*.py
 *.py
