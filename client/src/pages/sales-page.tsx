@@ -344,6 +344,25 @@ export default function SalesPage() {
                 Watch Demo Video
               </Button>
               
+              {/* Large Video Player */}
+              <div className="w-full max-w-4xl mx-auto mb-8">
+                <div className="relative bg-black rounded-xl overflow-hidden shadow-2xl border border-gray-200">
+                  <div className="aspect-video bg-gradient-to-br from-gray-900 to-black flex items-center justify-center">
+                    <div className="text-center">
+                      <Button 
+                        size="lg" 
+                        className="bg-red-600 hover:bg-red-700 text-white rounded-full w-20 h-20 p-0 mb-4"
+                        onClick={() => setShowVideoDemo(true)}
+                      >
+                        <Play className="h-8 w-8 ml-1" />
+                      </Button>
+                      <h3 className="text-white text-2xl font-bold mb-2">Watch ConvertMag.net in Action</h3>
+                      <p className="text-gray-300 text-lg">See how any content becomes a high-converting lead magnet in 5 minutes</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
               <div className="flex justify-center space-x-8 text-sm text-gray-600">
                 <div className="flex items-center">
                   <Check className="h-4 w-4 text-green-600 mr-2" />
@@ -500,8 +519,8 @@ export default function SalesPage() {
               <p className="text-2xl md:text-3xl font-bold text-center text-gray-900 mb-6">
                 5 Video-Specific Lead Magnets = Same Results as 25+ Category-Based Lead Magnets
               </p>
-              <div className="bg-green-600 text-white rounded-lg p-4">
-                <p className="text-xl font-bold text-center">
+              <div className="border-l-4 border-green-600 bg-green-50 pl-4 py-3">
+                <p className="text-xl font-bold text-center text-green-800">
                   That's a 10X improvement in lead generation efficiency
                 </p>
               </div>
