@@ -194,7 +194,7 @@ export default function Pricing() {
             }`}
           >
             Yearly
-            <span className="absolute -top-2 -right-2 bg-green-500 text-white text-xs px-2 py-1 rounded-full">
+            <span className="absolute -top-3 -right-1 sm:-top-2 sm:-right-2 bg-green-500 text-white text-xs px-2 py-1 rounded-full whitespace-nowrap">
               Save 17%
             </span>
           </button>
