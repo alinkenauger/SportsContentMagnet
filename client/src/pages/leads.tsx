@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/hooks/use-toast";
 import Sidebar from "@/components/sidebar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,6 +9,9 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Separator } from "@/components/ui/separator";
 import { 
   Search, 
   Filter, 
@@ -19,16 +23,20 @@ import {
   Users,
   Eye,
   TrendingUp,
-  FileText
+  FileText,
+  Copy,
+  MessageSquare
 } from "lucide-react";
 import { format } from "date-fns";
 
 export default function Leads() {
   const { user } = useAuth();
+  const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
   const [dateFilter, setDateFilter] = useState("all");
   const [sourceFilter, setSourceFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [selectedLead, setSelectedLead] = useState<any>(null);
 
   // Fetch leads data
   const { data: leads, isLoading } = useQuery({
@@ -70,6 +78,32 @@ export default function Leads() {
 
   // Calculate stats
   const totalLeads = leads?.length || 0;
+
+  // Action handlers
+  const handleEmailLead = (lead: any) => {
+    const subject = encodeURIComponent(`Follow up from ${lead.source || 'your guide'}`);
+    const body = encodeURIComponent(`Hi ${lead.firstName || 'there'},\n\nThank you for downloading our guide!\n\nBest regards`);
+    const mailtoUrl = `mailto:${lead.email}?subject=${subject}&body=${body}`;
+    window.open(mailtoUrl, '_blank');
+  };
+
+  const handleSMSLead = (lead: any) => {
+    const message = encodeURIComponent(`Hi ${lead.firstName || 'there'}, thank you for downloading our guide!`);
+    const smsUrl = `sms:${lead.phone}?body=${message}`;
+    window.open(smsUrl, '_blank');
+  };
+
+  const handleViewLead = (lead: any) => {
+    setSelectedLead(lead);
+  };
+
+  const copyToClipboard = (text: string, label: string) => {
+    navigator.clipboard.writeText(text);
+    toast({
+      title: "Copied!",
+      description: `${label} copied to clipboard`,
+    });
+  };
   const newLeads = leads?.filter((lead: any) => {
     const leadDate = new Date(lead.createdAt);
     const yesterday = new Date();
@@ -315,6 +349,7 @@ export default function Leads() {
                               <Button
                                 variant="ghost"
                                 size="sm"
+                                onClick={() => handleEmailLead(lead)}
                                 className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
                               >
                                 <Mail className="w-4 h-4 mr-1" />
@@ -324,6 +359,7 @@ export default function Leads() {
                                 <Button
                                   variant="ghost"
                                   size="sm"
+                                  onClick={() => handleSMSLead(lead)}
                                   className="text-green-600 hover:text-green-700 hover:bg-green-50"
                                 >
                                   <Phone className="w-4 h-4 mr-1" />
@@ -333,9 +369,10 @@ export default function Leads() {
                               <Button
                                 variant="ghost"
                                 size="sm"
+                                onClick={() => handleViewLead(lead)}
                                 className="text-purple-600 hover:text-purple-700 hover:bg-purple-50"
                               >
-                                <ExternalLink className="w-4 h-4 mr-1" />
+                                <Eye className="w-4 h-4 mr-1" />
                                 View
                               </Button>
                             </div>
@@ -362,6 +399,144 @@ export default function Leads() {
         </Card>
         </div>
       </div>
+
+      {/* Lead Details Dialog */}
+      <Dialog open={!!selectedLead} onOpenChange={() => setSelectedLead(null)}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Lead Details</DialogTitle>
+            <DialogDescription>
+              Complete information for {selectedLead?.firstName} {selectedLead?.lastName}
+            </DialogDescription>
+          </DialogHeader>
+          
+          {selectedLead && (
+            <div className="space-y-6">
+              {/* Contact Information */}
+              <div>
+                <h3 className="text-lg font-semibold mb-3">Contact Information</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label className="text-sm font-medium text-muted-foreground">Name</Label>
+                    <div className="flex items-center justify-between mt-1">
+                      <p className="text-sm">{selectedLead.firstName} {selectedLead.lastName}</p>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => copyToClipboard(`${selectedLead.firstName} ${selectedLead.lastName}`, "Name")}
+                      >
+                        <Copy className="w-3 h-3" />
+                      </Button>
+                    </div>
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium text-muted-foreground">Email</Label>
+                    <div className="flex items-center justify-between mt-1">
+                      <p className="text-sm">{selectedLead.email}</p>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => copyToClipboard(selectedLead.email, "Email")}
+                      >
+                        <Copy className="w-3 h-3" />
+                      </Button>
+                    </div>
+                  </div>
+                  {selectedLead.phone && (
+                    <div>
+                      <Label className="text-sm font-medium text-muted-foreground">Phone</Label>
+                      <div className="flex items-center justify-between mt-1">
+                        <p className="text-sm">{selectedLead.phone}</p>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => copyToClipboard(selectedLead.phone, "Phone")}
+                        >
+                          <Copy className="w-3 h-3" />
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                  <div>
+                    <Label className="text-sm font-medium text-muted-foreground">Captured Date</Label>
+                    <p className="text-sm mt-1">
+                      {selectedLead.createdAt ? format(new Date(selectedLead.createdAt), "MMMM d, yyyy 'at' h:mm a") : "Unknown"}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <Separator />
+
+              {/* Custom Fields Data */}
+              {selectedLead.customFieldData && Object.keys(selectedLead.customFieldData).length > 0 && (
+                <div>
+                  <h3 className="text-lg font-semibold mb-3">Additional Information</h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    {Object.entries(selectedLead.customFieldData).map(([key, value]) => (
+                      <div key={key}>
+                        <Label className="text-sm font-medium text-muted-foreground">
+                          {key.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
+                        </Label>
+                        <div className="flex items-center justify-between mt-1">
+                          <p className="text-sm">{String(value)}</p>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => copyToClipboard(String(value), key)}
+                          >
+                            <Copy className="w-3 h-3" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <Separator />
+
+              {/* Tags */}
+              {selectedLead.tags && selectedLead.tags.length > 0 && (
+                <div>
+                  <h3 className="text-lg font-semibold mb-3">Tags</h3>
+                  <div className="flex flex-wrap gap-2">
+                    {selectedLead.tags.map((tag: string, index: number) => (
+                      <Badge key={index} variant="outline">
+                        {tag}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Quick Actions */}
+              <div>
+                <h3 className="text-lg font-semibold mb-3">Quick Actions</h3>
+                <div className="flex gap-2">
+                  <Button
+                    onClick={() => handleEmailLead(selectedLead)}
+                    className="flex-1"
+                  >
+                    <Mail className="w-4 h-4 mr-2" />
+                    Send Email
+                  </Button>
+                  {selectedLead.phone && (
+                    <Button
+                      variant="outline"
+                      onClick={() => handleSMSLead(selectedLead)}
+                      className="flex-1"
+                    >
+                      <MessageSquare className="w-4 h-4 mr-2" />
+                      Send SMS
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -47,7 +47,8 @@ export class EmailService {
     }
 
     try {
-      await this.mailService.send({
+      console.log(`Attempting to send email to ${params.to} with subject: ${params.subject}`);
+      const result = await this.mailService.send({
         to: params.to,
         from: params.from || this.defaultFromEmail,
         subject: params.subject,
@@ -56,9 +57,11 @@ export class EmailService {
         templateId: params.templateId,
         dynamicTemplateData: params.dynamicTemplateData,
       });
+      console.log(`Email sent successfully to ${params.to}:`, result);
       return true;
     } catch (error) {
       console.error('SendGrid email error:', error);
+      console.error('Error details:', JSON.stringify(error, null, 2));
       return false;
     }
   }
@@ -152,7 +155,7 @@ export class EmailService {
 
     return this.sendEmail({
       to: user.email,
-      subject: `Welcome to VidMagnet - Your Account is Ready!`,
+      subject: `Welcome to ConvertMag.net - Your Account is Ready!`,
       html,
     });
   }

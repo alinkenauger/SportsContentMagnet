@@ -717,15 +717,13 @@ export class DatabaseStorage implements IStorage {
     const [stats] = await db
       .select({
         totalGuides: count(guides.id),
-        totalLeads: sql<number>`COALESCE(SUM(${guides.downloads}), 0)`,
         totalViews: sql<number>`COALESCE(SUM(${guides.views}), 0)`,
         totalDownloads: sql<number>`COALESCE(SUM(${guides.downloads}), 0)`,
-        avgConversionRate: sql<number>`COALESCE(AVG(${guides.conversionRate}), 0)`,
       })
       .from(guides)
       .where(and(...whereConditions));
 
-    // Build where conditions for leads (need to join with guides to filter by brand)
+    // Get actual leads count and calculate real conversion rate
     const leadsWhereConditions = [eq(leads.userId, userId)];
     
     let leadsQuery;
@@ -748,12 +746,16 @@ export class DatabaseStorage implements IStorage {
 
     const [leadsCount] = await leadsQuery.where(and(...leadsWhereConditions));
 
+    // Calculate real conversion rate: leads / views * 100
+    const avgConversionRate = stats.totalViews > 0 ? 
+      (leadsCount.totalLeads / stats.totalViews) * 100 : 0;
+
     return {
       totalGuides: stats.totalGuides,
       totalLeads: leadsCount.totalLeads,
       totalViews: stats.totalViews,
       totalDownloads: stats.totalDownloads,
-      avgConversionRate: Number(stats.avgConversionRate),
+      avgConversionRate: Number(avgConversionRate.toFixed(2)),
     };
   }
 
@@ -784,6 +786,13 @@ export class DatabaseStorage implements IStorage {
       conversions: conversions.count,
       conversionRate: Number(conversionRate.toFixed(2)),
     };
+  }
+
+  async updateGuideConversionRate(guideId: number, conversionRate: number): Promise<void> {
+    await db
+      .update(guides)
+      .set({ conversionRate })
+      .where(eq(guides.id, guideId));
   }
 
   // Branding operations

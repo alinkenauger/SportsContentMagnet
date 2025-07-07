@@ -61,6 +61,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Register custom auth routes (signup, password reset, etc.)
   registerAuthRoutes(app);
 
+  // Test email endpoint for debugging
+  app.post("/api/test-email", async (req, res) => {
+    try {
+      const { email } = req.body;
+      if (!email) {
+        return res.status(400).json({ error: "Email is required" });
+      }
+
+      const { EmailService } = await import('./services/emailService');
+      const emailService = new EmailService();
+      
+      console.log('Testing email delivery to:', email);
+      const result = await emailService.sendGuideDeliveryEmail(
+        { email, firstName: 'Test User' },
+        'Test Guide',
+        'https://example.com/guide',
+        'https://example.com/landing'
+      );
+
+      res.json({ 
+        success: result,
+        message: result ? 'Test email sent successfully' : 'Failed to send test email',
+        email: email
+      });
+    } catch (error) {
+      console.error('Test email error:', error);
+      res.status(500).json({ error: 'Failed to send test email', details: error.message });
+    }
+  });
+
   // Primary auth route (Google OAuth)
   app.get('/api/auth/user', async (req: any, res) => {
     try {
@@ -1099,6 +1129,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         userAgent: req.get('User-Agent'),
         referrer: req.get('Referer')
       });
+
+      // Update guide conversion rate
+      const updatedAnalytics = await storage.getGuideAnalytics(landingPage.guideId);
+      await storage.updateGuideConversionRate(landingPage.guideId, updatedAnalytics.conversionRate);
 
       // Send guide delivery email
       try {

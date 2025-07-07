@@ -224,7 +224,7 @@ export default function LandingPageEditor() {
       case 'description':
         return { text: 'Detailed description that explains the benefits and what visitors will get.' };
       case 'form-field':
-        return { label: 'Email', type: 'email', required: true, placeholder: 'Enter your email' };
+        return { label: 'Email', type: 'email', required: true, placeholder: 'Enter your email', options: [] };
       case 'cta-button':
         return { text: 'Get Started Now!', style: 'primary' };
       case 'benefit-list':
@@ -494,6 +494,14 @@ export default function LandingPageEditor() {
                   />
                 </div>
                 <div>
+                  <Label>Placeholder Text</Label>
+                  <Input
+                    value={element.content.placeholder || ''}
+                    onChange={(e) => updateElement(element.id, { ...element.content, placeholder: e.target.value })}
+                    placeholder="Enter placeholder text"
+                  />
+                </div>
+                <div>
                   <Label>Field Type</Label>
                   <Select 
                     value={element.content.type} 
@@ -507,9 +515,57 @@ export default function LandingPageEditor() {
                       <SelectItem value="email">Email</SelectItem>
                       <SelectItem value="tel">Phone</SelectItem>
                       <SelectItem value="select">Dropdown</SelectItem>
+                      <SelectItem value="textarea">Text Area</SelectItem>
+                      <SelectItem value="number">Number</SelectItem>
+                      <SelectItem value="date">Date</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
+                
+                {/* Dropdown Options */}
+                {element.content.type === 'select' && (
+                  <div>
+                    <Label>Dropdown Options</Label>
+                    <div className="space-y-2">
+                      {(element.content.options || []).map((option: string, index: number) => (
+                        <div key={index} className="flex gap-2">
+                          <Input
+                            value={option}
+                            onChange={(e) => {
+                              const newOptions = [...(element.content.options || [])];
+                              newOptions[index] = e.target.value;
+                              updateElement(element.id, { ...element.content, options: newOptions });
+                            }}
+                            placeholder={`Option ${index + 1}`}
+                          />
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              const newOptions = (element.content.options || []).filter((_: any, i: number) => i !== index);
+                              updateElement(element.id, { ...element.content, options: newOptions });
+                            }}
+                            className="text-red-500 hover:text-red-700"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      ))}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          const newOptions = [...(element.content.options || []), ''];
+                          updateElement(element.id, { ...element.content, options: newOptions });
+                        }}
+                      >
+                        <Plus className="h-4 w-4 mr-2" />
+                        Add Option
+                      </Button>
+                    </div>
+                  </div>
+                )}
+                
                 <div className="flex items-center space-x-2">
                   <Switch 
                     checked={element.content.required} 
@@ -523,12 +579,33 @@ export default function LandingPageEditor() {
                 <Label className="text-sm font-medium">
                   {element.content.label} {element.content.required && <span className="text-red-500">*</span>}
                 </Label>
-                <Input
-                  type={element.content.type}
-                  placeholder={element.content.placeholder}
-                  className="mt-1"
-                  disabled
-                />
+                {element.content.type === 'select' ? (
+                  <Select disabled>
+                    <SelectTrigger className="mt-1">
+                      <SelectValue placeholder={element.content.placeholder || 'Select an option'} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {(element.content.options || []).map((option: string, index: number) => (
+                        <SelectItem key={index} value={option}>
+                          {option}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : element.content.type === 'textarea' ? (
+                  <Textarea
+                    placeholder={element.content.placeholder}
+                    className="mt-1"
+                    disabled
+                  />
+                ) : (
+                  <Input
+                    type={element.content.type}
+                    placeholder={element.content.placeholder}
+                    className="mt-1"
+                    disabled
+                  />
+                )}
               </div>
             )}
           </div>
@@ -796,7 +873,9 @@ export default function LandingPageEditor() {
           name: el.content.label.toLowerCase().replace(/\s+/g, '_'),
           label: el.content.label,
           type: el.content.type,
-          required: el.content.required
+          required: el.content.required,
+          placeholder: el.content.placeholder || '',
+          options: el.content.options || []
         })),
       elements: elements
     };
