@@ -1,5 +1,6 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
+import { randomUUID } from "crypto";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import { setupGoogleAuth, isGoogleAuthenticated } from "./googleAuth";
@@ -1712,6 +1713,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching users:", error);
       res.status(500).json({ message: "Failed to fetch users" });
+    }
+  });
+
+  // Admin: Create new user
+  app.post('/api/admin/users', isGlobalAdmin, async (req, res) => {
+    try {
+      const { email, firstName, lastName, role } = req.body;
+
+      if (!email || !firstName || !lastName) {
+        return res.status(400).json({ message: "Email, first name, and last name are required" });
+      }
+
+      // Check if user already exists
+      const existingUser = await storage.getUserByEmail(email);
+      if (existingUser) {
+        return res.status(400).json({ message: "User with this email already exists" });
+      }
+
+      // Generate a temporary password (user will need to reset it)
+      const tempPassword = Math.random().toString(36).slice(-8);
+
+      // Create the user
+      const userData = {
+        id: randomUUID(),
+        email,
+        firstName,
+        lastName,
+        role: role || 'user',
+        tempPassword, // Store temporarily for display to admin
+        isEmailVerified: false,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      const user = await storage.upsertUser(userData);
+      
+      res.json({
+        ...user,
+        tempPassword, // Return temp password for admin to share with user
+        message: "User created successfully. Share the temporary password with the user."
+      });
+    } catch (error) {
+      console.error("Error creating user:", error);
+      res.status(500).json({ message: "Failed to create user" });
     }
   });
 

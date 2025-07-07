@@ -43,6 +43,11 @@ export default function AdminDashboard() {
   const [deleteUser, setDeleteUser] = useState<User | null>(null);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [activeTab, setActiveTab] = useState("overview");
+  const [showAddUserDialog, setShowAddUserDialog] = useState(false);
+  const [newUserEmail, setNewUserEmail] = useState("");
+  const [newUserFirstName, setNewUserFirstName] = useState("");
+  const [newUserLastName, setNewUserLastName] = useState("");
+  const [newUserRole, setNewUserRole] = useState("user");
 
   const { data: users, isLoading: isLoadingUsers } = useQuery({
     queryKey: ["/api/admin/users"],
@@ -91,6 +96,40 @@ export default function AdminDashboard() {
       toast({
         title: "Error",
         description: error.message || "Failed to update user role",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const createUserMutation = useMutation({
+    mutationFn: async (userData: {
+      email: string;
+      firstName: string;
+      lastName: string;
+      role: string;
+    }) => {
+      const response = await apiRequest("POST", "/api/admin/users", userData);
+      return response;
+    },
+    onSuccess: (data: any) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/stats"] });
+      
+      toast({
+        title: "User created successfully",
+        description: `User: ${newUserFirstName} ${newUserLastName}\nEmail: ${newUserEmail}\nTemporary Password: ${data.tempPassword}\n\nShare this password with the user.`,
+      });
+      
+      setShowAddUserDialog(false);
+      setNewUserEmail("");
+      setNewUserFirstName("");
+      setNewUserLastName("");
+      setNewUserRole("user");
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to create user",
         variant: "destructive",
       });
     },
@@ -290,7 +329,7 @@ export default function AdminDashboard() {
         <TabsContent value="users" className="space-y-6">
           <div className="flex items-center justify-between">
             <h2 className="text-2xl font-bold">User Management</h2>
-            <Button>
+            <Button onClick={() => setShowAddUserDialog(true)}>
               <Plus className="w-4 h-4 mr-2" />
               Add Global User
             </Button>
@@ -1097,6 +1136,83 @@ export default function AdminDashboard() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Add User Dialog */}
+      <Dialog open={showAddUserDialog} onOpenChange={setShowAddUserDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Add New Global User</DialogTitle>
+            <DialogDescription>
+              Create a new user account with admin access. A temporary password will be generated.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="firstName">First Name</Label>
+                <Input
+                  id="firstName"
+                  value={newUserFirstName}
+                  onChange={(e) => setNewUserFirstName(e.target.value)}
+                  placeholder="John"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="lastName">Last Name</Label>
+                <Input
+                  id="lastName"
+                  value={newUserLastName}
+                  onChange={(e) => setNewUserLastName(e.target.value)}
+                  placeholder="Doe"
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="email">Email Address</Label>
+              <Input
+                id="email"
+                type="email"
+                value={newUserEmail}
+                onChange={(e) => setNewUserEmail(e.target.value)}
+                placeholder="user@example.com"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="role">Initial Role</Label>
+              <Select value={newUserRole} onValueChange={setNewUserRole}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="user">User</SelectItem>
+                  <SelectItem value="admin">Admin</SelectItem>
+                  <SelectItem value="global_admin">Global Admin</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowAddUserDialog(false)}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={() => {
+                if (newUserEmail && newUserFirstName && newUserLastName) {
+                  createUserMutation.mutate({
+                    email: newUserEmail,
+                    firstName: newUserFirstName,
+                    lastName: newUserLastName,
+                    role: newUserRole,
+                  });
+                }
+              }}
+              disabled={!newUserEmail || !newUserFirstName || !newUserLastName || createUserMutation.isPending}
+            >
+              {createUserMutation.isPending ? "Creating..." : "Create User"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Delete User Dialog */}
       <Dialog open={!!deleteUser} onOpenChange={() => setDeleteUser(null)}>
