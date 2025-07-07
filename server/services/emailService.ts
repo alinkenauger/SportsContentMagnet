@@ -37,6 +37,9 @@ export class EmailService {
     if (process.env.SENDGRID_API_KEY) {
       this.mailService = new MailService();
       this.mailService.setApiKey(process.env.SENDGRID_API_KEY);
+      console.log('SendGrid configured with API key:', process.env.SENDGRID_API_KEY?.substring(0, 10) + '...');
+    } else {
+      console.log('SendGrid API key not found');
     }
   }
 
