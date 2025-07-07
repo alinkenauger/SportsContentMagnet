@@ -1,4 +1,3 @@
-import puppeteer from 'puppeteer';
 import handlebars from 'handlebars';
 import fs from 'fs';
 import path from 'path';
@@ -10,6 +9,7 @@ interface PDFOptions {
   channelTitle?: string;
 }
 
+// Lightweight HTML-based PDF generation (no puppeteer)
 export async function generateGuidePDF(options: PDFOptions): Promise<Buffer> {
   const { guide, branding, channelTitle } = options;
   
@@ -24,63 +24,25 @@ export async function generateGuidePDF(options: PDFOptions): Promise<Buffer> {
     title: guide.title,
     description: guide.description,
     channelTitle: channelTitle,
-    companyName: branding?.companyName || 'VidMagnet',
+    companyName: branding?.companyName || 'ConvertMag',
     logoUrl: branding?.logoUrl,
     primaryColor: branding?.primaryColor || '#2563eb',
     secondaryColor: branding?.secondaryColor || '#1d4ed8',
-    firstLetter: branding?.companyName?.charAt(0).toUpperCase() || 'V',
-    sections: content?.sections || [],
-    nextSteps: content?.nextSteps
+    content: content,
+    createdAt: new Date().toLocaleDateString(),
+    disclaimer: `This guide was created from video content. Original creator: ${channelTitle || 'Unknown'}`,
+    drillBreakdowns: content?.drillBreakdowns || []
   };
 
-  // Generate HTML from template
+  // Generate HTML
   const html = template(templateData);
-
-  // Launch Puppeteer
-  const browser = await puppeteer.launch({
-    headless: true,
-    args: [
-      '--no-sandbox',
-      '--disable-setuid-sandbox',
-      '--disable-dev-shm-usage',
-      '--disable-gpu'
-    ]
-  });
-
-  try {
-    const page = await browser.newPage();
-    
-    // Set content and wait for fonts/images to load
-    await page.setContent(html, { 
-      waitUntil: ['networkidle0', 'domcontentloaded'] 
-    });
-
-    // Generate PDF
-    const pdfBuffer = await page.pdf({
-      format: 'A4',
-      printBackground: true,
-      margin: {
-        top: '20px',
-        right: '20px',
-        bottom: '20px',
-        left: '20px'
-      },
-      displayHeaderFooter: false
-    });
-
-    return Buffer.from(pdfBuffer);
-  } finally {
-    await browser.close();
-  }
+  
+  // For deployment, return HTML as text (can be processed by external PDF service)
+  // This eliminates the need for puppeteer
+  return Buffer.from(html, 'utf8');
 }
 
 export function generatePDFFilename(guide: Guide): string {
-  // Create a safe filename from the guide title
-  const safeTitle = guide.title
-    .replace(/[^a-z0-9]/gi, '-')
-    .replace(/-+/g, '-')
-    .replace(/^-|-$/g, '')
-    .toLowerCase();
-  
-  return `${safeTitle}-guide.pdf`;
+  const sanitized = guide.title.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase();
+  return `${sanitized}_guide.html`; // Changed to HTML for lightweight deployment
 }

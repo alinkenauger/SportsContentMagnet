@@ -8,6 +8,7 @@ import { setupGoogleAuth, isGoogleAuthenticated } from "./googleAuth";
 import { analyzeVideoContent, generatePracticeGuide, personalizeGuideContent } from "./services/openai";
 import { getYouTubeVideoData, transcribeVideo } from "./services/youtube";
 import { generateGuidePDF, generatePDFFilename } from "./services/pdfGenerator";
+import { isPDFGenerationEnabled } from './services/featureFlags';
 import { EmailService } from "./services/emailService";
 import { insertGuideSchema, insertLandingPageSchema, insertLeadSchema, insertBrandingSettingsSchema, insertTrainingSettingsSchema, insertKnowledgebaseEntrySchema, brandUsers, subscriptionPlans } from "@shared/schema";
 import { db } from "./db";
@@ -18,6 +19,7 @@ import { StorageCostManager } from "./services/storageManager";
 import fs from 'fs';
 import path from 'path';
 import sharp from 'sharp';
+import { featureFlags, isImageProcessingEnabled } from './services/featureFlags';
 import { registerAuthRoutes } from "./authRoutes";
 import Stripe from "stripe";
 // import pdf from 'pdf-parse'; // Temporarily disabled due to module issues
@@ -990,6 +992,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const branding = await storage.getBrandingSettings(userId);
       
       // Generate PDF
+      if (!isPDFGenerationEnabled()) {
+        return res.status(503).json({ 
+          message: "PDF generation is temporarily disabled. Please contact support for alternative download options." 
+        });
+      }
+
       const pdfBuffer = await generateGuidePDF({
         guide,
         branding: branding || undefined,
@@ -1376,13 +1384,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Process image with automatic resizing to 200x200 with transparent background
-      const processedBuffer = await sharp(req.file.buffer)
-        .resize(200, 200, {
-          fit: 'contain',
-          background: { r: 0, g: 0, b: 0, alpha: 0 } // Transparent background
-        })
-        .png()
-        .toBuffer();
+      let processedBuffer: Buffer;
+      if (isImageProcessingEnabled()) {
+        processedBuffer = await sharp(req.file.buffer)
+          .resize(200, 200, {
+            fit: 'contain',
+            background: { r: 0, g: 0, b: 0, alpha: 0 } // Transparent background
+          })
+          .png()
+          .toBuffer();
+      } else {
+        // Fallback: use original buffer (no resizing in deployment)
+        processedBuffer = req.file.buffer;
+      }
 
       // Save the processed file
       fs.writeFileSync(path.join(process.cwd(), filePath), processedBuffer);
@@ -1417,12 +1431,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Process image with automatic resizing to 32x32 for favicon
-      const processedBuffer = await sharp(req.file.buffer)
-        .resize(32, 32, {
-          fit: 'cover'
-        })
-        .png()
-        .toBuffer();
+      let processedBuffer: Buffer;
+      if (isImageProcessingEnabled()) {
+        processedBuffer = await sharp(req.file.buffer)
+          .resize(32, 32, {
+            fit: 'cover'
+          })
+          .png()
+          .toBuffer();
+      } else {
+        // Fallback: use original buffer (no resizing in deployment)
+        processedBuffer = req.file.buffer;
+      }
 
       // Save the processed file
       fs.writeFileSync(path.join(process.cwd(), filePath), processedBuffer);
@@ -2139,13 +2159,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Resize and save logo
-      await sharp(req.file.buffer)
-        .resize(200, 200, { 
-          fit: 'contain',
-          background: { r: 255, g: 255, b: 255, alpha: 0 }
-        })
-        .png()
-        .toFile(logoPath);
+      if (isImageProcessingEnabled()) {
+        await sharp(req.file.buffer)
+          .resize(200, 200, { 
+            fit: 'contain',
+            background: { r: 255, g: 255, b: 255, alpha: 0 }
+          })
+          .png()
+          .toFile(logoPath);
+      } else {
+        // Fallback: save original image without resizing
+        fs.writeFileSync(logoPath, req.file.buffer);
+      }
 
       const logoUrl = `/logos/${filename}`;
       

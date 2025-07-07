@@ -179,3 +179,17 @@ DEPLOYMENT_OPTIMIZATION_SUMMARY.md
 cleanup-build.sh
 build-production.sh
 deployment-optimize.sh
+# Additional deployment optimization
+*.log
+*.tmp
+.env.local
+.env.development
+.env.test
+public/screenshots/*
+public/uploads/*
+server/services/youtube_extractor.py
+pyproject.toml
+uv.lock
+.cache
+.npm
+.vite
