@@ -393,14 +393,7 @@ export default function SalesPage() {
                 <div className="relative bg-black rounded-xl overflow-hidden shadow-2xl border border-gray-200">
                   <div className="aspect-video bg-gradient-to-br from-gray-900 to-black flex items-center justify-center">
                     <div className="text-center">
-                      <Button 
-                        size="lg" 
-                        className="bg-red-600 hover:bg-red-700 text-white rounded-full w-20 h-20 p-0 mb-4"
-                        onClick={() => setShowVideoDemo(true)}
-                      >
-                        <Play className="h-8 w-8 ml-1" />
-                      </Button>
-                      <h3 className="text-white text-2xl font-bold mb-2">Watch ConvertMag.net in Action</h3>
+                      <h3 className="text-white text-2xl font-bold mb-2">ConvertMag.net Demo</h3>
                       <p className="text-gray-300 text-lg">See how any content becomes a high-converting lead magnet in 5 minutes</p>
                     </div>
                   </div>
@@ -1390,8 +1383,8 @@ export default function SalesPage() {
                 </div>
                 
                 <div className="flex items-start space-x-4">
-                  <div className="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
-                    <span className="text-red-600 font-bold">3</span>
+                  <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
+                    <span className="text-green-600 font-bold text-lg">3</span>
                   </div>
                   <div>
                     <h4 className="font-bold text-lg mb-2">The Problem: $1000+ Cost Per Video</h4>
@@ -1559,7 +1552,7 @@ export default function SalesPage() {
               <DialogTrigger asChild>
                 <Button 
                   size="lg" 
-                  className="bg-blue-600 hover:bg-blue-700 text-white px-12 py-6 text-xl font-bold shadow-lg"
+                  className="bg-green-600 hover:bg-green-700 text-white px-12 py-6 text-xl font-bold shadow-lg"
                 >
                   ⚡ Get These Features Now - FREE
                   <ArrowRight className="ml-2 h-5 w-5" />
