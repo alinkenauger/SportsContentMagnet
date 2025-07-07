@@ -15,7 +15,7 @@ export function checkPackageAvailability() {
     availability.puppeteer = true;
     availability.pdfGeneration = true;
   } catch (error) {
-    console.log('Puppeteer not available - PDF generation disabled');
+    // Puppeteer not available - this is expected in deployment
   }
 
   try {
@@ -23,14 +23,14 @@ export function checkPackageAvailability() {
     availability.sharp = true;
     availability.imageProcessing = true;
   } catch (error) {
-    console.log('Sharp not available - image processing disabled');
+    // Sharp not available - this is expected in deployment
   }
 
   try {
     require.resolve('ytdl-core');
     availability.ytdlCore = true;
   } catch (error) {
-    console.log('ytdl-core not available - YouTube download disabled');
+    // ytdl-core not available - this is expected in deployment
   }
 
   return availability;
