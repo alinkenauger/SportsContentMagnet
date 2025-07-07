@@ -22,7 +22,7 @@ interface HighLevelContactData {
 
 export class EmailService {
   private mailService?: MailService;
-  private defaultFromEmail = 'noreply@getmoreviews.com';
+  private defaultFromEmail = 'adamlinkenauger@gmail.com'; // Must be verified in SendGrid
   
   // SendGrid Dynamic Template IDs - these should be set in your environment variables
   private templates = {
@@ -45,12 +45,12 @@ export class EmailService {
 
   async sendEmail(params: EmailParams): Promise<boolean> {
     if (!this.mailService) {
-      console.warn('SendGrid not configured, email would be sent:', params.subject);
+      console.warn('📧 SendGrid not configured, email would be sent:', params.subject);
       return false;
     }
 
     try {
-      console.log(`Attempting to send email to ${params.to} with subject: ${params.subject}`);
+      console.log(`📧 Attempting to send email to ${params.to} with subject: ${params.subject}`);
       const result = await this.mailService.send({
         to: params.to,
         from: params.from || this.defaultFromEmail,
@@ -60,11 +60,14 @@ export class EmailService {
         templateId: params.templateId,
         dynamicTemplateData: params.dynamicTemplateData,
       });
-      console.log(`Email sent successfully to ${params.to}:`, result);
+      console.log(`✅ Email sent successfully to ${params.to}`);
       return true;
-    } catch (error) {
-      console.error('SendGrid email error:', error);
-      console.error('Error details:', JSON.stringify(error, null, 2));
+    } catch (error: any) {
+      console.error('❌ SendGrid email error:', error.message);
+      if (error.message?.includes("not authorized to send mail")) {
+        console.error('🔧 ACTION NEEDED: Verify sender email in SendGrid → Settings → Sender Authentication');
+        console.error(`   → Add and verify: ${this.defaultFromEmail}`);
+      }
       return false;
     }
   }

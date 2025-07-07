@@ -1158,7 +1158,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           landingPageUrl
         );
       } catch (emailError) {
-        console.warn("Email delivery failed (non-critical):", emailError);
+        console.warn("📧 Email delivery failed (lead capture still successful):", emailError.message);
+        if (emailError.message?.includes("not authorized to send mail")) {
+          console.warn("🔧 Fix needed: Verify your sender email (adamlinkenauger@gmail.com) in SendGrid Settings → Sender Authentication");
+        }
         // Don't fail the lead creation if email fails
       }
 
