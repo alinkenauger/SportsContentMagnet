@@ -10,6 +10,7 @@ import {
   trainingSettings,
   knowledgebaseEntries,
   knowledgebaseCollections,
+  notifications,
   knowledgebaseUsageSettings,
   googleConnections,
   promptTemplates,
@@ -70,6 +71,8 @@ import {
   type InsertUserSubscription,
   type BrandUser,
   type InsertBrandUser,
+  type Notification,
+  type InsertNotification,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, sql, count, avg, isNull } from "drizzle-orm";
@@ -793,6 +796,40 @@ export class DatabaseStorage implements IStorage {
       .update(guides)
       .set({ conversionRate })
       .where(eq(guides.id, guideId));
+  }
+
+  // Notifications operations
+  async createNotification(notification: InsertNotification): Promise<Notification> {
+    const [newNotification] = await db.insert(notifications).values(notification).returning();
+    return newNotification;
+  }
+
+  async getNotifications(userId: string, unreadOnly: boolean = false): Promise<Notification[]> {
+    const conditions = [eq(notifications.userId, userId)];
+    if (unreadOnly) {
+      conditions.push(eq(notifications.read, false));
+    }
+    
+    return await db
+      .select()
+      .from(notifications)
+      .where(and(...conditions))
+      .orderBy(desc(notifications.createdAt))
+      .limit(20);
+  }
+
+  async markNotificationAsRead(notificationId: number, userId: string): Promise<void> {
+    await db
+      .update(notifications)
+      .set({ read: true })
+      .where(and(eq(notifications.id, notificationId), eq(notifications.userId, userId)));
+  }
+
+  async markAllNotificationsAsRead(userId: string): Promise<void> {
+    await db
+      .update(notifications)
+      .set({ read: true })
+      .where(eq(notifications.userId, userId));
   }
 
   // Branding operations

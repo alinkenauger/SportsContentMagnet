@@ -1134,6 +1134,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const updatedAnalytics = await storage.getGuideAnalytics(landingPage.guideId);
       await storage.updateGuideConversionRate(landingPage.guideId, updatedAnalytics.conversionRate);
 
+      // Create notification for new lead
+      await storage.createNotification({
+        userId: landingPage.userId,
+        title: "New lead captured",
+        message: `Someone downloaded your "${guide.title}" guide`,
+        type: "lead",
+        entityType: "guide",
+        entityId: landingPage.guideId,
+        data: { leadId: lead.id, guideTitle: guide.title }
+      });
+
       // Send guide delivery email
       try {
         const emailService = new EmailService();
@@ -1420,6 +1431,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error updating branding settings:", error);
       res.status(500).json({ message: "Failed to update branding settings" });
+    }
+  });
+
+  // Notifications routes
+  app.get("/api/notifications", isAuthenticated, async (req: any, res) => {
+    try {
+      const unreadOnly = req.query.unread === 'true';
+      const notifications = await storage.getNotifications(req.user.claims.sub, unreadOnly);
+      res.json(notifications);
+    } catch (error) {
+      console.error('Error fetching notifications:', error);
+      res.status(500).json({ error: 'Failed to fetch notifications' });
+    }
+  });
+
+  app.post("/api/notifications/:id/read", isAuthenticated, async (req: any, res) => {
+    try {
+      const notificationId = parseInt(req.params.id);
+      await storage.markNotificationAsRead(notificationId, req.user.claims.sub);
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Error marking notification as read:', error);
+      res.status(500).json({ error: 'Failed to mark notification as read' });
+    }
+  });
+
+  app.post("/api/notifications/read-all", isAuthenticated, async (req: any, res) => {
+    try {
+      await storage.markAllNotificationsAsRead(req.user.claims.sub);
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Error marking all notifications as read:', error);
+      res.status(500).json({ error: 'Failed to mark all notifications as read' });
     }
   });
 

@@ -42,41 +42,37 @@ export default function Dashboard() {
   const tableRef = useRef<HTMLTableElement>(null);
   const notificationsRef = useRef<HTMLDivElement>(null);
 
-  // Mock notifications data
-  const [notifications, setNotifications] = useState([
-    {
-      id: 1,
-      title: "New lead captured",
-      message: "Someone downloaded your 'Basketball Shooting Form' guide",
-      time: "2 minutes ago",
-      read: false,
-      type: "lead"
+  // Real notifications data
+  const { data: notifications = [], refetch: refetchNotifications } = useQuery({
+    queryKey: ['/api/notifications'],
+    queryFn: async () => {
+      const response = await fetch('/api/notifications', {
+        credentials: 'include',
+      });
+      if (!response.ok) {
+        throw new Error('Failed to fetch notifications');
+      }
+      return response.json();
     },
-    {
-      id: 2,
-      title: "Guide performance update",
-      message: "Your 'Soccer Training Drills' guide reached 100 views",
-      time: "1 hour ago",
-      read: false,
-      type: "milestone"
-    },
-    {
-      id: 3,
-      title: "Monthly summary ready",
-      message: "Your performance report for this month is ready to view",
-      time: "3 hours ago",
-      read: true,
-      type: "report"
-    }
-  ]);
+    staleTime: 30000, // 30 seconds
+    refetchInterval: 60000, // refetch every minute
+  });
 
   const unreadCount = notifications.filter(n => !n.read).length;
 
-  // Function to mark notification as read (removes it from the list)
-  const markAsRead = (notificationId: number) => {
-    setNotifications(prev => 
-      prev.filter(notification => notification.id !== notificationId)
-    );
+  // Function to mark notification as read
+  const markAsRead = async (notificationId: number) => {
+    try {
+      const response = await fetch(`/api/notifications/${notificationId}/read`, {
+        method: 'POST',
+        credentials: 'include',
+      });
+      if (response.ok) {
+        refetchNotifications();
+      }
+    } catch (error) {
+      console.error('Error marking notification as read:', error);
+    }
   };
 
   // Close notifications dropdown when clicking outside
@@ -524,7 +520,7 @@ export default function Dashboard() {
                                   {notification.message}
                                 </p>
                                 <p className="text-xs text-gray-400 mt-1">
-                                  {notification.time}
+                                  {new Date(notification.createdAt).toLocaleString()}
                                 </p>
                               </div>
                               {!notification.read && (

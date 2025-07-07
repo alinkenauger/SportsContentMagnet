@@ -285,6 +285,20 @@ export const analyticsEvents = pgTable("analytics_events", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Notifications
+export const notifications = pgTable("notifications", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").references(() => users.id).notNull(),
+  title: varchar("title").notNull(),
+  message: text("message").notNull(),
+  type: varchar("type").notNull(), // 'lead', 'milestone', 'report', 'system'
+  entityType: varchar("entity_type"), // 'guide', 'lead', 'user'
+  entityId: integer("entity_id"), // ID of the related entity
+  read: boolean("read").default(false),
+  data: jsonb("data"), // Additional notification data
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Training settings for customizing AI prompts per brand
 export const trainingSettings = pgTable("training_settings", {
   id: serial("id").primaryKey(),
@@ -796,3 +810,8 @@ export type SubscriptionTier = typeof subscriptionTiers.$inferSelect;
 export type InsertSubscriptionTier = typeof subscriptionTiers.$inferInsert;
 export type FileCleanupJob = typeof fileCleanupJobs.$inferSelect;
 export type InsertFileCleanupJob = typeof fileCleanupJobs.$inferInsert;
+
+// Notification Types
+export const insertNotificationSchema = createInsertSchema(notifications);
+export type Notification = typeof notifications.$inferSelect;
+export type InsertNotification = z.infer<typeof insertNotificationSchema>;
