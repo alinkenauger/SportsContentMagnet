@@ -31,6 +31,7 @@ import SalesPage from "@/pages/sales-page";
 import Subscribe from "@/pages/subscribe";
 import ResetPassword from "@/pages/reset-password";
 import EmailSettings from "@/pages/email-settings";
+import CompleteAccount from "@/pages/complete-account";
 
 
 function Router() {
@@ -42,6 +43,7 @@ function Router() {
         <>
           <Route path="/" component={SalesPage} />
           <Route path="/reset-password" component={ResetPassword} />
+          <Route path="/complete-account" component={CompleteAccount} />
         </>
       ) : (
         <>

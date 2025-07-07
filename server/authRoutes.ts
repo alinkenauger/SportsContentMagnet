@@ -28,6 +28,11 @@ const changePasswordSchema = z.object({
   newPassword: z.string().min(8, "New password must be at least 8 characters"),
 });
 
+const completeAccountSchema = z.object({
+  email: z.string().email("Please enter a valid email address"),
+  password: z.string().min(8, "Password must be at least 8 characters"),
+});
+
 function generateTempPassword(): string {
   const chars = 'ABCDEFGHJKMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789';
   let password = '';
@@ -55,18 +60,14 @@ export function registerAuthRoutes(app: Express) {
         });
       }
 
-      // Generate temporary password
-      const tempPassword = generateTempPassword();
-      const hashedPassword = await bcrypt.hash(tempPassword, 12);
-
-      // Create user account
+      // Create user account without password (incomplete)
       const newUser = await storage.upsertUser({
         id: crypto.randomUUID(),
         email: validatedData.email,
         firstName: validatedData.firstName,
         lastName: validatedData.lastName,
         profileImageUrl: null,
-        tempPassword: hashedPassword,
+        tempPassword: null, // No password set until account completion
         isEmailVerified: false,
         role: 'user',
       });
@@ -86,20 +87,7 @@ export function registerAuthRoutes(app: Express) {
         });
       }
 
-      // Send welcome email with login details
-      let emailSent = false;
-      try {
-        emailSent = await emailService.sendWelcomeEmail({
-          firstName: validatedData.firstName,
-          lastName: validatedData.lastName,
-          email: validatedData.email,
-          tempPassword: tempPassword,
-        });
-        console.log(`📧 Welcome email result for ${validatedData.email}: ${emailSent ? 'SUCCESS' : 'FAILED'}`);
-      } catch (emailError) {
-        console.error('Failed to send welcome email:', emailError);
-        emailSent = false;
-      }
+      // Note: No email sent for incomplete accounts - users complete setup directly
 
       // Add to High Level CRM
       try {
@@ -122,31 +110,17 @@ export function registerAuthRoutes(app: Express) {
         // Don't fail the signup if CRM fails
       }
 
-      // Provide appropriate response based on email delivery status
-      if (emailSent) {
-        res.status(201).json({
-          message: "Account created successfully! Check your email for login instructions, then log in immediately to get started.",
-          user: {
-            id: newUser.id,
-            email: newUser.email,
-            firstName: newUser.firstName,
-            lastName: newUser.lastName,
-          },
-          nextStep: "checkEmailAndLogin"
-        });
-      } else {
-        res.status(201).json({
-          message: `Account created! Use this password to log in immediately: ${tempPassword}`,
-          user: {
-            id: newUser.id,
-            email: newUser.email,
-            firstName: newUser.firstName,
-            lastName: newUser.lastName,
-          },
-          tempPassword: tempPassword,
-          nextStep: "loginImmediately"
-        });
-      }
+      // Account created successfully - redirect to complete setup
+      res.status(201).json({
+        message: "Account created successfully! Please complete your setup.",
+        user: {
+          id: newUser.id,
+          email: newUser.email,
+          firstName: newUser.firstName,
+          lastName: newUser.lastName,
+        },
+        nextStep: "completeAccount"
+      });
 
     } catch (error) {
       console.error('Signup error:', error);
@@ -366,6 +340,70 @@ export function registerAuthRoutes(app: Express) {
       console.error('Resend verification error:', error);
       res.status(500).json({
         message: "Failed to resend verification email.",
+      });
+    }
+  });
+
+  // Complete account setup route
+  app.post("/api/auth/complete-account", async (req, res) => {
+    try {
+      const { email, password } = completeAccountSchema.parse(req.body);
+      
+      const user = await storage.getUserByEmail(email);
+      if (!user) {
+        return res.status(404).json({
+          message: "Account not found. Please sign up first.",
+        });
+      }
+
+      if (user.tempPassword) {
+        return res.status(400).json({
+          message: "Account is already complete. Please log in instead.",
+        });
+      }
+
+      // Hash new password
+      const hashedPassword = await bcrypt.hash(password, 12);
+
+      // Update user with password
+      await storage.updateUserPassword(user.id, hashedPassword);
+
+      // Send welcome email now that account is complete
+      try {
+        await emailService.sendWelcomeEmail({
+          firstName: user.firstName || 'User',
+          lastName: user.lastName || '',
+          email: user.email!,
+          tempPassword: null, // No temp password since they set their own
+        });
+        console.log(`📧 Welcome email sent to ${user.email} after account completion`);
+      } catch (emailError) {
+        console.error('Failed to send welcome email after account completion:', emailError);
+        // Don't fail the completion if email fails
+      }
+
+      res.status(200).json({
+        message: "Account setup completed successfully! You can now log in.",
+        user: {
+          id: user.id,
+          email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName,
+        },
+      });
+
+    } catch (error) {
+      console.error('Complete account error:', error);
+      
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({
+          message: "Invalid input data",
+          errors: error.errors,
+        });
+      }
+
+      res.status(500).json({
+        message: "Failed to complete account setup. Please try again.",
       });
     }
   });
