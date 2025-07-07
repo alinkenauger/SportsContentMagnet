@@ -288,35 +288,7 @@ export default function SalesPage() {
                 </div>
               </div>
               
-              {/* Action Button Right Below Video */}
-              <div className="flex justify-center">
-                <Dialog open={isSignUpOpen} onOpenChange={setIsSignUpOpen}>
-                  <DialogTrigger asChild>
-                    <Button 
-                      size="lg" 
-                      className="bg-green-600 hover:bg-green-700 text-white px-8 py-4 text-xl font-bold"
-                    >
-                      Start Free Account
-                      <ArrowRight className="ml-2 h-5 w-5" />
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className="sm:max-w-md">
-                    <DialogHeader>
-                      <DialogTitle>Start Your Free Account</DialogTitle>
-                      <DialogDescription>
-                        Get started with ConvertMag.net in less than 60 seconds
-                      </DialogDescription>
-                    </DialogHeader>
-                    
-                    <Button 
-                      className="w-full bg-gradient-to-r from-blue-600 to-purple-600"
-                      onClick={() => window.location.href = "/signup"}
-                    >
-                      Create Free Account
-                    </Button>
-                  </DialogContent>
-                </Dialog>
-              </div>
+
             </div>
             
             {/* CTA Button after Discovery */}
