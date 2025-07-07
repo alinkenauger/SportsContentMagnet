@@ -1536,12 +1536,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         {
           name: 'business',
           displayName: 'Business',
-          price: '33.00',
+          price: '99.00',
           currency: 'USD',
           billingCycle: 'monthly',
           maxLeads: null, // unlimited
           maxVisits: null, // unlimited
-          maxBrands: null, // unlimited brands - $33 per brand
+          maxBrands: 3, // Minimum 3 brands included
           customBranding: true,
           whiteLabeling: true,
           features: ['unlimited_guides', 'white_labeling', 'team_management', 'priority_support'],

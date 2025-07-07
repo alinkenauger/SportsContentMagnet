@@ -110,6 +110,7 @@ export default function Pricing() {
     else if (plan.maxVisits === null) limits.push("Unlimited visits");
     
     if (plan.maxBrands === 0) limits.push("Personal account only");
+    else if (plan.maxBrands === 3) limits.push("3 brands included");
     else if (plan.maxBrands === null) limits.push("Unlimited brands");
     
     return limits;
@@ -239,14 +240,14 @@ export default function Pricing() {
                   <CardDescription className="mt-2">
                     {plan.name === 'free' && (isCurrentPlan(plan.id) ? "Your current plan" : "Perfect for trying out ConvertMag")}
                     {plan.name === 'personal' && (isCurrentPlan(plan.id) ? "Your current plan" : "Upgrade for unlimited leads & custom branding")}
-                    {plan.name === 'business' && (isCurrentPlan(plan.id) ? "Your current plan" : "Scale with multiple brands & team management")}
+                    {plan.name === 'business' && (isCurrentPlan(plan.id) ? "Your current plan" : "Includes 3 brands + unlimited team management")}
                   </CardDescription>
                 </div>
 
                 <div className="space-y-1">
                   <div className="text-4xl font-bold">
                     ${calculatePrice(plan.price)}
-                    {plan.name === 'business' && <span className="text-lg text-muted-foreground">/brand</span>}
+                    {plan.name === 'business' && <span className="text-lg text-muted-foreground">/3 brands</span>}
                   </div>
                   <div className="text-sm text-muted-foreground">
                     per {billingCycle === 'yearly' ? 'year' : 'month'}
@@ -332,7 +333,7 @@ export default function Pricing() {
           <div>
             <h3 className="font-semibold">How does the Business plan pricing work?</h3>
             <p className="text-muted-foreground">
-              The Business plan is $33 per brand per month. Each brand gets unlimited guides, leads, and visits, 
+              The Business plan is $99/month (or $990/year) and includes 3 brands minimum. Each brand gets unlimited guides, leads, and visits, 
               plus full white-labeling and team management capabilities.
             </p>
           </div>
