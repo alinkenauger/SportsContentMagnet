@@ -112,13 +112,13 @@ const pricingPlans = [
   },
   {
     name: "Business",
-    price: "$33",
-    description: "Perfect for teams & agencies",
+    price: "$99",
+    description: "Perfect for teams & agencies (minimum 3 brands)",
     features: [
       "Everything in Personal",
       "Team collaboration",
       "White-label solutions",
-      "Multi-brand management",
+      "Multi-brand management (3 brands minimum)",
       "Advanced analytics",
       "Priority phone support"
     ],
@@ -450,13 +450,13 @@ export default function SalesPage() {
               {/* Step 4: The Problem */}
               <div className="flex flex-col md:flex-row-reverse gap-8 items-center">
                 <div className="md:w-1/2">
-                  <div className="bg-orange-50 border-l-4 border-orange-500 p-6 rounded-r-lg">
-                    <h4 className="text-xl font-bold text-orange-800 mb-3">💸 The Scaling Problem</h4>
+                  <div className="bg-red-50 border-l-4 border-red-600 p-6 rounded-lg">
+                    <h4 className="text-xl font-bold text-red-800 mb-3">💸 The Scaling Problem</h4>
                     <p className="text-gray-700 mb-4">
                       But here's the catch: each video-specific guide cost $1000+ to create manually and took weeks to complete. I couldn't scale this strategy.
                     </p>
-                    <div className="bg-white rounded-lg p-4 border border-orange-200">
-                      <div className="text-orange-600 font-semibold text-center">
+                    <div className="bg-white rounded-lg p-4 border border-red-200">
+                      <div className="text-red-600 font-semibold text-center">
                         Amazing Strategy + Impossible Costs = No Solution
                       </div>
                     </div>
@@ -469,14 +469,14 @@ export default function SalesPage() {
               </div>
               
               {/* Step 5: The Solution */}
-              <div className="bg-gradient-to-r from-purple-600 to-blue-600 rounded-2xl p-8 text-white text-center">
+              <div className="bg-green-600 rounded-xl p-8 text-white text-center">
                 <h4 className="text-2xl font-bold mb-4">💡 The Solution That Changed Everything</h4>
-                <p className="text-xl mb-6 opacity-90">
+                <p className="text-xl mb-6">
                   "I found the 'New Way' but needed a solution to do the heavy lifting. Unfortunately, it didn't exist. So I spent the last year personally coding it myself."
                 </p>
-                <div className="bg-white bg-opacity-20 rounded-lg p-6 backdrop-blur-sm">
+                <div className="bg-white bg-opacity-20 rounded-lg p-6">
                   <div className="text-3xl font-bold mb-2">ConvertMag.net Was Born</div>
-                  <div className="text-lg opacity-90">Turning any content into video-specific lead magnets in 5 minutes, not 5 weeks</div>
+                  <div className="text-lg">Turning any content into video-specific lead magnets in 5 minutes, not 5 weeks</div>
                 </div>
               </div>
             </div>
@@ -485,67 +485,47 @@ export default function SalesPage() {
       </section>
 
       {/* Proven Results Section */}
-      <section className="bg-gradient-to-r from-yellow-400 to-orange-500 py-16">
+      <section className="bg-gray-50 py-16">
         <div className="container mx-auto px-4">
-          <div className="max-w-6xl mx-auto text-center">
-            <div className="bg-white text-orange-600 rounded-full px-6 py-3 inline-block mb-6 font-bold text-lg animate-pulse">
+          <div className="max-w-4xl mx-auto text-center">
+            <div className="bg-red-600 text-white rounded-lg px-6 py-3 inline-block mb-6 font-bold text-lg">
               🔥 PROVEN RESULTS FROM 2024 TEST
             </div>
             
-            <h2 className="text-4xl md:text-5xl font-black mb-8 text-white">
+            <h2 className="text-4xl md:text-5xl font-bold mb-8 text-gray-900">
               The Discovery That Changed Everything
             </h2>
             
-            <div className="bg-white bg-opacity-20 rounded-3xl p-8 backdrop-blur-sm mb-8">
-              <div className="bg-white rounded-2xl p-8 shadow-2xl">
-                <p className="text-3xl md:text-4xl font-black text-center text-gray-900 mb-4">
-                  5 Video-Specific Lead Magnets = Same Results as 25+ Category-Based Lead Magnets
-                </p>
-                <div className="bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-xl p-4">
-                  <p className="text-2xl font-bold text-center">
-                    That's a 10X improvement in lead generation efficiency
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-          
-          {/* Stop/Start Call to Action */}
-          <div className="max-w-5xl mx-auto mb-12">
-            <div className="grid md:grid-cols-2 gap-8 items-center py-8">
-              {/* STOP Side */}
-              <div className="text-center md:text-left">
-                <div className="inline-flex items-center bg-red-100 rounded-full px-6 py-3 mb-4">
-                  <span className="text-2xl mr-2">🛑</span>
-                  <span className="text-red-700 font-bold text-lg">STOP WASTING TIME</span>
-                </div>
-                <p className="text-xl text-gray-700 leading-relaxed">
-                  with Generic <strong>"Top 10 Tips"</strong> PDFs That <span className="text-red-600 font-semibold">Don't Convert</span>
-                </p>
-              </div>
-              
-              {/* START Side */}
-              <div className="text-center md:text-right">
-                <div className="inline-flex items-center bg-green-100 rounded-full px-6 py-3 mb-4">
-                  <span className="text-2xl mr-2">🚀</span>
-                  <span className="text-green-700 font-bold text-lg">START CREATING</span>
-                </div>
-                <p className="text-xl text-gray-700 leading-relaxed">
-                  Video-Specific Lead Magnets That Convert <span className="text-green-600 font-semibold">Up To 10x More Leads!</span>
+            <div className="bg-white rounded-xl p-8 shadow-lg mb-8">
+              <p className="text-2xl md:text-3xl font-bold text-center text-gray-900 mb-6">
+                5 Video-Specific Lead Magnets = Same Results as 25+ Category-Based Lead Magnets
+              </p>
+              <div className="bg-green-600 text-white rounded-lg p-4">
+                <p className="text-xl font-bold text-center">
+                  That's a 10X improvement in lead generation efficiency
                 </p>
               </div>
             </div>
           </div>
           
-          <div className="space-y-6 mb-12">
-            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+          {/* Simple Message */}
+          <div className="max-w-4xl mx-auto mb-12 text-center">
+            <p className="text-2xl text-gray-700 leading-relaxed">
+              Stop wasting time with generic PDFs that don't convert. <br/>
+              <span className="text-green-600 font-bold">Start creating video-specific lead magnets that get 10x more leads!</span>
+            </p>
+          </div>
+          
+          {/* Clear Call to Action Buttons */}
+          <div className="max-w-2xl mx-auto mb-12">
+            <div className="flex flex-col sm:flex-row gap-6 justify-center items-center">
               <Dialog open={isSignUpOpen} onOpenChange={setIsSignUpOpen}>
                 <DialogTrigger asChild>
                   <Button 
                     size="lg" 
-                    className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white px-12 py-6 text-xl font-bold shadow-2xl transform hover:scale-105 transition-all duration-300"
+                    className="bg-green-600 hover:bg-green-700 text-white px-8 py-4 text-xl font-bold w-full sm:w-auto"
                   >
-                    🚀 GET 10X RESULTS NOW (FREE)
+                    Start Free Account
                     <ArrowRight className="ml-2 h-5 w-5" />
                   </Button>
                 </DialogTrigger>
@@ -659,25 +639,35 @@ export default function SalesPage() {
               <Button 
                 variant="outline" 
                 size="lg"
-                className="border-2 border-blue-600 text-blue-600 hover:bg-blue-50 px-8 py-6 text-lg font-semibold"
+                className="border-2 border-gray-400 text-gray-700 hover:bg-gray-50 px-8 py-4 text-lg font-semibold w-full sm:w-auto"
                 onClick={() => setShowVideoDemo(true)}
               >
                 <Play className="mr-2 h-5 w-5" />
-                📺 See 10X Results Proof
+                Watch Demo
               </Button>
             </div>
             
-            <div className="grid md:grid-cols-3 gap-6 max-w-4xl mx-auto">
-              <div className="bg-white rounded-lg shadow-lg p-6 border-l-4 border-green-500">
-                <h3 className="font-bold text-lg mb-2 text-green-800">✅ Creates Fresh Value</h3>
+            <div className="text-center text-sm text-gray-600 mt-4">
+              No credit card required • Setup in 2 minutes
+            </div>
+          </div>
+          
+          {/* Key Features - Simple List */}
+          <div className="max-w-3xl mx-auto mb-12">
+            <div className="grid md:grid-cols-3 gap-8 text-center">
+              <div>
+                <div className="text-green-600 text-2xl mb-2">✅</div>
+                <h3 className="font-bold text-lg mb-2 text-gray-900">Creates Fresh Value</h3>
                 <p className="text-gray-600">100% original guides, not gated existing content</p>
               </div>
-              <div className="bg-white rounded-lg shadow-lg p-6 border-l-4 border-blue-500">
-                <h3 className="font-bold text-lg mb-2 text-blue-800">⚡ Smart Timestamping</h3>
+              <div>
+                <div className="text-green-600 text-2xl mb-2">⚡</div>
+                <h3 className="font-bold text-lg mb-2 text-gray-900">Smart Timestamping</h3>
                 <p className="text-gray-600">Click to jump to exact moments in source content</p>
               </div>
-              <div className="bg-white rounded-lg shadow-lg p-6 border-l-4 border-purple-500">
-                <h3 className="font-bold text-lg mb-2 text-purple-800">🎯 ANY Content Type</h3>
+              <div>
+                <div className="text-green-600 text-2xl mb-2">🎯</div>
+                <h3 className="font-bold text-lg mb-2 text-gray-900">ANY Content Type</h3>
                 <p className="text-gray-600">Videos, audio, blogs, PDFs, streams - not just YouTube</p>
               </div>
             </div>

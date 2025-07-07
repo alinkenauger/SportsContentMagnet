@@ -15,29 +15,29 @@ const steps: TransformationStep[] = [
   {
     id: "step1",
     title: "Turn A YouTube Video...",
-    image: "/attached_assets/mqdefault_1751825204492.jpg",
-    alt: "YouTube Golf Video Thumbnail",
+    image: "/attached_assets/CleanShot 2025-07-07 at 16.08.49@2x_1751918933270.png",
+    alt: "YouTube Video Input",
     description: "Any YouTube video becomes the source of transformation",
-    bgColor: "from-red-500 to-red-600",
-    textColor: "text-red-100"
+    bgColor: "from-gray-100 to-gray-200",
+    textColor: "text-gray-800"
   },
   {
     id: "step2", 
     title: "Into A High Converting Landing Page...",
-    image: "/attached_assets/CleanShot 2025-07-06 at 13.58.18@2x_1751825245756.png",
+    image: "/attached_assets/CleanShot 2025-07-07 at 16.31.56@2x_1751920318463.png",
     alt: "High Converting Landing Page",
     description: "AI generates professional landing page with compelling copy",
-    bgColor: "from-blue-500 to-blue-600",
-    textColor: "text-blue-100"
+    bgColor: "from-red-50 to-red-100",
+    textColor: "text-red-800"
   },
   {
     id: "step3",
     title: "And a Custom Highly Detailed Guide...",
-    image: "/attached_assets/CleanShot 2025-07-06 at 16.05.48_1751832465394.gif",
+    image: "/attached_assets/CleanShot 2025-07-07 at 16.35.04@2x_1751920507446.png",
     alt: "Interactive Practice Guide",
     description: "Complete interactive guide with smart timestamping",
-    bgColor: "from-green-500 to-green-600", 
-    textColor: "text-green-100"
+    bgColor: "from-green-50 to-green-100", 
+    textColor: "text-green-800"
   },
   {
     id: "step4",
@@ -45,8 +45,8 @@ const steps: TransformationStep[] = [
     image: "",
     alt: "",
     description: "Complete lead magnet system ready in 5 minutes",
-    bgColor: "from-purple-500 to-purple-600",
-    textColor: "text-purple-100"
+    bgColor: "from-white to-gray-50",
+    textColor: "text-gray-900"
   }
 ];
 
@@ -262,26 +262,7 @@ export function ScrollTransformation() {
                     }}
                   />
                   
-                  {/* Enhanced play button overlay for video thumbnail */}
-                  {currentStep === 0 && (
-                    <div 
-                      className="absolute inset-0 bg-black bg-opacity-20 rounded-xl sm:rounded-2xl flex items-center justify-center"
-                      style={{
-                        opacity: 1 - scrollProgress * 0.3,
-                        transition: 'opacity 0.3s ease-out',
-                      }}
-                    >
-                      <div 
-                        className="w-12 h-12 sm:w-16 sm:h-16 bg-white rounded-full flex items-center justify-center shadow-xl"
-                        style={{
-                          animation: 'pulse 2s infinite',
-                          transform: `scale(${1 + Math.sin(scrollProgress * Math.PI * 2) * 0.1})`,
-                        }}
-                      >
-                        <Play className="h-6 w-6 sm:h-8 sm:w-8 text-red-600 ml-0.5" />
-                      </div>
-                    </div>
-                  )}
+
                 </div>
               )}
 
