@@ -1,0 +1,173 @@
+# Development and version control
+.git
+.gitignore
+.github
+*.md
+!README.md
+
+# Python cache and libraries
+.cache
+.pythonlibs
+__pycache__
+*.py[cod]
+*$py.class
+*.pyc
+*.pyo
+*.pyd
+.Python
+pip-log.txt
+pip-delete-this-directory.txt
+.venv
+venv/
+ENV/
+env/
+*.egg-info
+dist/
+build/
+*.egg
+.eggs
+.pytest_cache
+.mypy_cache
+.ruff_cache
+.coverage
+htmlcov
+.tox
+
+# Node modules and npm
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.npm
+.yarn
+
+# Build outputs
+dist/
+build/
+*.log
+
+# IDE and editor files
+.vscode
+.idea
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.temp
+.temp
+.tmp
+tmp/
+temp/
+
+# Test files
+test/
+tests/
+*.test.js
+*.spec.js
+coverage/
+.nyc_output
+
+# Development scripts
+deploy*.sh
+cleanup*.sh
+build*.sh
+fix*.sh
+deployment*.sh
+validate*.sh
+*.sh
+
+# Documentation
+docs/
+documentation/
+*.pdf
+
+# Development dependencies
+*-dev
+*-test
+
+# Python specific
+pyproject.toml
+poetry.lock
+Pipfile
+Pipfile.lock
+requirements-dev.txt
+uv.lock
+
+# Large assets
+external_storage/
+attached_assets/
+public/screenshots/
+public/uploads/
+*.mp4
+*.mp3
+*.wav
+*.avi
+*.mov
+*.zip
+*.tar
+*.gz
+*.rar
+
+# Development config
+.env.local
+.env.development
+.env.test
+*.local
+
+# Backup files
+*backup*
+*original*
+*-old*
+*-bak*
+
+# Package manager files
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Dockerfiles and configs not needed in image
+Dockerfile*
+docker-compose*
+.dockerignore*
+
+# Development tools config
+.eslintrc*
+.prettierrc*
+.stylelintrc*
+.babelrc*
+jest.config*
+webpack.config*
+rollup.config*
+
+# CI/CD
+.travis.yml
+.circleci
+.gitlab-ci.yml
+.github/workflows
+
+# Miscellaneous
+*.sql
+*.sqlite
+*.db
+.cache/
+.parcel-cache/
+.next/
+.nuxt/
+.vuepress/dist
+.serverless/
+.fusebox/
+.dynamodb/
+
+# Replit specific
+.replit
+.config/
+.breakpoints
+.upm/
+
+# Package files that shouldn't be in production
+package-*.json
+!package.json
