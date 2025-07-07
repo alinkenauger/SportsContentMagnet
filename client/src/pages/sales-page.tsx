@@ -219,139 +219,12 @@ export default function SalesPage() {
                   </DialogDescription>
                 </DialogHeader>
                 
-{userAlreadyExists ? (
-                  <div className="text-center space-y-4">
-                    <div className="bg-green-50 border border-green-200 rounded-lg p-6">
-                      <h3 className="text-lg font-bold text-green-800 mb-2">🎉 Good News! You Already Have An Account!</h3>
-                      <p className="text-green-700 mb-4">
-                        We found an existing account with this email address. You can log in right away!
-                      </p>
-                      <div className="space-y-3">
-                        <Button 
-                          className="w-full bg-green-600 hover:bg-green-700 text-white"
-                          onClick={() => window.location.href = "/login"}
-                        >
-                          Click Here to Login
-                        </Button>
-                        <p className="text-sm text-gray-600">
-                          Don't know your password? No problem! 
-                          <br />
-                          <Button 
-                            variant="link" 
-                            className="text-blue-600 hover:text-blue-800 p-0 h-auto font-semibold"
-                            onClick={() => window.location.href = "/login?forgot=true"}
-                          >
-                            Click "Forgot Password" on the login page
-                          </Button>
-                        </p>
-                      </div>
-                    </div>
-                    <Button 
-                      variant="outline"
-                      onClick={() => setUserAlreadyExists(false)}
-                      className="w-full"
-                    >
-                      Try Different Email
-                    </Button>
-                  </div>
-                ) : (
-                  <Form {...form}>
-                    <form onSubmit={form.handleSubmit(handleSignUp)} className="space-y-4">
-                      <div className="grid grid-cols-2 gap-4">
-                        <FormField
-                          control={form.control}
-                          name="firstName"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>First Name</FormLabel>
-                              <FormControl>
-                                <Input placeholder="John" {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        <FormField
-                          control={form.control}
-                          name="lastName"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Last Name</FormLabel>
-                              <FormControl>
-                                <Input placeholder="Doe" {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </div>
-                      
-                      <FormField
-                        control={form.control}
-                        name="email"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Email Address</FormLabel>
-                            <FormControl>
-                              <Input type="email" placeholder="john@example.com" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      
-                      <FormField
-                        control={form.control}
-                        name="phone"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Phone (Optional)</FormLabel>
-                            <FormControl>
-                              <Input type="tel" placeholder="+1 (555) 123-4567" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      
-                      <FormField
-                        control={form.control}
-                        name="company"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Company/Brand (Optional)</FormLabel>
-                            <FormControl>
-                              <Input placeholder="Your Company" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      
-                      <FormField
-                        control={form.control}
-                        name="niche"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Content Niche (Optional)</FormLabel>
-                            <FormControl>
-                              <Input placeholder="Fitness, Cooking, Coding, etc." {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      
-                      <Button 
-                        type="submit" 
-                        className="w-full bg-gradient-to-r from-blue-600 to-purple-600"
-                        disabled={signUpMutation.isPending}
-                      >
-                        {signUpMutation.isPending ? "Creating Account..." : "Create Free Account"}
-                      </Button>
-                    </form>
-                  </Form>
-                )}
+<Button 
+                  className="w-full bg-gradient-to-r from-blue-600 to-purple-600"
+                  onClick={() => window.location.href = "/signup"}
+                >
+                  Create Free Account
+                </Button>
               </DialogContent>
             </Dialog>
           </div>
@@ -435,102 +308,12 @@ export default function SalesPage() {
                       </DialogDescription>
                     </DialogHeader>
                     
-                    <Form {...form}>
-                      <form onSubmit={form.handleSubmit(handleSignUp)} className="space-y-4">
-                        <div className="grid grid-cols-2 gap-4">
-                          <FormField
-                            control={form.control}
-                            name="firstName"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>First Name</FormLabel>
-                                <FormControl>
-                                  <Input placeholder="John" {...field} />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                          <FormField
-                            control={form.control}
-                            name="lastName"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Last Name</FormLabel>
-                                <FormControl>
-                                  <Input placeholder="Doe" {...field} />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                        </div>
-                        
-                        <FormField
-                          control={form.control}
-                          name="email"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Email Address</FormLabel>
-                              <FormControl>
-                                <Input type="email" placeholder="john@example.com" {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        
-                        <FormField
-                          control={form.control}
-                          name="phone"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Phone (Optional)</FormLabel>
-                              <FormControl>
-                                <Input type="tel" placeholder="+1 (555) 123-4567" {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        
-                        <FormField
-                          control={form.control}
-                          name="company"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Company/Brand (Optional)</FormLabel>
-                              <FormControl>
-                                <Input placeholder="Your Company" {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        
-                        <FormField
-                          control={form.control}
-                          name="niche"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Content Niche (Optional)</FormLabel>
-                              <FormControl>
-                                <Input placeholder="Fitness, Cooking, Coding, etc." {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        
-                        <Button 
-                          type="submit" 
-                          className="w-full bg-gradient-to-r from-blue-600 to-purple-600"
-                          disabled={signUpMutation.isPending}
-                        >
-                          {signUpMutation.isPending ? "Creating Account..." : "Create Free Account"}
-                        </Button>
-                      </form>
-                    </Form>
+                    <Button 
+                      className="w-full bg-gradient-to-r from-blue-600 to-purple-600"
+                      onClick={() => window.location.href = "/signup"}
+                    >
+                      Create Free Account
+                    </Button>
                   </DialogContent>
                 </Dialog>
               </div>
@@ -710,15 +493,17 @@ export default function SalesPage() {
           {/* Clear Call to Action Buttons */}
           <div className="max-w-2xl mx-auto mb-12">
             <div className="flex justify-center">
-              <Button 
-                variant="outline" 
-                size="lg"
-                className="border-2 border-gray-400 text-gray-700 hover:bg-gray-50 px-8 py-4 text-lg font-semibold"
-                onClick={() => setShowVideoDemo(true)}
-              >
-                <Play className="mr-2 h-5 w-5" />
-                Watch Demo
-              </Button>
+              <Dialog open={isSignUpOpen} onOpenChange={setIsSignUpOpen}>
+                <DialogTrigger asChild>
+                  <Button 
+                    size="lg"
+                    className="bg-green-600 hover:bg-green-700 text-white px-8 py-4 text-lg font-semibold"
+                  >
+                    Get Started For Free!
+                    <ArrowRight className="ml-2 h-5 w-5" />
+                  </Button>
+                </DialogTrigger>
+              </Dialog>
             </div>
             
             <div className="text-center text-sm text-gray-600 mt-4">
