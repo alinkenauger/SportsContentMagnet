@@ -82,16 +82,18 @@ export function registerAuthRoutes(app: Express) {
       }
 
       // Send welcome email with login details
+      let emailSent = false;
       try {
-        await emailService.sendWelcomeEmail({
+        emailSent = await emailService.sendWelcomeEmail({
           firstName: validatedData.firstName,
           lastName: validatedData.lastName,
           email: validatedData.email,
           tempPassword: tempPassword,
         });
+        console.log(`📧 Welcome email result for ${validatedData.email}: ${emailSent ? 'SUCCESS' : 'FAILED'}`);
       } catch (emailError) {
         console.error('Failed to send welcome email:', emailError);
-        // Don't fail the signup if email fails
+        emailSent = false;
       }
 
       // Add to High Level CRM
@@ -115,15 +117,29 @@ export function registerAuthRoutes(app: Express) {
         // Don't fail the signup if CRM fails
       }
 
-      res.status(201).json({
-        message: "Account created successfully! Check your email for login instructions.",
-        user: {
-          id: newUser.id,
-          email: newUser.email,
-          firstName: newUser.firstName,
-          lastName: newUser.lastName,
-        },
-      });
+      // Provide appropriate response based on email delivery status
+      if (emailSent) {
+        res.status(201).json({
+          message: "Account created successfully! Check your email for login instructions.",
+          user: {
+            id: newUser.id,
+            email: newUser.email,
+            firstName: newUser.firstName,
+            lastName: newUser.lastName,
+          },
+        });
+      } else {
+        res.status(201).json({
+          message: `Account created successfully! Your temporary password is: ${tempPassword} - Please save this password to log in.`,
+          user: {
+            id: newUser.id,
+            email: newUser.email,
+            firstName: newUser.firstName,
+            lastName: newUser.lastName,
+          },
+          tempPassword: tempPassword, // Include in response when email fails
+        });
+      }
 
     } catch (error) {
       console.error('Signup error:', error);
