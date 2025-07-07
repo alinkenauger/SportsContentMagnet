@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import { useLocation, useRouter } from "wouter";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,8 +9,6 @@ import { useMutation } from "@tanstack/react-query";
 import { Eye, EyeOff, CheckCircle } from "lucide-react";
 
 export default function CompleteAccount() {
-  const [, setLocation] = useLocation();
-  const [, navigate] = useRouter();
   const { toast } = useToast();
   
   const [password, setPassword] = useState("");
@@ -26,6 +23,8 @@ export default function CompleteAccount() {
     const lastName = urlParams.get('lastName') || localStorage.getItem('signup_lastName');
     const email = urlParams.get('email') || localStorage.getItem('signup_email');
     
+    console.log('CompleteAccount - checking for user data:', { firstName, lastName, email });
+    
     if (firstName && lastName && email) {
       setUserInfo({ firstName, lastName, email });
       // Clear from localStorage after using
@@ -34,9 +33,10 @@ export default function CompleteAccount() {
       localStorage.removeItem('signup_email');
     } else {
       // If no user info, redirect to signup
-      navigate("/");
+      console.log('CompleteAccount - no user data found, redirecting to home');
+      window.location.href = "/";
     }
-  }, [navigate]);
+  }, []);
 
   const completeAccountMutation = useMutation({
     mutationFn: async (data: { email: string; password: string }) => {
@@ -47,7 +47,7 @@ export default function CompleteAccount() {
         title: "Account Setup Complete!",
         description: "Welcome to ConvertMag.net! You can now start creating lead magnets.",
       });
-      navigate("/dashboard");
+      window.location.href = "/dashboard";
     },
     onError: (error: any) => {
       toast({
