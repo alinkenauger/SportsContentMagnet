@@ -32,6 +32,7 @@ import Subscribe from "@/pages/subscribe";
 import ResetPassword from "@/pages/reset-password";
 import EmailSettings from "@/pages/email-settings";
 import CompleteAccount from "@/pages/complete-account";
+import Login from "@/pages/login";
 
 
 function Router() {
@@ -42,6 +43,7 @@ function Router() {
       {isLoading || !isAuthenticated ? (
         <>
           <Route path="/" component={SalesPage} />
+          <Route path="/login" component={Login} />
           <Route path="/reset-password" component={ResetPassword} />
           <Route path="/complete-account" component={CompleteAccount} />
         </>
