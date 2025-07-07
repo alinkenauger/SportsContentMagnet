@@ -7,6 +7,7 @@ import { setupGoogleAuth, isGoogleAuthenticated } from "./googleAuth";
 import { analyzeVideoContent, generatePracticeGuide, personalizeGuideContent } from "./services/openai";
 import { getYouTubeVideoData, transcribeVideo } from "./services/youtube";
 import { generateGuidePDF, generatePDFFilename } from "./services/pdfGenerator";
+import { EmailService } from "./services/emailService";
 import { insertGuideSchema, insertLandingPageSchema, insertLeadSchema, insertBrandingSettingsSchema, insertTrainingSettingsSchema, insertKnowledgebaseEntrySchema, brandUsers, subscriptionPlans } from "@shared/schema";
 import { db } from "./db";
 import { eq } from "drizzle-orm";
@@ -1098,6 +1099,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
         userAgent: req.get('User-Agent'),
         referrer: req.get('Referer')
       });
+
+      // Send guide delivery email
+      try {
+        const emailService = new EmailService();
+        const guideDeliveryUrl = `${req.protocol}://${req.get('host')}/delivery/${customUrl}/${lead.id}`;
+        const landingPageUrl = `${req.protocol}://${req.get('host')}/landing/${customUrl}`;
+        
+        await emailService.sendGuideDeliveryEmail(
+          { email, firstName: firstName || 'Friend' },
+          guide?.title || 'Your Practice Guide',
+          guideDeliveryUrl,
+          landingPageUrl
+        );
+      } catch (emailError) {
+        console.warn("Email delivery failed (non-critical):", emailError);
+        // Don't fail the lead creation if email fails
+      }
 
       res.json({
         success: true,

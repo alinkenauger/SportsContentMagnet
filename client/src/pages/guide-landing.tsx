@@ -56,10 +56,8 @@ export default function GuideLanding() {
 
   const submitLeadMutation = useMutation({
     mutationFn: async (data: Record<string, string>) => {
-      return await apiRequest(`/api/landing/${customUrl}/submit`, {
-        method: "POST",
-        body: JSON.stringify(data),
-      });
+      const response = await apiRequest(`/api/landing/${customUrl}/submit`, "POST", data);
+      return await response.json();
     },
     onSuccess: (response: any) => {
       // Redirect to the delivery URL provided by the server

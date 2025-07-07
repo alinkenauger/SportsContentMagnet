@@ -107,6 +107,13 @@ ConvertMag.net is a comprehensive SAAS application that transforms ANY video, au
 
 ```
 Changelog:
+- July 07, 2025. Fixed critical landing page form submission issue and enhanced email delivery:
+  * Resolved "Failed to execute 'fetch' on 'Window'" error by correcting apiRequest parameter order
+  * Added complete email delivery system to form submissions with guide delivery emails
+  * Enhanced analytics tracking to properly capture conversion events and landing page views
+  * Verified lead creation, analytics tracking, and email delivery flow working correctly
+  * Landing page forms now properly redirect to delivery page after successful submission
+  * Added non-critical email delivery that doesn't fail lead creation if email service is unavailable
 - July 06, 2025. Enhanced pricing page with annual billing options and business plan restructuring:
   * Added monthly/yearly billing toggle with 17% savings on annual plans (2 months free)
   * Redesigned pricing page for logged-in users showing current plan status vs upgrade options
