@@ -291,20 +291,7 @@ export default function SalesPage() {
 
             </div>
             
-            {/* CTA Button after Discovery */}
-            <div className="text-center mt-12">
-              <Dialog open={isSignUpOpen} onOpenChange={setIsSignUpOpen}>
-                <DialogTrigger asChild>
-                  <Button 
-                    size="lg" 
-                    className="bg-green-600 hover:bg-green-700 text-white px-8 py-4 text-xl font-bold"
-                  >
-                    Start Free Account Now
-                    <ArrowRight className="ml-2 h-5 w-5" />
-                  </Button>
-                </DialogTrigger>
-              </Dialog>
-            </div>
+
           </div>
         </div>
       </section>
