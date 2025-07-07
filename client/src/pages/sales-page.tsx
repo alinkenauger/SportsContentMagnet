@@ -150,7 +150,7 @@ export default function SalesPage() {
 
   const signUpMutation = useMutation({
     mutationFn: async (data: SignUpData) => {
-      return apiRequest("POST", "/api/auth/signup", data);
+      return apiRequest("/api/auth/signup", "POST", data);
     },
     onSuccess: () => {
       toast({
