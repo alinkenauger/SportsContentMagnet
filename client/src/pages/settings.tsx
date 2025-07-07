@@ -46,6 +46,7 @@ import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { useBrands, useCreateBrand, useSetCurrentBrand, useDeleteBrand } from "@/hooks/useBrands";
+import BillingManagement from "@/components/BillingManagement";
 
 const fontOptions = [
   { value: "Inter", label: "Inter" },
@@ -650,95 +651,7 @@ export default function Settings() {
 
             {/* Billing Tab */}
             <TabsContent value="billing" className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <CreditCard className="w-5 h-5" />
-                    Billing & Subscription
-                  </CardTitle>
-                  <CardDescription>Manage your subscription, payment methods, and billing information</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  {/* Current Plan */}
-                  <div className="border rounded-lg p-4 bg-gradient-to-r from-blue-50 to-indigo-50">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h3 className="font-semibold text-lg">Pro Plan</h3>
-                        <p className="text-gray-600">Unlimited guides, advanced analytics, priority support</p>
-                        <div className="flex items-center gap-2 mt-2">
-                          <Badge variant="secondary">Active</Badge>
-                          <span className="text-sm text-gray-500">Next billing: Jan 15, 2025</span>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <div className="text-2xl font-bold">$29/mo</div>
-                        <Button variant="outline" size="sm" className="mt-2">
-                          Change Plan
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Payment Methods */}
-                  <div className="space-y-4">
-                    <h3 className="font-semibold">Payment Methods</h3>
-                    <div className="border rounded-lg p-4">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-6 bg-blue-600 rounded text-white text-xs flex items-center justify-center font-bold">
-                            VISA
-                          </div>
-                          <div>
-                            <p className="font-medium">•••• •••• •••• 4242</p>
-                            <p className="text-sm text-gray-500">Expires 12/2027</p>
-                          </div>
-                          <Badge variant="default" className="ml-2">Default</Badge>
-                        </div>
-                        <div className="flex gap-2">
-                          <Button variant="ghost" size="sm">
-                            <Edit className="w-4 h-4" />
-                          </Button>
-                          <Button variant="ghost" size="sm">
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                    <Button variant="outline" className="flex items-center gap-2">
-                      <Plus className="w-4 h-4" />
-                      Add Payment Method
-                    </Button>
-                  </div>
-
-                  {/* Billing History */}
-                  <div className="space-y-4">
-                    <h3 className="font-semibold">Recent Invoices</h3>
-                    <div className="space-y-2">
-                      {[
-                        { date: "Dec 15, 2024", amount: "$29.00", status: "Paid" },
-                        { date: "Nov 15, 2024", amount: "$29.00", status: "Paid" },
-                        { date: "Oct 15, 2024", amount: "$29.00", status: "Paid" },
-                      ].map((invoice, index) => (
-                        <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
-                          <div className="flex items-center gap-3">
-                            <Calendar className="w-4 h-4 text-gray-400" />
-                            <span>{invoice.date}</span>
-                          </div>
-                          <div className="flex items-center gap-3">
-                            <span className="font-medium">{invoice.amount}</span>
-                            <Badge variant="secondary" className="bg-green-100 text-green-800">
-                              {invoice.status}
-                            </Badge>
-                            <Button variant="ghost" size="sm">
-                              <FileText className="w-4 h-4" />
-                            </Button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+              <BillingManagement />
             </TabsContent>
 
             {/* Security Tab */}

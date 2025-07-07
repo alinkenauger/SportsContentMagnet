@@ -28,6 +28,7 @@ import KnowledgeBaseSettings from "@/pages/knowledge-base-settings";
 import Pricing from "@/pages/pricing";
 import TeamManagement from "@/pages/team-management";
 import SalesPage from "@/pages/sales-page";
+import Subscribe from "@/pages/subscribe";
 import ResetPassword from "@/pages/reset-password";
 import EmailSettings from "@/pages/email-settings";
 
@@ -57,6 +58,7 @@ function Router() {
           <Route path="/pricing" component={Pricing} />
           <Route path="/team" component={TeamManagement} />
           <Route path="/email-settings" component={EmailSettings} />
+          <Route path="/subscribe" component={Subscribe} />
           <Route path="/admin" component={AdminDashboard} />
           <Route path="/test-transcription" component={TranscriptionTest} />
         </>

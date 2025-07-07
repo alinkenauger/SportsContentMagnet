@@ -1,4 +1,5 @@
 import type { Express } from "express";
+import express from "express";
 import { createServer, type Server } from "http";
 import { randomUUID } from "crypto";
 import { storage } from "./storage";
@@ -18,7 +19,16 @@ import fs from 'fs';
 import path from 'path';
 import sharp from 'sharp';
 import { registerAuthRoutes } from "./authRoutes";
+import Stripe from "stripe";
 // import pdf from 'pdf-parse'; // Temporarily disabled due to module issues
+
+// Initialize Stripe
+if (!process.env.STRIPE_SECRET_KEY) {
+  throw new Error('Missing required Stripe secret: STRIPE_SECRET_KEY');
+}
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
+  apiVersion: "2023-10-16",
+});
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Configure multer for file uploads
@@ -2140,6 +2150,255 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Failed to upload logo" });
     }
   });
+
+  // Stripe Payment Routes
+  app.post('/api/stripe/create-checkout-session', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { planName, billingCycle = 'monthly' } = req.body;
+
+      // Get user data
+      const user = await storage.getUser(userId);
+      if (!user || !user.email) {
+        return res.status(400).json({ message: "User email required" });
+      }
+
+      // Get subscription plan
+      const plans = await storage.getSubscriptionPlans();
+      const plan = plans.find(p => p.name === planName);
+      if (!plan) {
+        return res.status(404).json({ message: "Plan not found" });
+      }
+
+      // Create or get Stripe customer
+      let stripeCustomerId = user.stripeCustomerId;
+      if (!stripeCustomerId) {
+        const customer = await stripe.customers.create({
+          email: user.email,
+          name: `${user.firstName || ''} ${user.lastName || ''}`.trim(),
+          metadata: {
+            userId: userId
+          }
+        });
+        stripeCustomerId = customer.id;
+        
+        // Update user with Stripe customer ID
+        await storage.updateUser(userId, { stripeCustomerId });
+      }
+
+      // Calculate price based on billing cycle
+      const price = billingCycle === 'yearly' ? 
+        (parseFloat(plan.price) * 10).toFixed(2) : // 2 months free on yearly
+        plan.price;
+
+      // Create checkout session
+      const session = await stripe.checkout.sessions.create({
+        customer: stripeCustomerId,
+        payment_method_types: ['card'],
+        line_items: [
+          {
+            price_data: {
+              currency: plan.currency.toLowerCase(),
+              product_data: {
+                name: `${plan.displayName} Plan`,
+                description: `ConvertMag.net ${plan.displayName} ${billingCycle} subscription`,
+              },
+              unit_amount: Math.round(parseFloat(price) * 100), // Convert to cents
+              recurring: {
+                interval: billingCycle === 'yearly' ? 'year' : 'month',
+              },
+            },
+            quantity: 1,
+          },
+        ],
+        mode: 'subscription',
+        success_url: `${req.headers.origin}/settings?tab=billing&success=true`,
+        cancel_url: `${req.headers.origin}/pricing?canceled=true`,
+        metadata: {
+          userId: userId,
+          planName: planName,
+          billingCycle: billingCycle
+        }
+      });
+
+      res.json({ url: session.url });
+    } catch (error) {
+      console.error('Error creating checkout session:', error);
+      res.status(500).json({ message: "Failed to create checkout session" });
+    }
+  });
+
+  // Stripe webhook handler
+  app.post('/api/stripe/webhook', express.raw({ type: 'application/json' }), async (req, res) => {
+    const sig = req.headers['stripe-signature'];
+    let event;
+
+    try {
+      // For now, we'll skip signature verification in development
+      // In production, you should set up STRIPE_WEBHOOK_SECRET
+      event = stripe.webhooks.constructEvent(req.body, sig as string, process.env.STRIPE_WEBHOOK_SECRET || 'whsec_test');
+    } catch (err: any) {
+      console.log(`⚠️  Webhook signature verification failed.`, err.message);
+      return res.status(400).send(`Webhook Error: ${err.message}`);
+    }
+
+    // Handle the event
+    try {
+      switch (event.type) {
+        case 'checkout.session.completed':
+          const session = event.data.object as Stripe.Checkout.Session;
+          if (session.mode === 'subscription') {
+            await handleSubscriptionCreated(session);
+          }
+          break;
+
+        case 'customer.subscription.updated':
+          const updatedSubscription = event.data.object as Stripe.Subscription;
+          await handleSubscriptionUpdated(updatedSubscription);
+          break;
+
+        case 'customer.subscription.deleted':
+          const deletedSubscription = event.data.object as Stripe.Subscription;
+          await handleSubscriptionCanceled(deletedSubscription);
+          break;
+
+        case 'invoice.payment_succeeded':
+          const invoice = event.data.object as Stripe.Invoice;
+          await handlePaymentSucceeded(invoice);
+          break;
+
+        case 'invoice.payment_failed':
+          const failedInvoice = event.data.object as Stripe.Invoice;
+          await handlePaymentFailed(failedInvoice);
+          break;
+
+        default:
+          console.log(`Unhandled event type ${event.type}`);
+      }
+    } catch (error) {
+      console.error('Error handling webhook:', error);
+      return res.status(400).send('Webhook handler failed');
+    }
+
+    res.json({ received: true });
+  });
+
+  // Get customer portal session
+  app.post('/api/stripe/create-portal-session', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (!user?.stripeCustomerId) {
+        return res.status(400).json({ message: "No Stripe customer found" });
+      }
+
+      const portalSession = await stripe.billingPortal.sessions.create({
+        customer: user.stripeCustomerId,
+        return_url: `${req.headers.origin}/settings?tab=billing`,
+      });
+
+      res.json({ url: portalSession.url });
+    } catch (error) {
+      console.error('Error creating portal session:', error);
+      res.status(500).json({ message: "Failed to create portal session" });
+    }
+  });
+
+  // Get current subscription status
+  app.get('/api/stripe/subscription-status', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (!user?.stripeSubscriptionId) {
+        return res.json({ status: 'none', plan: 'free' });
+      }
+
+      const subscription = await stripe.subscriptions.retrieve(user.stripeSubscriptionId);
+      
+      res.json({
+        status: subscription.status,
+        plan: subscription.metadata?.planName || 'unknown',
+        currentPeriodEnd: subscription.current_period_end,
+        cancelAtPeriodEnd: subscription.cancel_at_period_end,
+        billingCycle: subscription.items.data[0]?.price?.recurring?.interval || 'month'
+      });
+    } catch (error) {
+      console.error('Error getting subscription status:', error);
+      res.status(500).json({ message: "Failed to get subscription status" });
+    }
+  });
+
+  // Helper functions for webhook handling
+  async function handleSubscriptionCreated(session: Stripe.Checkout.Session) {
+    const userId = session.metadata?.userId;
+    const planName = session.metadata?.planName;
+    
+    if (!userId || !planName) return;
+
+    // Get the subscription
+    const subscription = await stripe.subscriptions.retrieve(session.subscription as string);
+    
+    // Update user subscription info
+    await storage.updateUser(userId, {
+      subscriptionTier: planName,
+      stripeSubscriptionId: subscription.id
+    });
+
+    console.log(`✅ Subscription created for user ${userId}: ${planName}`);
+  }
+
+  async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
+    const customerId = subscription.customer as string;
+    
+    // Find user by Stripe customer ID
+    const { users } = await import("@shared/schema");
+    const usersList = await db.select().from(users).where(eq(users.stripeCustomerId, customerId));
+    const user = usersList[0];
+    
+    if (!user) return;
+
+    // Update subscription status based on Stripe subscription
+    const planName = subscription.metadata?.planName || 
+      (subscription.status === 'active' ? user.subscriptionTier : 'free');
+
+    await storage.updateUser(user.id, {
+      subscriptionTier: subscription.status === 'active' ? planName : 'free',
+      stripeSubscriptionId: subscription.id
+    });
+
+    console.log(`✅ Subscription updated for user ${user.id}: ${subscription.status}`);
+  }
+
+  async function handleSubscriptionCanceled(subscription: Stripe.Subscription) {
+    const customerId = subscription.customer as string;
+    
+    // Find user by Stripe customer ID
+    const { users } = await import("@shared/schema");
+    const usersList = await db.select().from(users).where(eq(users.stripeCustomerId, customerId));
+    const user = usersList[0];
+    
+    if (!user) return;
+
+    // Downgrade to free plan
+    await storage.updateUser(user.id, {
+      subscriptionTier: 'free',
+      stripeSubscriptionId: null
+    });
+
+    console.log(`✅ Subscription canceled for user ${user.id}`);
+  }
+
+  async function handlePaymentSucceeded(invoice: Stripe.Invoice) {
+    console.log(`✅ Payment succeeded for invoice ${invoice.id}`);
+    // You can add additional logic here like sending success emails
+  }
+
+  async function handlePaymentFailed(invoice: Stripe.Invoice) {
+    console.log(`❌ Payment failed for invoice ${invoice.id}`);
+    // You can add additional logic here like sending failure emails
+  }
 
   // Health check endpoint for Docker deployment
   app.get('/health', (req, res) => {

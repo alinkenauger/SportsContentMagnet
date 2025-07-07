@@ -304,19 +304,16 @@ export default function Pricing() {
                 <Button
                   className="w-full"
                   variant={isCurrentPlan(plan.id) ? "outline" : isPopular ? "default" : "outline"}
-                  onClick={() => handleSubscribe(plan)}
-                  disabled={isCurrentPlan(plan.id) || isSubscribing === plan.name}
+                  onClick={() => plan.name === 'free' || isCurrentPlan(plan.id) ? null : window.location.href = '/subscribe'}
+                  disabled={isCurrentPlan(plan.id)}
                 >
-                  {isSubscribing === plan.name ? (
-                    <div className="flex items-center gap-2">
-                      <div className="animate-spin w-4 h-4 border-2 border-current border-t-transparent rounded-full" />
-                      Processing...
-                    </div>
-                  ) : isCurrentPlan(plan.id) ? (
+                  {isCurrentPlan(plan.id) ? (
                     <div className="flex items-center gap-2">
                       <Check className="w-4 h-4" />
                       You Already Own This
                     </div>
+                  ) : plan.name === 'free' ? (
+                    'Current Plan'
                   ) : (
                     `Upgrade to ${plan.displayName}`
                   )}
