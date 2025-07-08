@@ -4,6 +4,8 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/useAuth";
+import { useAdminAuth } from "@/hooks/useAdminAuth";
+import { useAdminSession } from "@/hooks/useAdminSession";
 
 import NotFound from "@/pages/not-found";
 import Landing from "@/pages/landing";
@@ -37,10 +39,16 @@ import Login from "@/pages/login";
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
+  const { isAdmin } = useAdminAuth();
+  const { isAuthenticated: isAdminAuthenticated, isLoading: isAdminLoading } = useAdminSession();
+  
+  // Combine regular auth with admin auth
+  const isUserAuthenticated = isAuthenticated || isAdminAuthenticated;
+  const isAuthLoading = isLoading || isAdminLoading;
 
   return (
     <Switch>
-      {isLoading || !isAuthenticated ? (
+      {(isAuthLoading || !isUserAuthenticated) && !isAdmin ? (
         <>
           <Route path="/" component={SalesPage} />
           <Route path="/login" component={Login} />

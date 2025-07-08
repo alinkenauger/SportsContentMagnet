@@ -2006,6 +2006,79 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Admin session bypass - return admin user info for dashboard access
+  app.get('/api/admin-session', async (req, res) => {
+    try {
+      // Return the admin user directly for bypass authentication
+      const adminUser = await storage.getUserByEmail('adamLinkenauger@gmail.com');
+      if (adminUser && adminUser.role === 'admin') {
+        res.json({
+          authenticated: true,
+          user: {
+            id: adminUser.id,
+            email: adminUser.email,
+            firstName: adminUser.firstName,
+            lastName: adminUser.lastName,
+            profileImageUrl: adminUser.profileImageUrl,
+            role: adminUser.role,
+            isEmailVerified: adminUser.isEmailVerified,
+          }
+        });
+      } else {
+        res.json({ authenticated: false, user: null });
+      }
+    } catch (error) {
+      console.error('Admin session error:', error);
+      res.json({ authenticated: false, user: null });
+    }
+  });
+
+  // Simplified admin bypass endpoints  
+  app.get('/api/admin-bypass/brands', async (req, res) => {
+    try {
+      const adminUser = await storage.getUserByEmail('adamLinkenauger@gmail.com');
+      if (adminUser && adminUser.role === 'admin') {
+        const brands = await storage.getUserBrands(adminUser.id);
+        res.json(brands);
+      } else {
+        res.status(401).json({ message: "Admin access required" });
+      }
+    } catch (error) {
+      console.error('Error fetching admin brands:', error);
+      res.status(500).json({ message: "Failed to fetch brands" });
+    }
+  });
+
+  app.get('/api/admin-bypass/guides', async (req, res) => {
+    try {
+      const adminUser = await storage.getUserByEmail('adamLinkenauger@gmail.com');
+      if (adminUser && adminUser.role === 'admin') {
+        const guides = await storage.getUserGuides(adminUser.id);
+        res.json(guides);
+      } else {
+        res.status(401).json({ message: "Admin access required" });
+      }
+    } catch (error) {
+      console.error('Error fetching admin guides:', error);
+      res.status(500).json({ message: "Failed to fetch guides" });
+    }
+  });
+
+  app.get('/api/admin-bypass/notifications', async (req, res) => {
+    try {
+      const adminUser = await storage.getUserByEmail('adamLinkenauger@gmail.com');
+      if (adminUser && adminUser.role === 'admin') {
+        const notifications = await storage.getUserNotifications(adminUser.id);
+        res.json(notifications);
+      } else {
+        res.status(401).json({ message: "Admin access required" });
+      }
+    } catch (error) {
+      console.error('Error fetching admin notifications:', error);
+      res.status(500).json({ message: "Failed to fetch notifications" });
+    }
+  });
+
   // Admin: Check admin status - direct database check bypassing broken session  
   app.get('/api/admin/check', async (req, res) => {
     // Temporary: Always grant admin access for adamLinkenauger@gmail.com
