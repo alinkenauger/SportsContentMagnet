@@ -44,10 +44,9 @@ export default function Dashboard() {
   const tableRef = useRef<HTMLTableElement>(null);
   const notificationsRef = useRef<HTMLDivElement>(null);
 
-  // Check if this is the specific admin user
-  const isSpecificAdmin = user?.email === 'adamLinkenauger@gmail.com' && user?.role === 'admin';
-
   // Real notifications data - use admin-aware endpoints only for specific admin
+  const isSpecificAdmin = user?.email === 'adamLinkenauger@gmail.com' && user?.role === 'admin';
+  
   const { data: notifications = [], refetch: refetchNotifications } = useQuery({
     queryKey: isSpecificAdmin ? ['/api/admin-bypass/notifications'] : ['/api/notifications'],
     enabled: isAuthenticated,
