@@ -4,8 +4,7 @@ import { createServer, type Server } from "http";
 import { randomUUID } from "crypto";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
-import { checkIsGlobalAdmin } from "./adminAuth";
-// Google OAuth removed - using admin bypass system
+import { requireSuperAdmin, requireAccountAdmin, requireBrandAdmin } from "./roleAuth";
 import { analyzeVideoContent, generatePracticeGuide, personalizeGuideContent } from "./services/openai";
 import { getYouTubeVideoData, transcribeVideo } from "./services/youtube";
 import { EmailService } from "./services/emailService";
@@ -1950,13 +1949,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Temporary admin access endpoint
-  app.get('/api/temp-admin-check', async (req, res) => {
-    res.json({ isAdmin: true, message: "Temporary admin access granted for development" });
-  });
 
-  // Temporary admin data endpoints - bypassing broken session middleware
-  app.get('/api/temp-admin-users', async (req, res) => {
+
+
+
+  // Super admin endpoints (proper role-based access)
+  app.get('/api/admin/users', requireSuperAdmin, async (req, res) => {
     try {
       const users = await storage.getAllUsers();
       res.json(users);
@@ -1966,7 +1964,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/temp-admin-stats', async (req, res) => {
+  app.get('/api/admin/stats', requireSuperAdmin, async (req, res) => {
     try {
       const stats = await storage.getSystemStats();
       res.json(stats);
@@ -1976,178 +1974,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Admin session bypass - return admin user info for dashboard access
-  app.get('/api/admin-session', async (req, res) => {
+  app.delete('/api/admin/users/:userId', requireSuperAdmin, async (req, res) => {
     try {
-      // Return the admin user directly for bypass authentication
-      const adminUser = await storage.getUserByEmail('adamLinkenauger@gmail.com');
-      if (adminUser && adminUser.role === 'admin') {
-        res.json({
-          authenticated: true,
-          user: {
-            id: adminUser.id,
-            email: adminUser.email,
-            firstName: adminUser.firstName,
-            lastName: adminUser.lastName,
-            profileImageUrl: adminUser.profileImageUrl,
-            role: adminUser.role,
-            isEmailVerified: adminUser.isEmailVerified,
-          }
-        });
-      } else {
-        res.json({ authenticated: false, user: null });
-      }
-    } catch (error) {
-      console.error('Admin session error:', error);
-      res.json({ authenticated: false, user: null });
-    }
-  });
-
-  // Comprehensive admin bypass endpoints for business functionality
-  app.get('/api/admin-bypass/brands', async (req, res) => {
-    try {
-      const adminUser = await storage.getUserByEmail('adamLinkenauger@gmail.com');
-      if (adminUser && adminUser.role === 'admin') {
-        const brands = await storage.getBrandsByUser(adminUser.id);
-        res.json(brands);
-      } else {
-        res.status(401).json({ message: "Admin access required" });
-      }
-    } catch (error) {
-      console.error('Error fetching admin brands:', error);
-      res.status(500).json({ message: "Failed to fetch brands" });
-    }
-  });
-
-  app.get('/api/admin-bypass/guides', async (req, res) => {
-    try {
-      const adminUser = await storage.getUserByEmail('adamLinkenauger@gmail.com');
-      if (adminUser && adminUser.role === 'admin') {
-        const guides = await storage.getGuidesByUser(adminUser.id);
-        res.json(guides);
-      } else {
-        res.status(401).json({ message: "Admin access required" });
-      }
-    } catch (error) {
-      console.error('Error fetching admin guides:', error);
-      res.status(500).json({ message: "Failed to fetch guides" });
-    }
-  });
-
-  app.get('/api/admin-bypass/notifications', async (req, res) => {
-    try {
-      const adminUser = await storage.getUserByEmail('adamLinkenauger@gmail.com');
-      if (adminUser && adminUser.role === 'admin') {
-        // Return empty array for now since notifications may not exist yet
-        res.json([]);
-      } else {
-        res.status(401).json({ message: "Admin access required" });
-      }
-    } catch (error) {
-      console.error('Error fetching admin notifications:', error);
-      res.status(500).json({ message: "Failed to fetch notifications" });
-    }
-  });
-
-  app.get('/api/admin-bypass/dashboard-stats', async (req, res) => {
-    try {
-      const adminUser = await storage.getUserByEmail('adamLinkenauger@gmail.com');
-      if (adminUser && adminUser.role === 'admin') {
-        // Get basic stats for admin user
-        const guides = await storage.getGuidesByUser(adminUser.id);
-        const stats = {
-          totalGuides: guides.length,
-          totalLeads: 0,
-          totalViews: 0,
-          totalDownloads: 0,
-          avgConversionRate: 0
-        };
-        res.json(stats);
-      } else {
-        res.status(401).json({ message: "Admin access required" });
-      }
-    } catch (error) {
-      console.error('Error fetching admin dashboard stats:', error);
-      res.status(500).json({ message: "Failed to fetch dashboard stats" });
-    }
-  });
-
-  app.get('/api/admin-bypass/branding', async (req, res) => {
-    try {
-      const adminUser = await storage.getUserByEmail('adamLinkenauger@gmail.com');
-      if (adminUser && adminUser.role === 'admin') {
-        // Return default branding structure for now
-        res.json({ 
-          logoUrl: null, 
-          faviconUrl: null, 
-          primaryColor: '#007bff',
-          companyName: 'ConvertMag.net'
-        });
-      } else {
-        res.status(401).json({ message: "Admin access required" });
-      }
-    } catch (error) {
-      console.error('Error fetching admin branding:', error);
-      res.status(500).json({ message: "Failed to fetch branding" });
-    }
-  });
-
-  // Admin-specific endpoints for admin panel functionality
-  app.delete('/api/admin-bypass/users/:userId', async (req, res) => {
-    try {
-      const adminUser = await storage.getUserByEmail('adamLinkenauger@gmail.com');
-      if (adminUser && adminUser.role === 'admin') {
-        await storage.deleteUser(req.params.userId);
-        res.json({ success: true });
-      } else {
-        res.status(401).json({ message: "Admin access required" });
-      }
+      await storage.deleteUser(req.params.userId);
+      res.json({ success: true });
     } catch (error) {
       console.error('Error deleting user:', error);
       res.status(500).json({ message: "Failed to delete user" });
     }
   });
 
-  app.patch('/api/admin-bypass/users/:userId/role', async (req, res) => {
+  app.patch('/api/admin/users/:userId/role', requireSuperAdmin, async (req, res) => {
     try {
-      const adminUser = await storage.getUserByEmail('adamLinkenauger@gmail.com');
-      if (adminUser && adminUser.role === 'admin') {
-        const { role } = req.body;
-        await storage.updateUserRole(req.params.userId, role);
-        res.json({ success: true });
-      } else {
-        res.status(401).json({ message: "Admin access required" });
-      }
+      const { role } = req.body;
+      await storage.updateUserRole(req.params.userId, role);
+      res.json({ success: true });
     } catch (error) {
       console.error('Error updating user role:', error);
       res.status(500).json({ message: "Failed to update user role" });
     }
   });
 
-  app.post('/api/admin-bypass/users', async (req, res) => {
+  app.post('/api/admin/users', requireSuperAdmin, async (req, res) => {
     try {
-      const adminUser = await storage.getUserByEmail('adamLinkenauger@gmail.com');
-      if (adminUser && adminUser.role === 'admin') {
-        const userData = req.body;
-        const newUser = await storage.createUser(userData);
-        res.json(newUser);
-      } else {
-        res.status(401).json({ message: "Admin access required" });
-      }
+      const userData = req.body;
+      const newUser = await storage.createUser(userData);
+      res.json(newUser);
     } catch (error) {
       console.error('Error creating user:', error);
       res.status(500).json({ message: "Failed to create user" });
     }
   });
 
-  // Admin: Check admin status - direct database check bypassing broken session  
-  app.get('/api/admin/check', async (req, res) => {
-    // Temporary: Always grant admin access for adamLinkenauger@gmail.com
-    res.json({ isAdmin: true });
-  });
-
-  app.get('/api/admin/check-old', isGlobalAdmin, async (req, res) => {
-    res.json({ isAdmin: true });
+  // Check if current user is super admin
+  app.get('/api/admin/check', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUserById(userId);
+      const isSuper = user?.role === 'super_admin';
+      res.json({ isAdmin: isSuper });
+    } catch (error) {
+      console.error('Error checking admin status:', error);
+      res.json({ isAdmin: false });
+    }
   });
 
   // Storage Management API Routes

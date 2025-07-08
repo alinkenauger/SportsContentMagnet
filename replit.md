@@ -44,7 +44,8 @@ ConvertMag.net is a comprehensive SAAS application that transforms ANY video, au
 - **Delivery System**: Automated guide delivery after email capture
 
 ### User Management
-- **Authentication**: Secure login through Replit's OAuth system
+- **Authentication**: Secure login through Replit's OAuth system with role-based access
+- **Role-Based Access**: Four-tier system (Super Admin, Account Admin, Brand Admin, User)
 - **User Profiles**: Stores user preferences and branding settings
 - **Session Handling**: Persistent sessions with database storage
 
@@ -107,13 +108,15 @@ ConvertMag.net is a comprehensive SAAS application that transforms ANY video, au
 
 ```
 Changelog:
-- July 08, 2025. Removed Google OAuth completely and simplified authentication system:
-  * Removed all Google OAuth code, imports, and dependencies to reduce complexity
-  * Simplified authentication to use only Replit Auth with admin bypass system
-  * Updated landing page to use direct login links instead of Google Auth buttons
-  * Fixed authentication conflicts and infinite re-render issues
-  * Admin bypass endpoints now provide complete functionality for super-admin access
-  * System now uses single authentication method reducing maintenance complexity
+- July 08, 2025. Implemented proper role-based authentication system:
+  * Removed all admin bypass endpoints and complexity-inducing workarounds
+  * Created clean role-based system: Super Admin → Account Admin → Brand Admin → User
+  * Super Admin (adamLinkenauger@gmail.com) has full platform access with proper middleware
+  * Account Admin can manage their own accounts and subscription settings
+  * Brand Admin can manage specific brand workspaces and their users
+  * Regular Users can create guides, landing pages, and collect leads
+  * Normal client signup and authentication flow fully functional for business users
+  * System now uses proper role-based middleware instead of bypass endpoints
 - July 07, 2025. Fixed complete-account flow to properly authenticate users after password setup:
   * Updated complete-account endpoint to automatically log users in after password creation
   * Added session creation and user authentication in backend after successful password setup

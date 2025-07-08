@@ -40,7 +40,7 @@ export const users = pgTable("users", {
   emailVerificationToken: varchar("email_verification_token"),
   isEmailVerified: boolean("is_email_verified").default(false),
   currentBrandId: integer("current_brand_id"), // Reference to active brand
-  role: varchar("role", { length: 50 }).default("user"), // 'user', 'admin'
+  role: varchar("role", { length: 50 }).default("user"), // 'super_admin', 'account_admin', 'brand_admin', 'user'
   subscriptionTier: varchar("subscription_tier").default("free"), // 'free', 'basic', 'pro', 'enterprise'
   stripeCustomerId: varchar("stripe_customer_id"), // Stripe customer ID
   stripeSubscriptionId: varchar("stripe_subscription_id"), // Stripe subscription ID
@@ -178,7 +178,7 @@ export const subscriptionPlans = pgTable("subscription_plans", {
 // User subscriptions
 export const userSubscriptions = pgTable("user_subscriptions", {
   id: serial("id").primaryKey(),
-  userId: varchar("user_id").references(() => users.id).notNull(),
+  userId: varchar("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
   planId: integer("plan_id").references(() => subscriptionPlans.id).notNull(),
   status: varchar("status").default("active"), // 'active', 'cancelled', 'expired', 'trialing'
   currentPeriodStart: timestamp("current_period_start"),

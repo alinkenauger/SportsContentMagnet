@@ -1,16 +1,12 @@
 import { Button } from "@/components/ui/button";
 import { LogOut } from "lucide-react";
-import { useAdminAuth } from "@/hooks/useAdminAuth";
+import { useAuth } from "@/hooks/useAuth";
 
 export default function AdminLogoutButton() {
-  const { isAdmin } = useAdminAuth();
+  const { user } = useAuth();
 
   const handleLogout = () => {
-    if (isAdmin) {
-      window.location.href = "/api/auth/logout";
-    } else {
-      window.location.href = "/api/logout";
-    }
+    window.location.href = "/api/auth/logout";
   };
 
   return (

@@ -13,7 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { AlertTriangle, Users, FileText, Mail, Activity, TrendingUp, Settings, Database, Image, DollarSign, Target, Plus, Edit, Save, X, Shield, Trash2, UserCheck, UserX, Eye, MessageSquare } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { useAdminAuth } from "@/hooks/useAdminAuth";
+import { useAuth } from "@/hooks/useAuth";
 
 interface User {
   id: string;
@@ -37,7 +37,15 @@ interface SystemStats {
 
 export default function AdminDashboard() {
   const { toast } = useToast();
-  const { isAdmin, isLoading: isCheckingAdmin } = useAdminAuth();
+  const { user, isAuthenticated, isLoading } = useAuth();
+  
+  // Check if user is super admin
+  const { data: adminCheck, isLoading: isCheckingAdmin } = useQuery({
+    queryKey: ['/api/admin/check'],
+    enabled: isAuthenticated && !!user,
+  });
+  
+  const isAdmin = adminCheck?.isAdmin || false;
   const queryClient = useQueryClient();
 
   const [deleteUser, setDeleteUser] = useState<User | null>(null);
@@ -50,22 +58,22 @@ export default function AdminDashboard() {
   const [newUserRole, setNewUserRole] = useState("user");
 
   const { data: users, isLoading: isLoadingUsers } = useQuery({
-    queryKey: ["/api/temp-admin-users"],
+    queryKey: ["/api/admin/users"],
     enabled: isAdmin,
   });
 
   const { data: stats, isLoading: isLoadingStats } = useQuery({
-    queryKey: ["/api/temp-admin-stats"],
+    queryKey: ["/api/admin/stats"],
     enabled: isAdmin,
   });
 
   const deleteUserMutation = useMutation({
     mutationFn: async (userId: string) => {
-      await apiRequest("DELETE", `/api/admin-bypass/users/${userId}`);
+      await apiRequest("DELETE", `/api/admin/users/${userId}`);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/temp-admin-users"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/temp-admin-stats"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/stats"] });
       toast({
         title: "User deleted",
         description: "The user has been successfully deleted.",
@@ -83,10 +91,10 @@ export default function AdminDashboard() {
 
   const updateUserRoleMutation = useMutation({
     mutationFn: async ({ userId, role }: { userId: string; role: string }) => {
-      await apiRequest("PATCH", `/api/admin-bypass/users/${userId}/role`, { role });
+      await apiRequest("PATCH", `/api/admin/users/${userId}/role`, { role });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/temp-admin-users"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
       toast({
         title: "Role updated",
         description: "The user's role has been successfully updated.",
@@ -108,12 +116,12 @@ export default function AdminDashboard() {
       lastName: string;
       role: string;
     }) => {
-      const response = await apiRequest("POST", "/api/admin-bypass/users", userData);
+      const response = await apiRequest("POST", "/api/admin/users", userData);
       return response;
     },
     onSuccess: (data: any) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/temp-admin-users"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/temp-admin-stats"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/stats"] });
       
       toast({
         title: "User created successfully",

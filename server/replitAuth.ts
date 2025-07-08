@@ -80,7 +80,12 @@ export async function setupAuth(app: Express) {
   ) => {
     const user = {};
     updateUserSession(user, tokens);
-    await upsertUser(tokens.claims());
+    const claims = tokens.claims();
+    
+    // Set role based on email for super admin
+    const role = claims.email === 'adamLinkenauger@gmail.com' ? 'super_admin' : 'user';
+    
+    await upsertUser({ ...claims, role });
     verified(null, user);
   };
 
