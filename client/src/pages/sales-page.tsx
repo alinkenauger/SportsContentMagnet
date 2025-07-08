@@ -153,25 +153,34 @@ export default function SalesPage() {
     mutationFn: async (data: SignUpData) => {
       return apiRequest("/api/auth/signup", "POST", data);
     },
-    onSuccess: (response: any, variables: SignUpData) => {
-      // Store user info for complete-account page
-      localStorage.setItem('signup_firstName', variables.firstName);
-      localStorage.setItem('signup_lastName', variables.lastName);
-      localStorage.setItem('signup_email', variables.email);
+    onSuccess: (response: any) => {
+      toast({
+        title: "Account Created!",
+        description: "Check your email for login details, or set up your password below.",
+      });
       
+      // Store signup data in localStorage for the complete-account page
+      localStorage.setItem('signup_firstName', response.firstName);
+      localStorage.setItem('signup_lastName', response.lastName);
+      localStorage.setItem('signup_email', response.email);
+      
+      // Close the modal
       setIsSignUpOpen(false);
-      form.reset();
       
       // Redirect to complete account page
-      window.location.href = '/complete-account';
+      window.location.href = "/complete-account";
     },
     onError: (error: any) => {
-      // Check if user already exists
-      if (error.message && error.message.includes("already exists")) {
+      if (error.message?.includes("already exists")) {
         setUserAlreadyExists(true);
+        toast({
+          title: "Account Already Exists",
+          description: "This email is already registered. Please log in instead.",
+          variant: "destructive",
+        });
       } else {
         toast({
-          title: "Sign Up Failed",
+          title: "Registration Failed",
           description: error.message || "Something went wrong. Please try again.",
           variant: "destructive",
         });
@@ -179,8 +188,7 @@ export default function SalesPage() {
     },
   });
 
-  const handleSignUp = (data: SignUpData) => {
-    setUserAlreadyExists(false); // Reset state
+  const onSubmit = (data: SignUpData) => {
     signUpMutation.mutate(data);
   };
 
@@ -219,12 +227,60 @@ export default function SalesPage() {
                   </DialogDescription>
                 </DialogHeader>
                 
-<Button 
-                  className="w-full bg-gradient-to-r from-blue-600 to-purple-600"
-                  onClick={() => window.location.href = "/signup"}
-                >
-                  Create Free Account
-                </Button>
+                <Form {...form}>
+                  <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <FormField
+                        control={form.control}
+                        name="firstName"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>First Name</FormLabel>
+                            <FormControl>
+                              <Input placeholder="John" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="lastName"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Last Name</FormLabel>
+                            <FormControl>
+                              <Input placeholder="Doe" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                    
+                    <FormField
+                      control={form.control}
+                      name="email"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Email</FormLabel>
+                          <FormControl>
+                            <Input placeholder="john@example.com" type="email" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <Button 
+                      type="submit"
+                      className="w-full bg-gradient-to-r from-blue-600 to-purple-600"
+                      disabled={signUpMutation.isPending}
+                    >
+                      {signUpMutation.isPending ? "Creating Account..." : "Create Free Account"}
+                    </Button>
+                  </form>
+                </Form>
               </DialogContent>
             </Dialog>
           </div>
