@@ -29,6 +29,18 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
   apiVersion: "2023-10-16",
 });
 
+// Helper function to get user ID from either authentication method
+function getUserId(req: any): string | null {
+  if (req.session && req.session.user) {
+    return req.session.user.id;
+  } else if (req.user && req.user.claims) {
+    return req.user.claims.sub;
+  } else if (req.user && req.user.id) {
+    return req.user.id;
+  }
+  return null;
+}
+
 export async function registerRoutes(app: Express): Promise<Server> {
   // Get deployment configuration
   const serviceConfig = getServiceConfiguration();
@@ -155,7 +167,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Brand routes
   app.get('/api/brands', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims?.sub || req.user.id;
+      const userId = getUserId(req);
       const brands = await storage.getBrandsByUser(userId);
       res.json(brands);
     } catch (error) {
@@ -292,7 +304,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Dashboard analytics
   app.get('/api/dashboard/stats', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = getUserId(req);
       // Get current brand from database
       const user = await storage.getUser(userId);
       const currentBrandId = user?.currentBrandId;
@@ -584,7 +596,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get('/api/guides', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = getUserId(req);
       const { search, category } = req.query;
       
       // Get current user to check their current brand
@@ -1349,7 +1361,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Branding settings routes
   app.get('/api/branding', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims?.sub || req.user.id;
+      const userId = getUserId(req);
       const settings = await storage.getBrandingSettings(userId);
       res.json(settings);
     } catch (error) {
@@ -1478,7 +1490,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/notifications", isAuthenticated, async (req: any, res) => {
     try {
       const unreadOnly = req.query.unread === 'true';
-      const notifications = await storage.getNotifications(req.user.claims.sub, unreadOnly);
+      const notifications = await storage.getNotifications(getUserId(req), unreadOnly);
       res.json(notifications);
     } catch (error) {
       console.error('Error fetching notifications:', error);
@@ -2009,8 +2021,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Check if current user is super admin
   app.get('/api/admin/check', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
-      const user = await storage.getUserById(userId);
+      // Handle both session-based and Replit Auth users
+      let userId: string;
+      let user: any;
+      
+      if (req.session && req.session.user) {
+        // Session-based authentication
+        userId = req.session.user.id;
+        user = req.session.user;
+      } else if (req.user && req.user.claims) {
+        // Replit Auth authentication
+        userId = req.user.claims.sub;
+        user = await storage.getUserById(userId);
+      } else {
+        return res.json({ isAdmin: false });
+      }
+      
       const isSuper = user?.role === 'super_admin';
       res.json({ isAdmin: isSuper });
     } catch (error) {
