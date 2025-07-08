@@ -44,11 +44,15 @@ export default function Dashboard() {
   const tableRef = useRef<HTMLTableElement>(null);
   const notificationsRef = useRef<HTMLDivElement>(null);
 
-  // Real notifications data - use admin-aware endpoints
+  // Check if this is the specific admin user
+  const isSpecificAdmin = user?.email === 'adamLinkenauger@gmail.com' && user?.role === 'admin';
+
+  // Real notifications data - use admin-aware endpoints only for specific admin
   const { data: notifications = [], refetch: refetchNotifications } = useQuery({
-    queryKey: user?.role === 'admin' ? ['/api/admin-bypass/notifications'] : ['/api/notifications'],
+    queryKey: isSpecificAdmin ? ['/api/admin-bypass/notifications'] : ['/api/notifications'],
+    enabled: isAuthenticated,
     queryFn: async () => {
-      const endpoint = user?.role === 'admin' ? '/api/admin-bypass/notifications' : '/api/notifications';
+      const endpoint = isSpecificAdmin ? '/api/admin-bypass/notifications' : '/api/notifications';
       const response = await fetch(endpoint, {
         credentials: 'include',
       });
@@ -135,12 +139,12 @@ export default function Dashboard() {
   }, [isAuthenticated, isLoading, toast]);
 
   const { data: stats, isLoading: statsLoading } = useQuery<DashboardStats>({
-    queryKey: user?.role === 'admin' ? ["/api/admin-bypass/dashboard-stats"] : ["/api/dashboard/stats", user?.currentBrandId],
+    queryKey: isSpecificAdmin ? ["/api/admin-bypass/dashboard-stats"] : ["/api/dashboard/stats", user?.currentBrandId],
     enabled: isAuthenticated,
   });
 
   const { data: guides, isLoading: guidesLoading, refetch: refetchGuides } = useQuery({
-    queryKey: user?.role === 'admin' ? ["/api/admin-bypass/guides"] : ["/api/guides", user?.currentBrandId],
+    queryKey: isSpecificAdmin ? ["/api/admin-bypass/guides"] : ["/api/guides", user?.currentBrandId],
     enabled: isAuthenticated,
   });
 
