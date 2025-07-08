@@ -448,6 +448,8 @@ export function registerAuthRoutes(app: Express) {
         });
       }
 
+
+
       // Check if user has a password set
       if (!user.tempPassword) {
         return res.status(401).json({
