@@ -433,11 +433,7 @@ export default function SalesPage() {
               <p className="text-2xl md:text-3xl font-bold text-center text-gray-900 mb-6">
                 5 Video-Specific Lead Magnets = Same Results as 25+ Category-Based Lead Magnets
               </p>
-              <div className="border-l-4 border-green-600 bg-green-50 pl-4 py-3">
-                <p className="text-xl font-bold text-center text-green-800">
-                  That's a 10X improvement in lead generation efficiency
-                </p>
-              </div>
+
             </div>
           </div>
           

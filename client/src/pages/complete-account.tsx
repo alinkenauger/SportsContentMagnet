@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useMutation } from "@tanstack/react-query";
 import { Eye, EyeOff, CheckCircle } from "lucide-react";
 
@@ -42,7 +42,7 @@ export default function CompleteAccount() {
     mutationFn: async (data: { email: string; password: string }) => {
       return apiRequest("/api/auth/complete-account", "POST", data);
     },
-    onSuccess: (response: any) => {
+    onSuccess: async (response: any) => {
       toast({
         title: "Account Setup Complete!",
         description: "Welcome to ConvertMag.net! You're now logged in.",
@@ -53,13 +53,16 @@ export default function CompleteAccount() {
       localStorage.removeItem('signup_lastName');
       localStorage.removeItem('signup_email');
       
+      // Invalidate auth cache to refresh authentication state
+      await queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
+      
       // Redirect to dashboard or specified redirect URL
       const redirectUrl = response.redirect || "/dashboard";
       
       // Small delay to allow authentication state to update, then redirect
       setTimeout(() => {
         window.location.href = redirectUrl;
-      }, 500);
+      }, 1000);
     },
     onError: (error: any) => {
       toast({
