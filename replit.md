@@ -117,6 +117,8 @@ Changelog:
   * Regular Users can create guides, landing pages, and collect leads
   * Normal client signup and authentication flow fully functional for business users
   * System now uses proper role-based middleware instead of bypass endpoints
+  * Fixed session cookie security settings (secure: false in development) for proper session persistence
+  * Authentication system fully operational with working login, session management, and role-based access
 - July 07, 2025. Fixed complete-account flow to properly authenticate users after password setup:
   * Updated complete-account endpoint to automatically log users in after password creation
   * Added session creation and user authentication in backend after successful password setup

@@ -448,14 +448,7 @@ export function registerAuthRoutes(app: Express) {
         });
       }
 
-      // Debug: Log what we're getting from storage
-      console.log('LOGIN DEBUG:', {
-        email: user.email,
-        hasTempPassword: !!user.tempPassword,
-        tempPasswordValue: user.tempPassword ? 'SET' : 'NULL',
-        tempPasswordLength: user.tempPassword?.length || 0,
-        allKeys: Object.keys(user)
-      });
+
 
 
 
