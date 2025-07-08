@@ -42,15 +42,24 @@ export default function CompleteAccount() {
     mutationFn: async (data: { email: string; password: string }) => {
       return apiRequest("/api/auth/complete-account", "POST", data);
     },
-    onSuccess: () => {
+    onSuccess: (response: any) => {
       toast({
         title: "Account Setup Complete!",
         description: "Welcome to ConvertMag.net! You're now logged in.",
       });
+      
+      // Clear any stored signup data
+      localStorage.removeItem('signup_firstName');
+      localStorage.removeItem('signup_lastName');
+      localStorage.removeItem('signup_email');
+      
+      // Redirect to dashboard or specified redirect URL
+      const redirectUrl = response.redirect || "/dashboard";
+      
       // Small delay to allow authentication state to update, then redirect
       setTimeout(() => {
-        window.location.href = "/dashboard";
-      }, 1000);
+        window.location.href = redirectUrl;
+      }, 500);
     },
     onError: (error: any) => {
       toast({

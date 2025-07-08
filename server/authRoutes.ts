@@ -365,10 +365,12 @@ export function registerAuthRoutes(app: Express) {
       // Hash new password
       const hashedPassword = await bcrypt.hash(password, 12);
 
-      // Update user with password
+      // Update user with password and mark email as verified
       await storage.updateUserPassword(user.id, hashedPassword);
+      await storage.markEmailAsVerified(user.id);
 
       // Automatically log the user in after account completion
+      // Create proper session authentication
       req.session.userId = user.id;
       req.session.user = {
         id: user.id,
@@ -377,7 +379,15 @@ export function registerAuthRoutes(app: Express) {
         lastName: user.lastName,
         profileImageUrl: user.profileImageUrl,
         role: user.role,
+        isEmailVerified: true,
       };
+
+      // Save the session before sending response
+      req.session.save((err) => {
+        if (err) {
+          console.error('Session save error:', err);
+        }
+      });
 
       // Send welcome email now that account is complete
       try {
@@ -400,8 +410,10 @@ export function registerAuthRoutes(app: Express) {
           email: user.email,
           firstName: user.firstName,
           lastName: user.lastName,
+          isEmailVerified: true,
         },
         authenticated: true,
+        redirect: "/dashboard",
       });
 
     } catch (error) {
@@ -416,6 +428,52 @@ export function registerAuthRoutes(app: Express) {
 
       res.status(500).json({
         message: "Failed to complete account setup. Please try again.",
+      });
+    }
+  });
+
+  // Get current user authentication state
+  app.get("/api/auth/me", async (req: any, res) => {
+    try {
+      // Check session-based authentication first
+      if (req.session && req.session.userId && req.session.user) {
+        return res.json({
+          authenticated: true,
+          user: req.session.user,
+        });
+      }
+
+      // Check OAuth authentication
+      if (req.isAuthenticated && req.isAuthenticated() && req.user) {
+        const user = req.user as any;
+        if (user.claims && user.claims.sub) {
+          const dbUser = await storage.getUserById(user.claims.sub);
+          if (dbUser) {
+            return res.json({
+              authenticated: true,
+              user: {
+                id: dbUser.id,
+                email: dbUser.email,
+                firstName: dbUser.firstName,
+                lastName: dbUser.lastName,
+                profileImageUrl: dbUser.profileImageUrl,
+                role: dbUser.role,
+                isEmailVerified: dbUser.isEmailVerified,
+              },
+            });
+          }
+        }
+      }
+
+      res.json({
+        authenticated: false,
+        user: null,
+      });
+    } catch (error) {
+      console.error('Get current user error:', error);
+      res.status(500).json({
+        authenticated: false,
+        user: null,
       });
     }
   });

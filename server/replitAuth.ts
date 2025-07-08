@@ -129,7 +129,12 @@ export async function setupAuth(app: Express) {
 
 export const isAuthenticated: RequestHandler = async (req, res, next) => {
   try {
-    // Check Google OAuth first (for users signed in with Google)
+    // Check session-based authentication first (for users who completed account setup)
+    if (req.session && req.session.userId && req.session.user) {
+      return next();
+    }
+
+    // Check Google OAuth (for users signed in with Google)
     if (req.isAuthenticated && req.isAuthenticated() && req.user && req.user.id) {
       return next();
     }
