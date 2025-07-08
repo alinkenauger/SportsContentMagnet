@@ -349,7 +349,7 @@ export class DatabaseStorage implements IStorage {
     return user;
   }
 
-  async updateUserResetToken(userId: string, token: string, expiry: Date): Promise<void> {
+  async updateUserResetToken(userId: string, token: string | null, expiry: Date | null): Promise<void> {
     await db
       .update(users)
       .set({

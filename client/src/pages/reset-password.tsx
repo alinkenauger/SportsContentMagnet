@@ -63,7 +63,7 @@ export default function ResetPassword() {
 
   const forgotPasswordMutation = useMutation({
     mutationFn: async (data: ForgotPasswordData) => {
-      return apiRequest("POST", "/api/auth/forgot-password", data);
+      return apiRequest("/api/auth/forgot-password", "POST", data);
     },
     onSuccess: () => {
       toast({
@@ -83,7 +83,7 @@ export default function ResetPassword() {
 
   const resetPasswordMutation = useMutation({
     mutationFn: async (data: ResetPasswordData) => {
-      return apiRequest("POST", "/api/auth/reset-password", {
+      return apiRequest("/api/auth/reset-password", "POST", {
         token: resetToken,
         password: data.password,
       });

@@ -498,6 +498,100 @@ export function registerAuthRoutes(app: Express) {
     }
   });
 
+  // Forgot password route
+  app.post("/api/auth/forgot-password", async (req, res) => {
+    try {
+      const { email } = z.object({
+        email: z.string().email(),
+      }).parse(req.body);
+
+      const user = await storage.getUserByEmail(email);
+      if (!user) {
+        // Don't reveal if user exists or not for security
+        return res.json({
+          message: "If an account with this email exists, you'll receive reset instructions.",
+        });
+      }
+
+      // Generate reset token
+      const resetToken = generateResetToken();
+      const resetTokenExpiry = new Date(Date.now() + 3600000); // 1 hour from now
+
+      // Store reset token
+      await storage.updateUserResetToken(user.id, resetToken, resetTokenExpiry);
+
+      // Send reset email
+      try {
+        // Implementation depends on your email service
+        console.log(`Password reset email would be sent to ${email} with token: ${resetToken}`);
+      } catch (emailError) {
+        console.error('Failed to send reset email:', emailError);
+      }
+
+      res.json({
+        message: "If an account with this email exists, you'll receive reset instructions.",
+      });
+
+    } catch (error) {
+      console.error('Forgot password error:', error);
+      
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({
+          message: "Invalid email address",
+          errors: error.errors,
+        });
+      }
+
+      res.status(500).json({
+        message: "Failed to process request. Please try again.",
+      });
+    }
+  });
+
+  // Reset password route
+  app.post("/api/auth/reset-password", async (req, res) => {
+    try {
+      const { token, password } = z.object({
+        token: z.string(),
+        password: z.string().min(8),
+      }).parse(req.body);
+
+      // Find user with valid reset token
+      const user = await storage.getUserByResetToken(token);
+      if (!user || !user.resetTokenExpiry || user.resetTokenExpiry < new Date()) {
+        return res.status(400).json({
+          message: "Invalid or expired reset token.",
+        });
+      }
+
+      // Hash new password
+      const bcrypt = await import('bcrypt');
+      const hashedPassword = await bcrypt.hash(password, 12);
+
+      // Update user password and clear reset token
+      await storage.updateUserPassword(user.id, hashedPassword);
+      await storage.clearUserResetToken(user.id);
+
+      res.json({
+        message: "Password reset successful! You can now log in with your new password.",
+      });
+
+    } catch (error) {
+      console.error('Reset password error:', error);
+      
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({
+          message: "Invalid input data",
+          errors: error.errors,
+        });
+      }
+
+      res.status(500).json({
+        message: "Failed to reset password. Please try again.",
+      });
+    }
+  });
+
   // Get current user authentication state
   app.get("/api/auth/me", async (req: any, res) => {
     try {
