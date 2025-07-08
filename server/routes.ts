@@ -2083,7 +2083,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const adminUser = await storage.getUserByEmail('adamLinkenauger@gmail.com');
       if (adminUser && adminUser.role === 'admin') {
-        const stats = await storage.getDashboardStats(adminUser.id);
+        // Get basic stats for admin user
+        const guides = await storage.getGuidesByUser(adminUser.id);
+        const stats = {
+          totalGuides: guides.length,
+          totalLeads: 0,
+          totalViews: 0,
+          totalDownloads: 0,
+          avgConversionRate: 0
+        };
         res.json(stats);
       } else {
         res.status(401).json({ message: "Admin access required" });

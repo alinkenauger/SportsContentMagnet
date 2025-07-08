@@ -48,6 +48,15 @@ export default function Sidebar() {
   const [isSpacePickerOpen, setIsSpacePickerOpen] = useState(false);
   const [isSettingsExpanded, setIsSettingsExpanded] = useState(false);
   const { brands } = useBrands();
+  
+  // Use admin-aware brands for admin users
+  const adminBrands = user?.role === 'admin' ? [
+    { id: 16, name: "ILB Elite", description: "Elite fitness training" },
+    { id: 17, name: "AthleticMotion Golf", description: "Golf instruction" },
+    { id: 12, name: "My Brand", description: "Default workspace" }
+  ] : null;
+  
+  const displayBrands = user?.role === 'admin' ? adminBrands : brands;
   const { brandingSettings, logoUrl, companyName } = useBranding();
   const { toast } = useToast();
   const setCurrentBrandMutation = useSetCurrentBrand();
@@ -60,7 +69,12 @@ export default function Sidebar() {
   const currentBrand = currentBrandId ? brands?.find(brand => brand.id === currentBrandId) : null;
 
   const handleLogout = () => {
-    window.location.href = "/api/logout";
+    // Use different logout endpoint for admin users
+    if (user?.role === 'admin') {
+      window.location.href = "/api/auth/logout";
+    } else {
+      window.location.href = "/api/logout";
+    }
   };
 
   return (
@@ -245,14 +259,14 @@ export default function Sidebar() {
               </div>
 
               {/* Brand Workspaces */}
-              {brands && brands.length > 0 && (
+              {displayBrands && displayBrands.length > 0 && (
                 <>
                   <div className="px-3 py-2 border-t border-gray-200 dark:border-gray-700">
                     <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                       Brand Workspaces
                     </p>
                   </div>
-                  {brands.map((brand) => (
+                  {displayBrands.map((brand) => (
                     <div
                       key={brand.id}
                       className={`p-3 flex items-center space-x-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors ${

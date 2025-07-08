@@ -44,11 +44,12 @@ export default function Dashboard() {
   const tableRef = useRef<HTMLTableElement>(null);
   const notificationsRef = useRef<HTMLDivElement>(null);
 
-  // Real notifications data
+  // Real notifications data - use admin-aware endpoints
   const { data: notifications = [], refetch: refetchNotifications } = useQuery({
-    queryKey: ['/api/notifications'],
+    queryKey: user?.role === 'admin' ? ['/api/admin-bypass/notifications'] : ['/api/notifications'],
     queryFn: async () => {
-      const response = await fetch('/api/notifications', {
+      const endpoint = user?.role === 'admin' ? '/api/admin-bypass/notifications' : '/api/notifications';
+      const response = await fetch(endpoint, {
         credentials: 'include',
       });
       if (!response.ok) {
@@ -134,12 +135,12 @@ export default function Dashboard() {
   }, [isAuthenticated, isLoading, toast]);
 
   const { data: stats, isLoading: statsLoading } = useQuery<DashboardStats>({
-    queryKey: ["/api/dashboard/stats", user?.currentBrandId],
+    queryKey: user?.role === 'admin' ? ["/api/admin-bypass/dashboard-stats"] : ["/api/dashboard/stats", user?.currentBrandId],
     enabled: isAuthenticated,
   });
 
   const { data: guides, isLoading: guidesLoading, refetch: refetchGuides } = useQuery({
-    queryKey: ["/api/guides", user?.currentBrandId],
+    queryKey: user?.role === 'admin' ? ["/api/admin-bypass/guides"] : ["/api/guides", user?.currentBrandId],
     enabled: isAuthenticated,
   });
 
