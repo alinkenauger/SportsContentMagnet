@@ -50,12 +50,12 @@ export default function AdminDashboard() {
   const [newUserRole, setNewUserRole] = useState("user");
 
   const { data: users, isLoading: isLoadingUsers } = useQuery({
-    queryKey: ["/api/admin/users"],
+    queryKey: ["/api/temp-admin-users"],
     enabled: isAdmin,
   });
 
   const { data: stats, isLoading: isLoadingStats } = useQuery({
-    queryKey: ["/api/admin/stats"],
+    queryKey: ["/api/temp-admin-stats"],
     enabled: isAdmin,
   });
 

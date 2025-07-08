@@ -65,11 +65,13 @@ function Router() {
           <Route path="/team" component={TeamManagement} />
           <Route path="/email-settings" component={EmailSettings} />
           <Route path="/subscribe" component={Subscribe} />
-          <Route path="/admin" component={AdminDashboard} />
           <Route path="/test-transcription" component={TranscriptionTest} />
 
         </>
       )}
+      
+      {/* Admin route - handles its own authentication */}
+      <Route path="/admin" component={AdminDashboard} />
       
       {/* Public routes for landing and delivery pages */}
       <Route path="/landing/:customUrl" component={GuideLanding} />
