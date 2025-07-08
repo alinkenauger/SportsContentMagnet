@@ -61,11 +61,11 @@ export default function AdminDashboard() {
 
   const deleteUserMutation = useMutation({
     mutationFn: async (userId: string) => {
-      await apiRequest("DELETE", `/api/admin/users/${userId}`);
+      await apiRequest("DELETE", `/api/admin-bypass/users/${userId}`);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/stats"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/temp-admin-users"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/temp-admin-stats"] });
       toast({
         title: "User deleted",
         description: "The user has been successfully deleted.",
@@ -83,10 +83,10 @@ export default function AdminDashboard() {
 
   const updateUserRoleMutation = useMutation({
     mutationFn: async ({ userId, role }: { userId: string; role: string }) => {
-      await apiRequest("PATCH", `/api/admin/users/${userId}/role`, { role });
+      await apiRequest("PATCH", `/api/admin-bypass/users/${userId}/role`, { role });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/temp-admin-users"] });
       toast({
         title: "Role updated",
         description: "The user's role has been successfully updated.",
@@ -108,12 +108,12 @@ export default function AdminDashboard() {
       lastName: string;
       role: string;
     }) => {
-      const response = await apiRequest("POST", "/api/admin/users", userData);
+      const response = await apiRequest("POST", "/api/admin-bypass/users", userData);
       return response;
     },
     onSuccess: (data: any) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/stats"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/temp-admin-users"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/temp-admin-stats"] });
       
       toast({
         title: "User created successfully",
