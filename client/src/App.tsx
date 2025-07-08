@@ -50,6 +50,7 @@ function Router() {
       ) : (
         <>
           <Route path="/" component={Dashboard} />
+          <Route path="/dashboard" component={Dashboard} />
           <Route path="/create" component={CreateGuide} />
           <Route path="/content-library" component={ContentLibrary} />
           <Route path="/guide-editor/:guideId" component={GuideEditorEnhanced} />
