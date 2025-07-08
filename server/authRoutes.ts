@@ -432,6 +432,72 @@ export function registerAuthRoutes(app: Express) {
     }
   });
 
+  // Login route for email/password authentication
+  app.post("/api/auth/login", async (req, res) => {
+    try {
+      const { email, password } = z.object({
+        email: z.string().email(),
+        password: z.string().min(1),
+      }).parse(req.body);
+
+      // Find user by email
+      const user = await storage.getUserByEmail(email);
+      if (!user) {
+        return res.status(401).json({
+          message: "Invalid email or password.",
+        });
+      }
+
+      // Check if user has completed account setup
+      if (!user.tempPassword) {
+        return res.status(401).json({
+          message: "Please complete your account setup first.",
+        });
+      }
+
+      // Verify password
+      const bcrypt = await import('bcrypt');
+      const isPasswordValid = await bcrypt.compare(password, user.tempPassword);
+      if (!isPasswordValid) {
+        return res.status(401).json({
+          message: "Invalid email or password.",
+        });
+      }
+
+      // Create session
+      req.session.userId = user.id;
+      req.session.user = {
+        id: user.id,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        profileImageUrl: user.profileImageUrl,
+        role: user.role,
+        isEmailVerified: user.isEmailVerified,
+      };
+
+      res.status(200).json({
+        message: "Login successful! Welcome back to ConvertMag.net!",
+        user: req.session.user,
+        authenticated: true,
+      });
+
+    } catch (error) {
+      console.error('Login error:', error);
+      
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({
+          message: "Invalid input data",
+          errors: error.errors,
+        });
+      }
+
+      res.status(500).json({
+        message: "Login failed. Please try again.",
+      });
+    }
+  });
+
   // Get current user authentication state
   app.get("/api/auth/me", async (req: any, res) => {
     try {

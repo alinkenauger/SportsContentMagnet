@@ -11,6 +11,8 @@ const ADMIN_USER_IDS = [
 // List of admin email addresses as fallback
 const ADMIN_EMAILS = [
   "adamlinkenauger@gmail.com", // Your email - replace with your actual email
+  "adamLinkenauger@gmail.com", // Case variation
+  "adam@sportofbusiness.com", // Your business email
   // Add more admin emails here as needed
   // Example: "teammate@company.com", "admin@company.com"
 ];
