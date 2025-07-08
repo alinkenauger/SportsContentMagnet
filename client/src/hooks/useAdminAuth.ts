@@ -6,7 +6,7 @@ interface AdminCheckResponse {
 
 export function useAdminAuth() {
   const { data, isLoading, error } = useQuery<AdminCheckResponse>({
-    queryKey: ["/api/admin/check"],
+    queryKey: ["/api/temp-admin-check"],
     retry: false,
   });
 

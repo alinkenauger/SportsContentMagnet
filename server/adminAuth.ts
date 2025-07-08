@@ -4,6 +4,7 @@ import { storage } from "./storage";
 // List of admin user IDs (you can add your team members here)
 const ADMIN_USER_IDS = [
   "38750665", // Your user ID - replace with your actual ID
+  "b6539943-3686-4ac3-9c3e-26a3be4c768d", // Adam's actual user ID
   // Add more admin user IDs here as needed
   // Example: "user_id_2", "user_id_3"
 ];
@@ -23,7 +24,34 @@ const ADMIN_EMAILS = [
  */
 export const isGlobalAdmin: RequestHandler = async (req, res, next) => {
   try {
-    // Check if user is authenticated first
+    // Check session-based authentication first
+    if (req.session && req.session.userId && req.session.user) {
+      const userId = req.session.userId;
+      const userEmail = req.session.user.email;
+
+      // Check if user ID is in admin list
+      if (ADMIN_USER_IDS.includes(userId)) {
+        return next();
+      }
+
+      // Check if user email is in admin list (fallback)
+      if (userEmail && ADMIN_EMAILS.includes(userEmail)) {
+        return next();
+      }
+
+      // Check database role (most reliable for session auth)
+      const user = await storage.getUser(userId);
+      if (user && user.role === "admin") {
+        return next();
+      }
+
+      return res.status(403).json({ 
+        message: "Global administrator access required",
+        code: "ADMIN_ACCESS_REQUIRED"
+      });
+    }
+
+    // Check OAuth authentication (fallback)
     if (!req.isAuthenticated() || !req.user) {
       return res.status(401).json({ message: "Authentication required" });
     }

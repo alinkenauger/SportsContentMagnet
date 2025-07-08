@@ -476,10 +476,20 @@ export function registerAuthRoutes(app: Express) {
         isEmailVerified: user.isEmailVerified,
       };
 
-      res.status(200).json({
-        message: "Login successful! Welcome back to ConvertMag.net!",
-        user: req.session.user,
-        authenticated: true,
+      // Save session explicitly
+      req.session.save((err) => {
+        if (err) {
+          console.error('Session save error:', err);
+          return res.status(500).json({
+            message: "Failed to save session. Please try again.",
+          });
+        }
+
+        res.status(200).json({
+          message: "Login successful! Welcome back to ConvertMag.net!",
+          user: req.session.user,
+          authenticated: true,
+        });
       });
 
     } catch (error) {
