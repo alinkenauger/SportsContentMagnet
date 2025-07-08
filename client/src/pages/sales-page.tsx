@@ -153,22 +153,27 @@ export default function SalesPage() {
     mutationFn: async (data: SignUpData) => {
       return apiRequest("/api/auth/signup", "POST", data);
     },
-    onSuccess: (response: any) => {
+    onSuccess: (response: any, variables: SignUpData) => {
       toast({
         title: "Account Created!",
         description: "Check your email for login details, or set up your password below.",
       });
       
-      // Store signup data in localStorage for the complete-account page
-      localStorage.setItem('signup_firstName', response.firstName);
-      localStorage.setItem('signup_lastName', response.lastName);
-      localStorage.setItem('signup_email', response.email);
+      // Store signup data in localStorage for the complete-account page using form data
+      localStorage.setItem('signup_firstName', variables.firstName);
+      localStorage.setItem('signup_lastName', variables.lastName);
+      localStorage.setItem('signup_email', variables.email);
       
       // Close the modal
       setIsSignUpOpen(false);
       
-      // Redirect to complete account page
-      window.location.href = "/complete-account";
+      // Redirect to complete account page with URL params as backup
+      const params = new URLSearchParams({
+        firstName: variables.firstName,
+        lastName: variables.lastName,
+        email: variables.email
+      });
+      window.location.href = `/complete-account?${params.toString()}`;
     },
     onError: (error: any) => {
       if (error.message?.includes("already exists")) {

@@ -27,10 +27,7 @@ export default function CompleteAccount() {
     
     if (firstName && lastName && email) {
       setUserInfo({ firstName, lastName, email });
-      // Clear from localStorage after using
-      localStorage.removeItem('signup_firstName');
-      localStorage.removeItem('signup_lastName');
-      localStorage.removeItem('signup_email');
+      // Don't clear localStorage yet - wait until successful completion
     } else {
       // If no user info, redirect to signup
       console.log('CompleteAccount - no user data found, redirecting to home');
