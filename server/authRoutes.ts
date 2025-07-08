@@ -448,10 +448,10 @@ export function registerAuthRoutes(app: Express) {
         });
       }
 
-      // Check if user has completed account setup
+      // Check if user has a password set
       if (!user.tempPassword) {
         return res.status(401).json({
-          message: "Please complete your account setup first.",
+          message: "No password set for this account. Please complete your account setup first.",
         });
       }
 
