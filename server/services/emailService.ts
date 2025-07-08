@@ -27,7 +27,7 @@ export class EmailService {
   // SendGrid Dynamic Template IDs - these should be set in your environment variables
   private templates = {
     welcome: process.env.SENDGRID_WELCOME_TEMPLATE_ID,
-    passwordReset: process.env.SENDGRID_PASSWORD_RESET_TEMPLATE_ID,
+    passwordReset: process.env.SENDGRID_RESET_TEMPLATE_ID || process.env.SENDGRID_PASSWORD_RESET_TEMPLATE_ID,
     guideDelivery: process.env.SENDGRID_GUIDE_DELIVERY_TEMPLATE_ID,
     leadNotification: process.env.SENDGRID_LEAD_NOTIFICATION_TEMPLATE_ID,
     subscriptionConfirmation: process.env.SENDGRID_SUBSCRIPTION_CONFIRMATION_TEMPLATE_ID,
@@ -46,14 +46,34 @@ export class EmailService {
   async sendEmail(params: EmailParams): Promise<boolean> {
     if (!this.mailService) {
       console.warn('📧 SendGrid not configured, email would be sent:', params.subject);
+      console.warn('📧 Email Details:', {
+        to: params.to,
+        subject: params.subject,
+        templateId: params.templateId,
+        data: params.dynamicTemplateData
+      });
+      
+      // In development, log the email content for debugging
+      if (process.env.NODE_ENV === 'development') {
+        console.log('📧 Email content (dev mode):', params.html || params.text);
+      }
+      
       return false;
     }
 
     try {
       console.log(`📧 Attempting to send email to ${params.to} with subject: ${params.subject}`);
+      
+      // Use environment variable for from email if available
+      const fromEmail = process.env.SENDGRID_FROM_EMAIL || this.defaultFromEmail;
+      const fromName = process.env.SENDGRID_FROM_NAME || 'SportsContentMagnet';
+      
       const result = await this.mailService.send({
         to: params.to,
-        from: params.from || this.defaultFromEmail,
+        from: {
+          email: fromEmail,
+          name: fromName
+        },
         subject: params.subject,
         text: params.text || '',
         html: params.html,
@@ -63,11 +83,18 @@ export class EmailService {
       console.log(`✅ Email sent successfully to ${params.to}`);
       return true;
     } catch (error: any) {
-      console.error('❌ SendGrid email error:', error.message);
+      console.error('❌ SendGrid email error:', error);
+      console.error('Full error details:', error.response?.body || error.message);
+      
       if (error.message?.includes("not authorized to send mail")) {
         console.error('🔧 ACTION NEEDED: Verify sender email in SendGrid → Settings → Sender Authentication');
-        console.error(`   → Add and verify: ${this.defaultFromEmail}`);
+        console.error(`   → Add and verify: ${process.env.SENDGRID_FROM_EMAIL || this.defaultFromEmail}`);
       }
+      
+      if (error.code === 401) {
+        console.error('🔧 ACTION NEEDED: Check your SendGrid API key in .env file');
+      }
+      
       return false;
     }
   }
@@ -167,9 +194,10 @@ export class EmailService {
   }
 
   async sendPasswordResetEmail(user: { email: string; firstName: string }, resetToken: string): Promise<boolean> {
-    const resetUrl = process.env.REPLIT_DOMAINS ? 
-      `https://${process.env.REPLIT_DOMAINS.split(',')[0]}/reset-password?token=${resetToken}` : 
-      `https://your-domain.com/reset-password?token=${resetToken}`;
+    // Use APP_URL if available, otherwise try REPLIT_DOMAINS
+    const baseUrl = process.env.APP_URL || 
+      (process.env.REPLIT_DOMAINS ? `https://${process.env.REPLIT_DOMAINS.split(',')[0]}` : 'http://localhost:3000');
+    const resetUrl = `${baseUrl}/reset-password?token=${resetToken}`;
 
     // If we have a dynamic template, use it
     if (this.templates.passwordReset) {

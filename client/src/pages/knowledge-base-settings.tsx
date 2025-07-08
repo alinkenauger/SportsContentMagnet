@@ -108,7 +108,7 @@ export default function KnowledgeBaseSettings() {
 
   const deleteCollectionMutation = useMutation({
     mutationFn: async (id: number) => {
-      return await apiRequest("DELETE", `/api/knowledgebase/collections/${id}`);
+      return await apiRequest(`/api/knowledgebase/collections/${id}`, "DELETE");
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/knowledgebase/collections"] });

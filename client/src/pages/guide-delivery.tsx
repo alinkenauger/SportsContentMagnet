@@ -168,7 +168,7 @@ export default function GuideDelivery() {
               <Button 
                 variant="outline"
                 size="sm"
-                onClick={() => window.location.href = '/public/library'}
+                onClick={() => window.location.href = '/library/public'}
                 className="flex items-center space-x-2 border-slate-300 hover:bg-slate-50"
               >
                 <BookOpen className="w-4 h-4" />

@@ -70,7 +70,7 @@ export default function TeamManagement() {
 
   const inviteMutation = useMutation({
     mutationFn: async (data: { userId: string; role: string }) => {
-      return apiRequest("POST", `/api/brands/${currentBrand?.id}/users`, data);
+      return apiRequest(`/api/brands/${currentBrand?.id}/users`, "POST", data);
     },
     onSuccess: () => {
       toast({
@@ -93,7 +93,7 @@ export default function TeamManagement() {
 
   const updateRoleMutation = useMutation({
     mutationFn: async (data: { id: number; role: string }) => {
-      return apiRequest("PATCH", `/api/brand-users/${data.id}/role`, { role: data.role });
+      return apiRequest(`/api/brand-users/${data.id}/role`, "PATCH", { role: data.role });
     },
     onSuccess: () => {
       toast({
@@ -115,7 +115,7 @@ export default function TeamManagement() {
 
   const removeMutation = useMutation({
     mutationFn: async (id: number) => {
-      return apiRequest("DELETE", `/api/brand-users/${id}`);
+      return apiRequest(`/api/brand-users/${id}`, "DELETE");
     },
     onSuccess: () => {
       toast({

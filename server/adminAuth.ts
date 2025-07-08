@@ -1,22 +1,18 @@
 import type { RequestHandler } from "express";
 import { storage } from "./storage";
 
-// List of admin user IDs (you can add your team members here)
-const ADMIN_USER_IDS = [
-  "38750665", // Your user ID - replace with your actual ID
-  "b6539943-3686-4ac3-9c3e-26a3be4c768d", // Adam's actual user ID
-  // Add more admin user IDs here as needed
-  // Example: "user_id_2", "user_id_3"
-];
+// Admin user IDs and emails from environment variables
+// Set ADMIN_USER_IDS and ADMIN_EMAILS in your .env file as comma-separated lists
+// Example: ADMIN_USER_IDS="user1,user2" ADMIN_EMAILS="admin1@example.com,admin2@example.com"
+const ADMIN_USER_IDS = process.env.ADMIN_USER_IDS?.split(',').map(id => id.trim()).filter(Boolean) || [];
+const ADMIN_EMAILS = process.env.ADMIN_EMAILS?.split(',').map(email => email.trim().toLowerCase()).filter(Boolean) || [];
 
-// List of admin email addresses as fallback
-const ADMIN_EMAILS = [
-  "adamlinkenauger@gmail.com", // Your email - replace with your actual email
-  "adamLinkenauger@gmail.com", // Case variation
-  "adam@sportofbusiness.com", // Your business email
-  // Add more admin emails here as needed
-  // Example: "teammate@company.com", "admin@company.com"
-];
+// Log configuration on startup (without exposing sensitive data)
+if (ADMIN_USER_IDS.length === 0 && ADMIN_EMAILS.length === 0) {
+  console.warn("Warning: No admin users configured. Set ADMIN_USER_IDS and/or ADMIN_EMAILS in environment variables.");
+} else {
+  console.log(`Admin configuration loaded: ${ADMIN_USER_IDS.length} user IDs, ${ADMIN_EMAILS.length} emails`);
+}
 
 /**
  * Middleware to check if user has global admin access
@@ -34,8 +30,8 @@ export const isGlobalAdmin: RequestHandler = async (req, res, next) => {
         return next();
       }
 
-      // Check if user email is in admin list (fallback)
-      if (userEmail && ADMIN_EMAILS.includes(userEmail)) {
+      // Check if user email is in admin list (fallback, case-insensitive)
+      if (userEmail && ADMIN_EMAILS.includes(userEmail.toLowerCase())) {
         return next();
       }
 
@@ -69,8 +65,8 @@ export const isGlobalAdmin: RequestHandler = async (req, res, next) => {
       return next();
     }
 
-    // Check if user email is in admin list (fallback)
-    if (userEmail && ADMIN_EMAILS.includes(userEmail)) {
+    // Check if user email is in admin list (fallback, case-insensitive)
+    if (userEmail && ADMIN_EMAILS.includes(userEmail.toLowerCase())) {
       return next();
     }
 
@@ -102,7 +98,7 @@ export async function checkIsGlobalAdmin(userId: string, userEmail?: string): Pr
       return true;
     }
     
-    if (userEmail && ADMIN_EMAILS.includes(userEmail)) {
+    if (userEmail && ADMIN_EMAILS.includes(userEmail.toLowerCase())) {
       return true;
     }
 

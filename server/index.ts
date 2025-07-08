@@ -1,10 +1,23 @@
 import express, { type Request, Response, NextFunction } from "express";
+import cookieParser from "cookie-parser";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import { apiLimiter } from "./rateLimiter";
+import { setCSRFToken, verifyCSRFToken } from "./csrfProtection";
 
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
+app.use(cookieParser());
+
+// Set CSRF token cookie for all requests
+app.use(setCSRFToken);
+
+// Apply general rate limiting to all API routes
+app.use('/api/', apiLimiter);
+
+// Apply CSRF protection to all API routes
+app.use('/api/', verifyCSRFToken);
 
 // Serve static files for screenshots and uploads
 app.use('/screenshots', express.static('public/screenshots'));

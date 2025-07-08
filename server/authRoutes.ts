@@ -4,6 +4,7 @@ import bcrypt from "bcrypt";
 import crypto from "crypto";
 import { storage } from "./storage";
 import { emailService, highLevelService } from "./services/emailService";
+import { authLimiter, passwordResetLimiter } from "./rateLimiter";
 
 const signUpSchema = z.object({
   firstName: z.string().min(2, "First name must be at least 2 characters"),
@@ -48,7 +49,7 @@ function generateResetToken(): string {
 
 export function registerAuthRoutes(app: Express) {
   // Sign up route
-  app.post("/api/auth/signup", async (req, res) => {
+  app.post("/api/auth/signup", authLimiter, async (req, res) => {
     try {
       const validatedData = signUpSchema.parse(req.body);
       
@@ -139,7 +140,7 @@ export function registerAuthRoutes(app: Express) {
   });
 
   // Forgot password route
-  app.post("/api/auth/forgot-password", async (req, res) => {
+  app.post("/api/auth/forgot-password", passwordResetLimiter, async (req, res) => {
     try {
       const { email } = forgotPasswordSchema.parse(req.body);
       
@@ -192,7 +193,7 @@ export function registerAuthRoutes(app: Express) {
   });
 
   // Reset password route
-  app.post("/api/auth/reset-password", async (req, res) => {
+  app.post("/api/auth/reset-password", passwordResetLimiter, async (req, res) => {
     try {
       const { token, password } = resetPasswordSchema.parse(req.body);
       
@@ -231,7 +232,7 @@ export function registerAuthRoutes(app: Express) {
   });
 
   // Change password route (for authenticated users)
-  app.post("/api/auth/change-password", async (req: any, res) => {
+  app.post("/api/auth/change-password", authLimiter, async (req: any, res) => {
     try {
       if (!req.user || !req.user.claims || !req.user.claims.sub) {
         return res.status(401).json({ message: "Authentication required" });
@@ -345,7 +346,7 @@ export function registerAuthRoutes(app: Express) {
   });
 
   // Complete account setup route
-  app.post("/api/auth/complete-account", async (req, res) => {
+  app.post("/api/auth/complete-account", authLimiter, async (req, res) => {
     try {
       const { email, password } = completeAccountSchema.parse(req.body);
       
@@ -433,7 +434,7 @@ export function registerAuthRoutes(app: Express) {
   });
 
   // Login route for email/password authentication
-  app.post("/api/auth/login", async (req, res) => {
+  app.post("/api/auth/login", authLimiter, async (req, res) => {
     try {
       const { email, password } = z.object({
         email: z.string().email(),
@@ -515,7 +516,7 @@ export function registerAuthRoutes(app: Express) {
   });
 
   // Forgot password route
-  app.post("/api/auth/forgot-password", async (req, res) => {
+  app.post("/api/auth/forgot-password", passwordResetLimiter, async (req, res) => {
     try {
       const { email } = z.object({
         email: z.string().email(),
@@ -565,7 +566,7 @@ export function registerAuthRoutes(app: Express) {
   });
 
   // Reset password route
-  app.post("/api/auth/reset-password", async (req, res) => {
+  app.post("/api/auth/reset-password", passwordResetLimiter, async (req, res) => {
     try {
       const { token, password } = z.object({
         token: z.string(),

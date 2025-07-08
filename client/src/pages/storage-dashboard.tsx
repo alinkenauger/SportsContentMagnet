@@ -60,7 +60,7 @@ export default function StorageDashboard() {
   // Mutations
   const deleteFileMutation = useMutation({
     mutationFn: async (fileId: number) => {
-      return await apiRequest("DELETE", `/api/storage/files/${fileId}`);
+      return await apiRequest(`/api/storage/files/${fileId}`, "DELETE");
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/storage"] });

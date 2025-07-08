@@ -18,6 +18,7 @@ import fs from 'fs';
 import path from 'path';
 import { getServiceConfiguration } from './services/deploymentChecker';
 import { registerAuthRoutes } from "./authRoutes";
+import { authLimiter, passwordResetLimiter, adminLimiter } from "./rateLimiter";
 import Stripe from "stripe";
 // import pdf from 'pdf-parse'; // Temporarily disabled due to module issues
 
@@ -111,6 +112,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Register custom auth routes (signup, password reset, etc.)
   registerAuthRoutes(app);
+
+  // Get CSRF token endpoint
+  app.get("/api/csrf-token", (req, res) => {
+    const { csrfTokenEndpoint } = require('./csrfProtection');
+    csrfTokenEndpoint(req, res);
+  });
 
   // Test email endpoint for debugging
   app.post("/api/test-email", async (req, res) => {
@@ -880,11 +887,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Import admin auth at the top of the route handler to avoid hoisting issues
-  const { isGlobalAdmin: adminAuth } = await import('./adminAuth');
-  
   // Admin-only guide transfer between any brand accounts  
-  app.patch('/api/admin/guides/:id/transfer', isAuthenticated, adminAuth, async (req: any, res) => {
+  app.patch('/api/admin/guides/:id/transfer', isAuthenticated, requireSuperAdmin, async (req: any, res) => {
     try {
       const guideId = parseInt(req.params.id);
       const { targetBrandId, targetUserId } = req.body;
@@ -1637,6 +1641,80 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Knowledge base collections endpoints
+  app.get('/api/knowledgebase/collections', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = getUserId(req);
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+
+      const user = await storage.getUserById(userId);
+      const brandId = user?.currentBrandId || null;
+
+      // Get collections for user and optionally for brand
+      const collections = await storage.getKnowledgebaseCollections(userId, brandId);
+      res.json(collections);
+    } catch (error) {
+      console.error("Error fetching knowledge base collections:", error);
+      res.status(500).json({ message: "Failed to fetch collections" });
+    }
+  });
+
+  app.post('/api/knowledgebase/collections', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = getUserId(req);
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+
+      const user = await storage.getUserById(userId);
+      const brandId = user?.currentBrandId || null;
+
+      const collection = await storage.createKnowledgebaseCollection({
+        ...req.body,
+        userId,
+        brandId
+      });
+      res.json(collection);
+    } catch (error) {
+      console.error("Error creating knowledge base collection:", error);
+      res.status(500).json({ message: "Failed to create collection" });
+    }
+  });
+
+  app.put('/api/knowledgebase/collections/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const userId = getUserId(req);
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+
+      const collection = await storage.updateKnowledgebaseCollection(parseInt(id), userId, req.body);
+      res.json(collection);
+    } catch (error) {
+      console.error("Error updating knowledge base collection:", error);
+      res.status(500).json({ message: "Failed to update collection" });
+    }
+  });
+
+  app.delete('/api/knowledgebase/collections/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const userId = getUserId(req);
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+
+      await storage.deleteKnowledgebaseCollection(parseInt(id), userId);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting knowledge base collection:", error);
+      res.status(500).json({ message: "Failed to delete collection" });
+    }
+  });
+
   // File transcription route for knowledgebase
   app.post('/api/transcribe', isAuthenticated, async (req: any, res) => {
     try {
@@ -1650,8 +1728,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Initialize default subscription plans (run once)
-  const { isGlobalAdmin } = await import('./adminAuth');
-  app.post('/api/subscription/init-plans', isGlobalAdmin, async (req, res) => {
+  app.post('/api/subscription/init-plans', requireSuperAdmin, async (req, res) => {
     try {
       const plans = [
         {
@@ -1852,121 +1929,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Global Admin routes
-  // Admin: Get all users with stats - temporary bypass for broken session
-  app.get('/api/admin/users', async (req, res) => {
-    try {
-      const users = await storage.getAllUsers();
-      res.json(users);
-    } catch (error) {
-      console.error("Error fetching users:", error);
-      res.status(500).json({ message: "Failed to fetch users" });
-    }
-  });
-
-  // Admin: Create new user - temporary bypass for broken session
-  app.post('/api/admin/users', async (req, res) => {
-    try {
-      const { email, firstName, lastName, role } = req.body;
-
-      if (!email || !firstName || !lastName) {
-        return res.status(400).json({ message: "Email, first name, and last name are required" });
-      }
-
-      // Check if user already exists
-      const existingUser = await storage.getUserByEmail(email);
-      if (existingUser) {
-        return res.status(400).json({ message: "User with this email already exists" });
-      }
-
-      // Generate a temporary password (user will need to reset it)
-      const tempPassword = Math.random().toString(36).slice(-8);
-
-      // Create the user
-      const userData = {
-        id: randomUUID(),
-        email,
-        firstName,
-        lastName,
-        role: role || 'user',
-        tempPassword, // Store temporarily for display to admin
-        isEmailVerified: false,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-
-      const user = await storage.upsertUser(userData);
-      
-      res.json({
-        ...user,
-        tempPassword, // Return temp password for admin to share with user
-        message: "User created successfully. Share the temporary password with the user."
-      });
-    } catch (error) {
-      console.error("Error creating user:", error);
-      res.status(500).json({ message: "Failed to create user" });
-    }
-  });
-
-  // Admin: Get specific user stats
-  app.get('/api/admin/users/:userId', isGlobalAdmin, async (req, res) => {
-    try {
-      const { userId } = req.params;
-      const userStats = await storage.getUserStats(userId);
-      res.json(userStats);
-    } catch (error) {
-      console.error("Error fetching user stats:", error);
-      res.status(500).json({ message: "Failed to fetch user stats" });
-    }
-  });
-
-  // Admin: Update user role
-  app.patch('/api/admin/users/:userId/role', isGlobalAdmin, async (req, res) => {
-    try {
-      const { userId } = req.params;
-      const { role } = req.body;
-
-      if (!['user', 'admin'].includes(role)) {
-        return res.status(400).json({ message: "Invalid role. Must be 'user' or 'admin'" });
-      }
-
-      const updatedUser = await storage.updateUserRole(userId, role);
-      res.json(updatedUser);
-    } catch (error) {
-      console.error("Error updating user role:", error);
-      res.status(500).json({ message: "Failed to update user role" });
-    }
-  });
-
-  // Admin: Delete user
-  app.delete('/api/admin/users/:userId', isGlobalAdmin, async (req, res) => {
-    try {
-      const { userId } = req.params;
-      await storage.deleteUser(userId);
-      res.json({ message: "User deleted successfully" });
-    } catch (error) {
-      console.error("Error deleting user:", error);
-      res.status(500).json({ message: "Failed to delete user" });
-    }
-  });
-
-  // Admin: Get system stats - temporary bypass for broken session
-  app.get('/api/admin/stats', async (req, res) => {
-    try {
-      const stats = await storage.getSystemStats();
-      res.json(stats);
-    } catch (error) {
-      console.error("Error fetching system stats:", error);
-      res.status(500).json({ message: "Failed to fetch system stats" });
-    }
-  });
+  // Note: Removed insecure admin routes - all admin endpoints now require proper authentication
 
 
 
 
 
   // Super admin endpoints (proper role-based access)
-  app.get('/api/admin/users', requireSuperAdmin, async (req, res) => {
+  app.get('/api/admin/users', adminLimiter, requireSuperAdmin, async (req, res) => {
     try {
       const users = await storage.getAllUsers();
       res.json(users);
@@ -1976,7 +1946,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/admin/stats', requireSuperAdmin, async (req, res) => {
+  app.get('/api/admin/stats', adminLimiter, requireSuperAdmin, async (req, res) => {
     try {
       const stats = await storage.getSystemStats();
       res.json(stats);
@@ -2015,6 +1985,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error creating user:', error);
       res.status(500).json({ message: "Failed to create user" });
+    }
+  });
+
+  app.get('/api/admin/users/:userId', adminLimiter, requireSuperAdmin, async (req, res) => {
+    try {
+      const { userId } = req.params;
+      const userStats = await storage.getUserStats(userId);
+      res.json(userStats);
+    } catch (error) {
+      console.error("Error fetching user stats:", error);
+      res.status(500).json({ message: "Failed to fetch user stats" });
     }
   });
 
@@ -2130,6 +2111,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Delete specific storage file
+  app.delete('/api/storage/files/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = getUserId(req);
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+
+      const fileId = parseInt(req.params.id);
+      
+      // Verify the file belongs to the user before deleting
+      const file = await storage.getStorageFile(fileId, userId);
+      if (!file) {
+        return res.status(404).json({ message: "File not found" });
+      }
+
+      // Delete the file
+      await storage.deleteStorageFile(fileId, userId);
+      
+      res.json({ success: true, message: "File deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting storage file:", error);
+      res.status(500).json({ message: "Failed to delete file" });
+    }
+  });
+
   // Get storage billing history
   app.get('/api/storage/billing', isAuthenticated, async (req: any, res) => {
     try {
@@ -2155,7 +2162,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Process cleanup jobs (admin endpoint)
-  app.post('/api/admin/storage/cleanup', isGlobalAdmin, async (req, res) => {
+  app.post('/api/admin/storage/cleanup', requireSuperAdmin, async (req, res) => {
     try {
       await StorageCostManager.processCleanupJobs();
       res.json({ success: true, message: "Cleanup jobs processed" });
