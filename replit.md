@@ -107,6 +107,13 @@ ConvertMag.net is a comprehensive SAAS application that transforms ANY video, au
 
 ```
 Changelog:
+- July 08, 2025. Removed Google OAuth completely and simplified authentication system:
+  * Removed all Google OAuth code, imports, and dependencies to reduce complexity
+  * Simplified authentication to use only Replit Auth with admin bypass system
+  * Updated landing page to use direct login links instead of Google Auth buttons
+  * Fixed authentication conflicts and infinite re-render issues
+  * Admin bypass endpoints now provide complete functionality for super-admin access
+  * System now uses single authentication method reducing maintenance complexity
 - July 07, 2025. Fixed complete-account flow to properly authenticate users after password setup:
   * Updated complete-account endpoint to automatically log users in after password creation
   * Added session creation and user authentication in backend after successful password setup

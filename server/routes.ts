@@ -5,7 +5,7 @@ import { randomUUID } from "crypto";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import { checkIsGlobalAdmin } from "./adminAuth";
-import { setupGoogleAuth, isGoogleAuthenticated } from "./googleAuth";
+// Google OAuth removed - using admin bypass system
 import { analyzeVideoContent, generatePracticeGuide, personalizeGuideContent } from "./services/openai";
 import { getYouTubeVideoData, transcribeVideo } from "./services/youtube";
 import { EmailService } from "./services/emailService";
@@ -95,9 +95,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Use Google OAuth as primary authentication
-  setupGoogleAuth(app);
-  // Keep Replit Auth as backup/alternative
+  // Use Replit Auth with admin bypass system
   await setupAuth(app);
   
   // Register custom auth routes (signup, password reset, etc.)
@@ -261,37 +259,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Google auth status (works with both Replit Auth and Google OAuth)
-  app.get('/api/auth/google-status', async (req: any, res) => {
-    try {
-      // Check if authenticated with Google OAuth
-      if (req.isAuthenticated() && req.user && req.user.id) {
-        return res.json({ connected: true, user: { id: req.user.id, email: req.user.email } });
-      }
-      
-      // Check if authenticated with Replit Auth and has Google connection
-      if (req.user?.claims?.sub) {
-        const userId = req.user.claims.sub;
-        const googleConnection = await storage.getUserGoogleConnection(userId);
-        return res.json({ connected: !!googleConnection });
-      }
-      
-      res.status(401).json({ message: "Unauthorized" });
-    } catch (error) {
-      console.error("Error checking Google auth status:", error);
-      res.status(500).json({ message: "Failed to check Google auth status" });
-    }
-  });
+    // Removed Google auth status endpoint
 
-  // Alternative user endpoint for Google OAuth
-  app.get('/api/auth/google-user', isGoogleAuthenticated, async (req: any, res) => {
-    try {
-      res.json(req.user);
-    } catch (error) {
-      console.error("Error fetching Google user:", error);
-      res.status(500).json({ message: "Failed to fetch user" });
-    }
-  });
+  // Removed Google OAuth user endpoint
 
   // Test transcription endpoint (for debugging)
   app.post('/api/test-transcription', async (req, res) => {

@@ -1,7 +1,7 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Video, Users, TrendingUp, Zap } from "lucide-react";
-import GoogleAuthButton from "@/components/google-auth-button";
+// Google OAuth removed - using admin bypass system
 import { useBranding } from "@/hooks/useBranding";
 
 export default function Landing() {
@@ -28,9 +28,12 @@ export default function Landing() {
           </div>
           <div className="flex items-center space-x-3">
             <Button variant="outline" onClick={() => window.location.href = '/sales'}>
-              Get Started Free
+              Learn More
             </Button>
-            <Button onClick={() => window.location.href = '/api/login'}>
+            <Button 
+              className="gradient-primary text-white"
+              onClick={() => window.location.href = '/api/login'}
+            >
               Sign In
             </Button>
           </div>
@@ -48,9 +51,12 @@ export default function Landing() {
             Automatically extract valuable coaching insights from your videos and create branded practice guides that convert viewers into leads.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <GoogleAuthButton variant="hero" size="lg" />
-            <Button size="lg" variant="outline" onClick={() => window.location.href = '/api/login'}>
-              Sign In with Replit
+            <Button 
+              size="lg"
+              className="gradient-primary text-white"
+              onClick={() => window.location.href = '/api/login'}
+            >
+              Start Creating Guides
             </Button>
             <Button size="lg" variant="outline">
               Watch Demo

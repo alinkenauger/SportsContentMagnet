@@ -60,16 +60,18 @@ export default function ContentLibrary() {
   });
 
   // Handle unauthorized errors
-  if (error && isUnauthorizedError(error as Error)) {
-    toast({
-      title: "Unauthorized",
-      description: "You are logged out. Logging in again...",
-      variant: "destructive",
-    });
-    setTimeout(() => {
-      window.location.href = "/api/login";
-    }, 500);
-  }
+  useEffect(() => {
+    if (error && isUnauthorizedError(error as Error)) {
+      toast({
+        title: "Unauthorized",
+        description: "You are logged out. Logging in again...",
+        variant: "destructive",
+      });
+      setTimeout(() => {
+        window.location.href = "/api/login";
+      }, 500);
+    }
+  }, [error, toast]);
 
   const filteredGuides = guides?.filter(guide => {
     if (selectedStatus !== "all" && guide.status !== selectedStatus) {
