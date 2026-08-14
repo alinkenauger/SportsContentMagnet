@@ -614,18 +614,49 @@ export default function GuideEditorEnhanced() {
   }
 
   const handleSave = () => {
+    const originalContent = (guide?.content || {}) as any;
+    const originalSections = Array.isArray(originalContent.sections)
+      ? originalContent.sections
+      : [];
     const sections: any[] = [];
     let currentSection: any = null;
+    let sectionIndex = 0;
+
+    const finishSection = (section: any) => {
+      const nextSection = {
+        ...section,
+        content: section.content.trim(),
+      };
+
+      if (originalContent.schemaVersion === 2) {
+        const blocks = Array.isArray(nextSection.blocks) ? [...nextSection.blocks] : [];
+        const richTextIndex = blocks.findIndex((block: any) => block?.type === 'rich_text');
+        const richTextBlock = { type: 'rich_text', text: nextSection.content || 'Add section content.' };
+        if (richTextIndex >= 0) blocks[richTextIndex] = richTextBlock;
+        else blocks.unshift(richTextBlock);
+        nextSection.blocks = blocks;
+      }
+
+      return nextSection;
+    };
     
     elements.forEach(element => {
       if (element.type === 'heading' && !element.parentId) {
         if (currentSection) {
-          sections.push(currentSection);
+          sections.push(finishSection(currentSection));
+          sectionIndex += 1;
         }
+        const originalSection = originalSections[sectionIndex] || {};
         currentSection = {
+          ...originalSection,
+          ...(originalContent.schemaVersion === 2 && !originalSection.id
+            ? { id: `section_${sectionIndex + 1}_${Date.now()}` }
+            : {}),
           title: element.content.text,
           content: '',
-          type: 'section'
+          type: originalSection.type || (originalContent.schemaVersion === 2 ? 'tip' : 'section'),
+          timestamp: element.timestamp ?? originalSection.timestamp,
+          timestampSeconds: element.timestampSeconds ?? originalSection.timestampSeconds,
         };
       } else if (element.type === 'paragraph' && currentSection && !element.parentId) {
         currentSection.content += element.content.text + '\n\n';
@@ -633,16 +664,16 @@ export default function GuideEditorEnhanced() {
     });
     
     if (currentSection) {
-      sections.push(currentSection);
+      sections.push(finishSection(currentSection));
     }
 
-    const content = guide?.content as any;
     const updatedContent = {
+      ...originalContent,
       title: guideTitle,
       introduction: elements.find(e => e.id.startsWith('intro-') && !e.parentId)?.content.text || '',
       sections,
-      conclusion: content?.conclusion || '',
-      callToAction: content?.callToAction || ''
+      conclusion: originalContent.conclusion || '',
+      callToAction: originalContent.callToAction || ''
     };
 
     saveGuideMutation.mutate({

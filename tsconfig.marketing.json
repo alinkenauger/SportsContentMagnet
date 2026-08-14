@@ -1,0 +1,18 @@
+{
+  "extends": "./tsconfig.json",
+  "include": [
+    "client/src/components/marketing/artifact-fixtures.ts",
+    "client/src/components/marketing/artifact-proof.tsx",
+    "client/src/pages/sales-page.tsx",
+    "client/src/pages/complete-account.tsx",
+    "client/src/pages/login.tsx",
+    "shared/guideContent.ts",
+    "shared/quiz.ts"
+  ],
+  "exclude": ["node_modules", "dist", "**/*.test.ts"],
+  "compilerOptions": {
+    "incremental": false,
+    "noEmit": true,
+    "types": ["node", "vite/client"]
+  }
+}

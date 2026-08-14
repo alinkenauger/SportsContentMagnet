@@ -126,9 +126,9 @@ public/uploads/**
 *-bak*
 package-*.json
 !package.json
+!package-lock.json
 
 # Package manager files (except package.json)
-package-lock.json
 yarn.lock
 pnpm-lock.yaml
 
@@ -155,6 +155,7 @@ tsconfig.tsbuildinfo
 
 # Miscellaneous
 *.sql
+!migrations/*.sql
 *.sqlite
 *.db
 .parcel-cache/**

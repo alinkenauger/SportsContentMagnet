@@ -17,7 +17,8 @@ import {
   CreditCard,
   UserCog,
   Mail,
-  ChevronDown
+  ChevronDown,
+  Gift
 } from "lucide-react";
 import { useState } from "react";
 import { useBrands, useSetCurrentBrand, useClearCurrentBrand } from "@/hooks/useBrands";
@@ -28,8 +29,9 @@ import type { Brand } from "@shared/schema";
 
 const navigation = [
   { name: "Dashboard", href: "/", icon: Home },
-  { name: "Create Guide", href: "/create", icon: Plus },
-  { name: "Content Library", href: "/content-library", icon: Book },
+  { name: "Create Magnet", href: "/create", icon: Plus },
+  { name: "Lead Magnet Library", href: "/content-library", icon: Book },
+  { name: "Benefit Library", href: "/benefit-library", icon: Gift },
   { name: "Analytics", href: "/analytics", icon: BarChart3 },
   { name: "Leads", href: "/leads", icon: Users },
 ];

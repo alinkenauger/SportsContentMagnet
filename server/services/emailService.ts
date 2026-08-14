@@ -20,6 +20,33 @@ interface HighLevelContactData {
   customFields?: Record<string, any>;
 }
 
+export function publicAppBaseUrl(): string | undefined {
+  const configuredUrl = process.env.PUBLIC_APP_URL?.trim();
+  const domain = process.env.REPLIT_DOMAINS?.split(",")[0]?.trim();
+  const candidate = configuredUrl || (domain ? `https://${domain}` : undefined);
+  if (!candidate) return undefined;
+
+  try {
+    const url = new URL(candidate);
+    if (!['http:', 'https:'].includes(url.protocol)) return undefined;
+    if (process.env.NODE_ENV === 'production' && url.protocol !== 'https:') return undefined;
+    if (url.username || url.password || (url.pathname !== '/' && url.pathname !== '')) return undefined;
+    return url.origin;
+  } catch {
+    return undefined;
+  }
+}
+
+function escapeHtml(value: string): string {
+  return value.replace(/[&<>"']/g, (character) => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#039;",
+  })[character] || character);
+}
+
 export class EmailService {
   private mailService?: MailService;
   private defaultFromEmail = 'adam@getmoreviews.com'; // Verified in SendGrid Single Sender Auth
@@ -37,7 +64,7 @@ export class EmailService {
     if (process.env.SENDGRID_API_KEY) {
       this.mailService = new MailService();
       this.mailService.setApiKey(process.env.SENDGRID_API_KEY);
-      console.log('SendGrid configured with API key:', process.env.SENDGRID_API_KEY?.substring(0, 10) + '...');
+      console.log('SendGrid configured');
     } else {
       console.log('SendGrid API key not found');
     }
@@ -50,7 +77,7 @@ export class EmailService {
     }
 
     try {
-      console.log(`📧 Attempting to send email to ${params.to} with subject: ${params.subject}`);
+      console.log(`📧 Attempting to send email: ${params.subject}`);
       const result = await this.mailService.send({
         to: params.to,
         from: params.from || this.defaultFromEmail,
@@ -60,7 +87,7 @@ export class EmailService {
         templateId: params.templateId,
         dynamicTemplateData: params.dynamicTemplateData,
       });
-      console.log(`✅ Email sent successfully to ${params.to}`);
+      console.log('✅ Email sent successfully');
       return true;
     } catch (error: any) {
       console.error('❌ SendGrid email error:', error.message);
@@ -72,23 +99,26 @@ export class EmailService {
     }
   }
 
-  async sendWelcomeEmail(user: { firstName: string; lastName: string; email: string; tempPassword: string }): Promise<boolean> {
-    const loginUrl = process.env.REPLIT_DOMAINS ? 
-      `https://${process.env.REPLIT_DOMAINS.split(',')[0]}/api/login` : 
-      'https://your-domain.com/api/login';
+  async sendWelcomeEmail(user: { firstName: string; lastName: string; email: string }): Promise<boolean> {
+    const appBaseUrl = publicAppBaseUrl();
+    if (!appBaseUrl) {
+      console.error("PUBLIC_APP_URL or REPLIT_DOMAINS is required to send auth emails");
+      return false;
+    }
+    const loginUrl = `${appBaseUrl}/login`;
 
     // If we have a dynamic template, use it
     if (this.templates.welcome) {
       return this.sendEmail({
         to: user.email,
-        subject: 'Welcome to ConvertMag.net - Your Account is Ready!',
+        subject: 'Welcome to VidMagnet - Your Account is Ready!',
         templateId: this.templates.welcome,
         dynamicTemplateData: {
           firstName: user.firstName,
           lastName: user.lastName,
           email: user.email,
-          tempPassword: user.tempPassword,
           loginUrl: loginUrl,
+          productName: "VidMagnet",
           currentYear: new Date().getFullYear()
         }
       });
@@ -102,7 +132,7 @@ export class EmailService {
       <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Welcome to ConvertMag.net</title>
+        <title>Welcome to VidMagnet</title>
         <style>
           body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
           .container { max-width: 600px; margin: 0 auto; padding: 20px; }
@@ -117,21 +147,14 @@ export class EmailService {
       <body>
         <div class="container">
           <div class="header">
-            <h1>Welcome to ConvertMag.net!</h1>
+            <h1>Welcome to VidMagnet!</h1>
             <p>Your account has been created successfully</p>
           </div>
           
           <div class="content">
-            <h2>Hi ${user.firstName},</h2>
+            <h2>Hi ${escapeHtml(user.firstName)},</h2>
             
-            <p>Welcome to ConvertMag.net! We're excited to help you transform ANY content into high-converting lead magnets.</p>
-            
-            <div class="credentials">
-              <h3>Your Login Details:</h3>
-              <p><strong>Email:</strong> ${user.email}</p>
-              <p><strong>Temporary Password:</strong> <code>${user.tempPassword}</code></p>
-              <p class="warning">⚠️ Please change your password after your first login for security.</p>
-            </div>
+            <p>Welcome to VidMagnet. Your account is ready, and you can now turn content you already trust into a useful Guide or personalized Outcome Quiz.</p>
             
             <div style="text-align: center;">
               <a href="${loginUrl}" class="button">Login to Your Account</a>
@@ -139,20 +162,18 @@ export class EmailService {
             
             <h3>What's Next?</h3>
             <ul>
-              <li>✅ Create your first guide from a YouTube video</li>
-              <li>✅ Customize your branding and landing pages</li>
-              <li>✅ Start capturing leads with your content</li>
-              <li>✅ Track your conversion analytics</li>
+              <li>Create your first Guide or Outcome Quiz</li>
+              <li>Apply your brand to the recipient experience</li>
+              <li>Add a useful next step for your lead</li>
             </ul>
             
             <p>If you have any questions, feel free to reach out to our support team. We're here to help!</p>
             
-            <p>Best regards,<br>The ConvertMag.net Team</p>
+            <p>Best regards,<br>The VidMagnet Team</p>
           </div>
           
           <div class="footer">
-            <p>&copy; 2025 ConvertMag.net. All rights reserved.</p>
-            <p>Transform ANY content into high-converting lead magnets.</p>
+            <p>&copy; ${new Date().getFullYear()} VidMagnet. All rights reserved.</p>
           </div>
         </div>
       </body>
@@ -161,21 +182,66 @@ export class EmailService {
 
     return this.sendEmail({
       to: user.email,
-      subject: `Welcome to ConvertMag.net - Your Account is Ready!`,
+      subject: `Welcome to VidMagnet - Your Account is Ready!`,
+      html,
+    });
+  }
+
+  async sendAccountCompletionEmail(
+    user: { email: string; firstName: string },
+    completionToken: string,
+  ): Promise<boolean> {
+    const appBaseUrl = publicAppBaseUrl();
+    if (!appBaseUrl) {
+      console.error("PUBLIC_APP_URL or REPLIT_DOMAINS is required to send auth emails");
+      return false;
+    }
+    const completionUrl = `${appBaseUrl}/complete-account#token=${encodeURIComponent(completionToken)}`;
+    const firstName = escapeHtml(user.firstName || "there");
+    const html = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Finish setting up VidMagnet</title>
+      </head>
+      <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #101419;">
+        <div style="max-width: 600px; margin: 0 auto; padding: 24px;">
+          <h1>Finish setting up VidMagnet</h1>
+          <p>Hi ${firstName},</p>
+          <p>Use this secure link to finish setting your password. The link expires in 30 minutes and works once.</p>
+          <p style="margin: 28px 0;">
+            <a href="${completionUrl}" style="display: inline-block; background: #FF6B3D; color: #101419; padding: 12px 20px; border-radius: 8px; font-weight: 700; text-decoration: none;">Finish account setup</a>
+          </p>
+          <p>If you did not request this, you can ignore this email.</p>
+          <p style="word-break: break-all; color: #5B6470;">${completionUrl}</p>
+          <p>Best regards,<br>The VidMagnet Team</p>
+        </div>
+      </body>
+      </html>
+    `;
+
+    return this.sendEmail({
+      to: user.email,
+      subject: "Finish setting up your VidMagnet account",
       html,
     });
   }
 
   async sendPasswordResetEmail(user: { email: string; firstName: string }, resetToken: string): Promise<boolean> {
-    const resetUrl = process.env.REPLIT_DOMAINS ? 
-      `https://${process.env.REPLIT_DOMAINS.split(',')[0]}/reset-password?token=${resetToken}` : 
-      `https://your-domain.com/reset-password?token=${resetToken}`;
+    const appBaseUrl = publicAppBaseUrl();
+    if (!appBaseUrl) {
+      console.error("PUBLIC_APP_URL or REPLIT_DOMAINS is required to send auth emails");
+      return false;
+    }
+    const resetUrl = `${appBaseUrl}/reset-password?token=${encodeURIComponent(resetToken)}`;
 
     // If we have a dynamic template, use it
     if (this.templates.passwordReset) {
       return this.sendEmail({
         to: user.email,
-        subject: 'Reset Your ConvertMag.net Password',
+        subject: 'Reset Your VidMagnet Password',
         templateId: this.templates.passwordReset,
         dynamicTemplateData: {
           firstName: user.firstName,
@@ -213,7 +279,7 @@ export class EmailService {
           <div class="content">
             <h2>Hi ${user.firstName},</h2>
             
-            <p>We received a request to reset your ConvertMag.net account password.</p>
+            <p>We received a request to reset your VidMagnet account password.</p>
             
             <div style="text-align: center;">
               <a href="${resetUrl}" class="button">Reset Your Password</a>
@@ -228,11 +294,11 @@ export class EmailService {
             <p>If you're having trouble clicking the button, copy and paste this URL into your browser:</p>
             <p style="word-break: break-all; color: #666;">${resetUrl}</p>
             
-            <p>Best regards,<br>The ConvertMag.net Team</p>
+            <p>Best regards,<br>The VidMagnet Team</p>
           </div>
           
           <div class="footer">
-            <p>&copy; 2025 ConvertMag.net. All rights reserved.</p>
+            <p>&copy; ${new Date().getFullYear()} VidMagnet. All rights reserved.</p>
           </div>
         </div>
       </body>
@@ -241,7 +307,7 @@ export class EmailService {
 
     return this.sendEmail({
       to: user.email,
-      subject: `Reset Your ConvertMag.net Password`,
+      subject: `Reset Your VidMagnet Password`,
       html,
     });
   }
@@ -464,20 +530,28 @@ export class EmailService {
 export class HighLevelService {
   private apiKey?: string;
   private baseUrl = 'https://rest.gohighlevel.com/v1';
+  private fetchImpl: typeof fetch;
+  private requestTimeoutMs: number;
 
-  constructor() {
+  constructor(options?: { fetchImpl?: typeof fetch; requestTimeoutMs?: number }) {
     this.apiKey = process.env.HIGHLEVEL_API_KEY;
+    this.fetchImpl = options?.fetchImpl ?? fetch;
+    this.requestTimeoutMs = options?.requestTimeoutMs ?? 2_500;
   }
 
   async addContact(contactData: HighLevelContactData): Promise<boolean> {
     if (!this.apiKey) {
-      console.warn('High Level API key not configured, contact would be added:', contactData.email);
+      console.warn('High Level API key not configured; contact sync skipped');
       return false;
     }
 
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), this.requestTimeoutMs);
+
     try {
-      const response = await fetch(`${this.baseUrl}/contacts/`, {
+      const response = await this.fetchImpl(`${this.baseUrl}/contacts/`, {
         method: 'POST',
+        signal: controller.signal,
         headers: {
           'Authorization': `Bearer ${this.apiKey}`,
           'Content-Type': 'application/json',
@@ -497,11 +571,13 @@ export class HighLevelService {
         throw new Error(`High Level API error: ${response.status}`);
       }
 
-      console.log('Successfully added contact to High Level CRM:', contactData.email);
+      console.log('Successfully added contact to High Level CRM');
       return true;
     } catch (error) {
       console.error('High Level API error:', error);
       return false;
+    } finally {
+      clearTimeout(timeout);
     }
   }
 
@@ -530,14 +606,14 @@ export class HighLevelService {
 
   async sendHighLevelEmail(contactEmail: string, subject: string, htmlContent: string): Promise<boolean> {
     if (!this.apiKey) {
-      console.warn('High Level API key not configured, email would be sent:', subject);
+      console.warn('High Level API key not configured; email send skipped');
       return false;
     }
 
     try {
       // Note: High Level email sending requires specific setup and workflow triggers
       // This is a placeholder for the actual implementation which may vary based on your High Level setup
-      console.log('High Level email would be sent:', { contactEmail, subject });
+      console.log('High Level email request completed:', { subject });
       return true;
     } catch (error) {
       console.error('High Level email error:', error);

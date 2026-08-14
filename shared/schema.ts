@@ -11,10 +11,18 @@ import {
   decimal,
   uuid,
   unique,
+  uniqueIndex,
 } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
-import { relations } from "drizzle-orm";
+import { relations, sql } from "drizzle-orm";
+import type {
+  QuizLeadCapture,
+  QuizOutcome,
+  QuizQuestion,
+  QuizResultSnapshot,
+  QuizTheme,
+} from "./quiz";
 
 // Session storage table (required for Replit Auth)
 export const sessions = pgTable(
@@ -39,7 +47,7 @@ export const users = pgTable("users", {
   resetTokenExpiry: timestamp("reset_token_expiry"),
   emailVerificationToken: varchar("email_verification_token"),
   isEmailVerified: boolean("is_email_verified").default(false),
-  currentBrandId: integer("current_brand_id"), // Reference to active brand
+  currentBrandId: integer("current_brand_id").references(() => brands.id, { onDelete: "set null" }),
   role: varchar("role", { length: 50 }).default("user"), // 'super_admin', 'account_admin', 'brand_admin', 'user'
   subscriptionTier: varchar("subscription_tier").default("free"), // 'free', 'basic', 'pro', 'enterprise'
   stripeCustomerId: varchar("stripe_customer_id"), // Stripe customer ID
@@ -142,19 +150,40 @@ export const mediaAssets = pgTable("media_assets", {
 // Branding settings for each brand
 export const brandingSettings = pgTable("branding_settings", {
   id: serial("id").primaryKey(),
-  userId: varchar("user_id").references(() => users.id).notNull().unique(),
-  brandId: integer("brand_id").references(() => brands.id), // nullable for migration
-  logoUrl: varchar("logo_url"),
+  userId: varchar("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
+  brandId: integer("brand_id").references(() => brands.id, { onDelete: "cascade" }),
+  displayName: varchar("display_name", { length: 160 }),
+  companyName: varchar("company_name"), // compatibility alias for displayName
+  tagline: text("tagline"),
+  logoUrl: varchar("logo_url"), // horizontal wordmark; retained for compatibility
+  logoMarkUrl: varchar("logo_mark_url"),
+  logoAltText: varchar("logo_alt_text", { length: 240 }),
   faviconUrl: varchar("favicon_url"),
+  socialImageUrl: varchar("social_image_url"),
   primaryColor: varchar("primary_color").default("#2563EB"),
   secondaryColor: varchar("secondary_color").default("#10B981"),
   accentColor: varchar("accent_color").default("#F59E0B"),
-  fontFamily: varchar("font_family").default("Inter"),
-  companyName: varchar("company_name"),
-  tagline: text("tagline"),
+  backgroundColor: varchar("background_color").default("#F8FAFC"),
+  surfaceColor: varchar("surface_color").default("#FFFFFF"),
+  textColor: varchar("text_color").default("#0F172A"),
+  headingFontFamily: varchar("heading_font_family", { length: 100 }).default("Inter"),
+  bodyFontFamily: varchar("body_font_family", { length: 100 }).default("Inter"),
+  fontFamily: varchar("font_family").default("Inter"), // compatibility alias for bodyFontFamily
+  websiteUrl: varchar("website_url"),
+  privacyUrl: varchar("privacy_url"),
+  termsUrl: varchar("terms_url"),
+  brandVoice: text("brand_voice"),
+  targetAudience: text("target_audience"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
-});
+}, (table) => [
+  uniqueIndex("branding_settings_personal_unique")
+    .on(table.userId)
+    .where(sql`${table.brandId} IS NULL`),
+  uniqueIndex("branding_settings_brand_unique")
+    .on(table.brandId)
+    .where(sql`${table.brandId} IS NOT NULL`),
+]);
 
 // Subscription plans and pricing
 export const subscriptionPlans = pgTable("subscription_plans", {
@@ -196,10 +225,11 @@ export const guides = pgTable("guides", {
   id: serial("id").primaryKey(),
   userId: varchar("user_id").references(() => users.id).notNull(),
   brandId: integer("brand_id").references(() => brands.id), // Link guides to specific brands (nullable for migration)
+  magnetType: varchar("magnet_type", { length: 20 }).notNull().default("guide"), // 'guide' or 'quiz'
   title: varchar("title").notNull(),
   description: text("description"),
-  youtubeUrl: varchar("youtube_url").notNull(),
-  youtubeVideoId: varchar("youtube_video_id").notNull(),
+  youtubeUrl: varchar("youtube_url"),
+  youtubeVideoId: varchar("youtube_video_id"),
   channelTitle: varchar("channel_title"), // YouTube channel name
   thumbnailUrl: varchar("thumbnail_url"),
   transcript: text("transcript"),
@@ -266,6 +296,75 @@ export const leads = pgTable("leads", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Reusable free gifts and calls-to-action that can be assigned to quiz outcomes.
+export const benefitAssets = pgTable("benefit_assets", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
+  brandId: integer("brand_id").references(() => brands.id, { onDelete: "cascade" }),
+  kind: varchar("kind", { length: 20 }).notNull(), // 'free_gift' or 'cta'
+  title: varchar("title", { length: 200 }).notNull(),
+  description: text("description").notNull(),
+  benefitSummary: text("benefit_summary").notNull(),
+  url: text("url").notNull(),
+  buttonLabel: varchar("button_label", { length: 100 }).notNull(),
+  tags: text("tags").array().notNull().default([]),
+  status: varchar("status", { length: 20 }).notNull().default("active"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("benefit_assets_user_brand_idx").on(table.userId, table.brandId),
+  index("benefit_assets_kind_idx").on(table.kind),
+]);
+
+// Quiz definitions stay one-to-one with the existing guide/lead-magnet record.
+export const quizzes = pgTable("quizzes", {
+  id: serial("id").primaryKey(),
+  guideId: integer("guide_id").references(() => guides.id, { onDelete: "cascade" }).notNull().unique(),
+  userId: varchar("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
+  brandId: integer("brand_id").references(() => brands.id, { onDelete: "cascade" }),
+  sourceContent: text("source_content").notNull(),
+  questions: jsonb("questions").$type<QuizQuestion[]>().notNull(),
+  outcomes: jsonb("outcomes").$type<QuizOutcome[]>().notNull(),
+  leadCapture: jsonb("lead_capture").$type<QuizLeadCapture>().notNull(),
+  theme: jsonb("theme").$type<QuizTheme>().notNull(),
+  themeMode: varchar("theme_mode", { length: 20 }).notNull().default("brand"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("quizzes_user_brand_idx").on(table.userId, table.brandId),
+]);
+
+// Public quiz sessions use an unguessable UUID token and retain the scored result.
+export const quizAttempts = pgTable("quiz_attempts", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  quizId: integer("quiz_id").references(() => quizzes.id, { onDelete: "cascade" }).notNull(),
+  landingPageId: integer("landing_page_id").references(() => landingPages.id, { onDelete: "cascade" }).notNull(),
+  leadId: integer("lead_id").references(() => leads.id, { onDelete: "set null" }),
+  answerMap: jsonb("answer_map").$type<Record<string, string>>().notNull().default({}),
+  scoreMap: jsonb("score_map").$type<Record<string, number>>().notNull().default({}),
+  outcomeId: varchar("outcome_id", { length: 80 }),
+  resultSnapshot: jsonb("result_snapshot").$type<QuizResultSnapshot>(),
+  resultViewedAt: timestamp("result_viewed_at"),
+  firstClickedAt: timestamp("first_clicked_at"),
+  lastClickedAt: timestamp("last_clicked_at"),
+  clickCount: integer("click_count").notNull().default(0),
+  clickedAssetId: integer("clicked_asset_id").references(() => benefitAssets.id, { onDelete: "set null" }),
+  ipAddress: varchar("ip_address"),
+  userAgent: text("user_agent"),
+  referrer: text("referrer"),
+  startedAt: timestamp("started_at").defaultNow(),
+  completedAt: timestamp("completed_at"),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("quiz_attempts_quiz_idx").on(table.quizId),
+  index("quiz_attempts_landing_page_idx").on(table.landingPageId),
+  index("quiz_attempts_lead_idx").on(table.leadId),
+  index("quiz_attempts_rate_idx").on(table.quizId, table.ipAddress, table.startedAt),
+  index("quiz_attempts_stale_idx")
+    .on(table.quizId, table.startedAt)
+    .where(sql`${table.completedAt} IS NULL`),
+]);
+
 // QR codes for sharing guides
 export const qrCodes = pgTable("qr_codes", {
   id: serial("id").primaryKey(),
@@ -289,7 +388,15 @@ export const analyticsEvents = pgTable("analytics_events", {
   userAgent: text("user_agent"),
   referrer: text("referrer"),
   createdAt: timestamp("created_at").defaultNow(),
-});
+}, (table) => [
+  index("analytics_events_quiz_view_dedupe_idx").on(
+    table.guideId,
+    table.landingPageId,
+    table.eventType,
+    table.ipAddress,
+    table.createdAt,
+  ),
+]);
 
 // Notifications
 export const notifications = pgTable("notifications", {
@@ -479,6 +586,8 @@ export const usersRelations = relations(users, ({ many, one }) => ({
   personalizationRules: many(personalizationRules),
   promptTemplates: many(promptTemplates),
   mediaAssets: many(mediaAssets),
+  benefitAssets: many(benefitAssets),
+  quizzes: many(quizzes),
   googleConnection: one(googleConnections),
   brandUsers: many(brandUsers),
   userSubscription: one(userSubscriptions),
@@ -492,6 +601,8 @@ export const brandsRelations = relations(brands, ({ one, many }) => ({
   knowledgebaseEntries: many(knowledgebaseEntries),
   promptTemplates: many(promptTemplates),
   mediaAssets: many(mediaAssets),
+  benefitAssets: many(benefitAssets),
+  quizzes: many(quizzes),
   brandUsers: many(brandUsers),
 }));
 
@@ -503,6 +614,11 @@ export const guidesRelations = relations(guides, ({ one, many }) => ({
   qrCodes: many(qrCodes),
   analyticsEvents: many(analyticsEvents),
   contentVariants: many(contentVariants),
+  quiz: one(quizzes, {
+    fields: [guides.id],
+    references: [quizzes.guideId],
+    relationName: "guideQuiz",
+  }),
 }));
 
 export const landingPagesRelations = relations(landingPages, ({ one, many }) => ({
@@ -510,12 +626,37 @@ export const landingPagesRelations = relations(landingPages, ({ one, many }) => 
   user: one(users, { fields: [landingPages.userId], references: [users.id] }),
   leads: many(leads),
   analyticsEvents: many(analyticsEvents),
+  quizAttempts: many(quizAttempts),
 }));
 
 export const leadsRelations = relations(leads, ({ one }) => ({
   landingPage: one(landingPages, { fields: [leads.landingPageId], references: [landingPages.id] }),
   guide: one(guides, { fields: [leads.guideId], references: [guides.id] }),
   user: one(users, { fields: [leads.userId], references: [users.id] }),
+}));
+
+export const benefitAssetsRelations = relations(benefitAssets, ({ one, many }) => ({
+  user: one(users, { fields: [benefitAssets.userId], references: [users.id] }),
+  brand: one(brands, { fields: [benefitAssets.brandId], references: [brands.id] }),
+  attempts: many(quizAttempts),
+}));
+
+export const quizzesRelations = relations(quizzes, ({ one, many }) => ({
+  guide: one(guides, {
+    fields: [quizzes.guideId],
+    references: [guides.id],
+    relationName: "guideQuiz",
+  }),
+  user: one(users, { fields: [quizzes.userId], references: [users.id] }),
+  brand: one(brands, { fields: [quizzes.brandId], references: [brands.id] }),
+  attempts: many(quizAttempts),
+}));
+
+export const quizAttemptsRelations = relations(quizAttempts, ({ one }) => ({
+  quiz: one(quizzes, { fields: [quizAttempts.quizId], references: [quizzes.id] }),
+  landingPage: one(landingPages, { fields: [quizAttempts.landingPageId], references: [landingPages.id] }),
+  lead: one(leads, { fields: [quizAttempts.leadId], references: [leads.id] }),
+  clickedAsset: one(benefitAssets, { fields: [quizAttempts.clickedAssetId], references: [benefitAssets.id] }),
 }));
 
 export const qrCodesRelations = relations(qrCodes, ({ one }) => ({
@@ -531,6 +672,7 @@ export const analyticsEventsRelations = relations(analyticsEvents, ({ one }) => 
 
 export const brandingSettingsRelations = relations(brandingSettings, ({ one }) => ({
   user: one(users, { fields: [brandingSettings.userId], references: [users.id] }),
+  brand: one(brands, { fields: [brandingSettings.brandId], references: [brands.id] }),
 }));
 
 export const trainingSettingsRelations = relations(trainingSettings, ({ one }) => ({
@@ -603,6 +745,24 @@ export const insertLandingPageSchema = createInsertSchema(landingPages).omit({
 export const insertLeadSchema = createInsertSchema(leads).omit({
   id: true,
   createdAt: true,
+});
+
+export const insertBenefitAssetSchema = createInsertSchema(benefitAssets).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertQuizSchema = createInsertSchema(quizzes).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertQuizAttemptSchema = createInsertSchema(quizAttempts).omit({
+  id: true,
+  startedAt: true,
+  updatedAt: true,
 });
 
 export const insertBrandingSettingsSchema = createInsertSchema(brandingSettings).omit({
@@ -772,6 +932,12 @@ export type LandingPage = typeof landingPages.$inferSelect;
 export type InsertLandingPage = z.infer<typeof insertLandingPageSchema>;
 export type Lead = typeof leads.$inferSelect;
 export type InsertLead = z.infer<typeof insertLeadSchema>;
+export type BenefitAsset = typeof benefitAssets.$inferSelect;
+export type InsertBenefitAsset = z.infer<typeof insertBenefitAssetSchema>;
+export type Quiz = typeof quizzes.$inferSelect;
+export type InsertQuiz = z.infer<typeof insertQuizSchema>;
+export type QuizAttempt = typeof quizAttempts.$inferSelect;
+export type InsertQuizAttempt = z.infer<typeof insertQuizAttemptSchema>;
 export type BrandingSettings = typeof brandingSettings.$inferSelect;
 export type InsertBrandingSettings = z.infer<typeof insertBrandingSettingsSchema>;
 export type QrCode = typeof qrCodes.$inferSelect;

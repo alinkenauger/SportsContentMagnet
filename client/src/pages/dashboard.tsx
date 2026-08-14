@@ -112,7 +112,7 @@ export default function Dashboard() {
     { id: "metadata", title: "Video metadata extracted", status: "pending" as const },
     { id: "transcript", title: "Content transcribed", status: "pending" as const },
     { id: "analysis", title: "Analyzing coaching insights...", status: "pending" as const },
-    { id: "guide", title: "Generating practice guide", status: "pending" as const },
+    { id: "guide", title: "Building implementation asset", status: "pending" as const },
   ]);
   const [currentStep, setCurrentStep] = useState("");
   const [progress, setProgress] = useState(0);
@@ -581,7 +581,7 @@ export default function Dashboard() {
                 onClick={() => setLocation('/create')}
               >
                 <Plus className="w-4 h-4 mr-2" />
-                Create New Guide
+                Create New Magnet
               </Button>
             </div>
           </div>
@@ -592,7 +592,7 @@ export default function Dashboard() {
           {/* Stats Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
             <StatsCard
-              title="Total Guides"
+              title="Total Magnets"
               value={stats?.totalGuides || 0}
               change="+12%"
               changeType="positive"

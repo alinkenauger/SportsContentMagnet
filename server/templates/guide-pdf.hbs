@@ -195,11 +195,24 @@
     </div>
 
     <div class="content">
+        {{#if promise}}
+            <div class="next-steps">
+                <h3>What this guide helps you accomplish</h3>
+                <p>{{promise}}</p>
+            </div>
+        {{/if}}
+
+        {{#if introduction}}
+            <div class="section">
+                <div class="section-content">{{introduction}}</div>
+            </div>
+        {{/if}}
+
         {{#each sections}}
             <div class="section">
                 <h2 class="section-title">{{title}}</h2>
                 <div class="section-content">
-                    {{{content}}}
+                    {{content}}
                     
                     {{#if drillBreakdown}}
                         <div class="drill-breakdown">
@@ -255,10 +268,17 @@
             </div>
         {{/each}}
 
+        {{#if conclusion}}
+            <div class="section">
+                <h2 class="section-title">Put it into practice</h2>
+                <div class="section-content">{{conclusion}}</div>
+            </div>
+        {{/if}}
+
         {{#if nextSteps}}
             <div class="next-steps">
                 <h3>Next Steps</h3>
-                {{{nextSteps}}}
+                {{nextSteps}}
             </div>
         {{/if}}
     </div>

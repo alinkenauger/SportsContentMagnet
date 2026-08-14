@@ -1,16 +1,30 @@
-import type { Express } from "express";
+import type { Express, Response } from "express";
 import express from "express";
 import { createServer, type Server } from "http";
-import { randomUUID } from "crypto";
+import { randomBytes, randomUUID } from "crypto";
+import bcrypt from "bcrypt";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import { requireSuperAdmin, requireAccountAdmin, requireBrandAdmin } from "./roleAuth";
-import { analyzeVideoContent, generatePracticeGuide, personalizeGuideContent } from "./services/openai";
+import { analyzeVideoContent, generatePracticeGuide } from "./services/openai";
 import { getYouTubeVideoData, transcribeVideo } from "./services/youtube";
 import { EmailService } from "./services/emailService";
-import { insertGuideSchema, insertLandingPageSchema, insertLeadSchema, insertBrandingSettingsSchema, insertTrainingSettingsSchema, insertKnowledgebaseEntrySchema, brandUsers, subscriptionPlans } from "@shared/schema";
+import {
+  insertBrandSchema,
+  insertGuideSchema,
+  insertLandingPageSchema,
+  insertLeadSchema,
+  insertTrainingSettingsSchema,
+  insertKnowledgebaseEntrySchema,
+  brandUsers,
+  guides,
+  landingPages,
+  quizzes,
+  subscriptionPlans,
+} from "@shared/schema";
 import { db } from "./db";
 import { eq } from "drizzle-orm";
+import { z } from "zod";
 import QRCode from 'qrcode';
 import multer from 'multer';
 import { StorageCostManager } from "./services/storageManager";
@@ -18,6 +32,35 @@ import fs from 'fs';
 import path from 'path';
 import { getServiceConfiguration } from './services/deploymentChecker';
 import { registerAuthRoutes } from "./authRoutes";
+import { registerQuizRoutes } from "./quizRoutes";
+import { getRequestUserId } from "./requestUser";
+import { isDirectlyAccessibleGuide } from "./guideVisibility";
+import { hasAllowedBrandImageSignature } from "./brandAssetValidation";
+import {
+  BrandAccessError,
+  assertBrandAccess,
+  assertGuideAccess,
+  listAccessibleBrands,
+  resolveBrandIdForUser,
+  resolveCurrentBrandScope,
+} from "./brandAccess";
+import {
+  mergeBrandAppearance,
+  resolveAppearanceForScope,
+  resolveBrandingEnvelope,
+  resolvePublicAppearanceForGuide,
+  toBrandingPersistence,
+} from "./brandAppearance";
+import {
+  brandAppearanceUpdateSchema,
+  brandScopeMatches,
+  brandScopeExpectationSchema,
+} from "@shared/branding";
+import {
+  guideCreationBriefSchema,
+  inferGuideFormatFromTemplate,
+  type GuideCreationBrief,
+} from "@shared/guideContent";
 import Stripe from "stripe";
 // import pdf from 'pdf-parse'; // Temporarily disabled due to module issues
 
@@ -31,14 +74,86 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
 
 // Helper function to get user ID from either authentication method
 function getUserId(req: any): string | null {
-  if (req.session && req.session.user) {
-    return req.session.user.id;
-  } else if (req.user && req.user.claims) {
-    return req.user.claims.sub;
-  } else if (req.user && req.user.id) {
-    return req.user.id;
+  return getRequestUserId(req);
+}
+
+function requestText(value: unknown): string | undefined {
+  return typeof value === "string" && value.trim().length > 0 ? value.trim() : undefined;
+}
+
+const adminRoleSchema = z.enum(["user", "brand_admin", "account_admin", "super_admin"]);
+const adminCreateUserSchema = z.object({
+  email: z.string().trim().email().max(320).transform((email) => email.toLowerCase()),
+  firstName: z.string().trim().min(1).max(100),
+  lastName: z.string().trim().min(1).max(100),
+  role: adminRoleSchema.default("user"),
+});
+
+function guideBriefFromRequest(body: Record<string, unknown>, selectedTemplate?: string): unknown {
+  const nestedBrief = typeof body.creationBrief === "object" &&
+    body.creationBrief !== null &&
+    !Array.isArray(body.creationBrief)
+    ? body.creationBrief as Record<string, unknown>
+    : {};
+
+  return {
+    format: requestText(nestedBrief.format) || requestText(body.format) ||
+      inferGuideFormatFromTemplate(selectedTemplate),
+    audience: requestText(nestedBrief.audience) || requestText(body.audience) ||
+      requestText(body.targetAudience),
+    difficulty: requestText(nestedBrief.difficulty) || requestText(body.difficulty),
+    focus: requestText(nestedBrief.focus) || requestText(body.focus) ||
+      requestText(body.customInstructions),
+    desiredOutcome: requestText(nestedBrief.desiredOutcome) || requestText(body.desiredOutcome),
+    availableTime: requestText(nestedBrief.availableTime) || requestText(body.availableTime),
+    customInstructions: requestText(nestedBrief.customInstructions) ||
+      requestText(body.additionalInstructions) || requestText(body.customInstructions),
+  };
+}
+
+function sendBrandRouteError(res: Response, error: unknown, fallback: string): void {
+  if (error instanceof z.ZodError) {
+    res.status(400).json({
+      message: "Invalid request",
+      issues: error.issues.map((issue) => ({
+        path: issue.path.join("."),
+        message: issue.message,
+      })),
+    });
+    return;
   }
-  return null;
+  if (error instanceof BrandAccessError) {
+    res.status(error.status).json({ message: error.message });
+    return;
+  }
+  console.error(fallback, error);
+  res.status(500).json({ message: fallback });
+}
+
+function brandingUpdateFromBody(body: unknown) {
+  const record = body && typeof body === "object" && !Array.isArray(body)
+    ? body as Record<string, unknown>
+    : {};
+  const candidate = record.appearance && typeof record.appearance === "object" && !Array.isArray(record.appearance)
+    ? record.appearance
+    : record;
+  const {
+    id: _id,
+    userId: _userId,
+    brandId: _brandId,
+    scope: _scope,
+    capabilities: _capabilities,
+    createdAt: _createdAt,
+    updatedAt: _updatedAt,
+    expectedScope: _nestedExpectedScope,
+    ...appearance
+  } = candidate as Record<string, unknown>;
+  return {
+    appearance: brandAppearanceUpdateSchema.parse(appearance),
+    expectedScope: record.expectedScope === undefined
+      ? undefined
+      : brandScopeExpectationSchema.parse(record.expectedScope),
+  };
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -97,11 +212,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       fileSize: 5 * 1024 * 1024, // 5MB limit for logos
     },
     fileFilter: (req, file, cb) => {
-      // Accept only image files
-      if (file.mimetype.startsWith('image/')) {
+      // Limit same-origin public assets to formats that cannot execute scripts.
+      if (['image/png', 'image/jpeg', 'image/webp'].includes(file.mimetype)) {
         cb(null, true);
       } else {
-        cb(new Error('Only image files are allowed') as any, false);
+        cb(new Error('Only PNG, JPEG, or WebP images are allowed') as any, false);
       }
     }
   });
@@ -111,6 +226,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Register custom auth routes (signup, password reset, etc.)
   registerAuthRoutes(app);
+
+  // Register outcome quiz authoring, public runner, and benefit-library routes.
+  registerQuizRoutes(app);
 
   // Test email endpoint for debugging
   app.post("/api/test-email", async (req, res) => {
@@ -143,21 +261,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Primary auth route (Google OAuth)
-  app.get('/api/auth/user', async (req: any, res) => {
+  app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
     try {
-      // Check Google OAuth first
-      if (req.isAuthenticated() && req.user && req.user.id) {
-        return res.json(req.user);
-      }
-      
-      // Fallback to Replit Auth
-      if (req.user?.claims?.sub) {
-        const userId = req.user.claims.sub;
-        const user = await storage.getUser(userId);
-        return res.json(user);
-      }
-      
-      res.status(401).json({ message: "Unauthorized" });
+      const userId = getRequestUserId(req);
+      if (!userId) return res.status(401).json({ message: "Unauthorized" });
+      const user = await storage.getUser(userId);
+      if (!user) return res.status(401).json({ message: "Unauthorized" });
+      return res.json({
+        id: user.id,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        profileImageUrl: user.profileImageUrl,
+        role: user.role,
+        isEmailVerified: user.isEmailVerified,
+        currentBrandId: user.currentBrandId,
+      });
     } catch (error) {
       console.error("Error fetching user:", error);
       res.status(500).json({ message: "Failed to fetch user" });
@@ -168,20 +287,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/brands', isAuthenticated, async (req: any, res) => {
     try {
       const userId = getUserId(req);
-      const brands = await storage.getBrandsByUser(userId);
-      res.json(brands);
+      if (!userId) return res.status(401).json({ message: "Authentication required" });
+      res.json(await listAccessibleBrands(userId));
     } catch (error) {
-      console.error("Error fetching brands:", error);
-      res.status(500).json({ message: "Failed to fetch brands" });
+      sendBrandRouteError(res, error, "Failed to fetch brands");
     }
   });
 
   app.post('/api/brands', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims?.sub || req.user.id;
-      const brandData = { ...req.body, userId };
+      const userId = getRequestUserId(req);
+      if (!userId) return res.status(401).json({ message: "Authentication required" });
+      const brandData = insertBrandSchema.omit({ userId: true }).parse(req.body);
       
-      const brand = await storage.createBrand(brandData);
+      const brand = await storage.createBrand({ ...brandData, userId });
       
       // If this is the user's first brand, set it as current
       const userBrands = await storage.getBrandsByUser(userId);
@@ -191,53 +310,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       res.json(brand);
     } catch (error) {
-      console.error("Error creating brand:", error);
-      res.status(500).json({ message: "Failed to create brand" });
+      sendBrandRouteError(res, error, "Failed to create brand");
     }
   });
 
   app.put('/api/brands/:id', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims?.sub || req.user.id;
+      const userId = getRequestUserId(req);
+      if (!userId) return res.status(401).json({ message: "Authentication required" });
       const brandId = parseInt(req.params.id);
-      
-      // Verify brand ownership
-      const brand = await storage.getBrand(brandId);
-      if (!brand || brand.userId !== userId) {
-        return res.status(404).json({ message: "Brand not found" });
-      }
-      
-      const updatedBrand = await storage.updateBrand(brandId, req.body);
+      await assertBrandAccess(userId, brandId, "manage_brand");
+      const update = insertBrandSchema.omit({ userId: true }).partial().parse(req.body);
+      const updatedBrand = await storage.updateBrand(brandId, update);
       res.json(updatedBrand);
     } catch (error) {
-      console.error("Error updating brand:", error);
-      res.status(500).json({ message: "Failed to update brand" });
+      sendBrandRouteError(res, error, "Failed to update brand");
     }
   });
 
   app.post('/api/brands/:id/set-current', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims?.sub || req.user.id;
-      const brandId = parseInt(req.params.id);
-      
-      // Verify brand ownership
-      const brand = await storage.getBrand(brandId);
-      if (!brand || brand.userId !== userId) {
-        return res.status(404).json({ message: "Brand not found" });
+      const userId = getUserId(req);
+      if (!userId) {
+        return res.status(401).json({ message: "Authentication required" });
       }
+      const brandId = parseInt(req.params.id);
+      await assertBrandAccess(userId, brandId, "read");
       
       await storage.setCurrentBrand(userId, brandId);
+      if (req.session?.user) {
+        req.session.user.currentBrandId = brandId;
+      }
       res.json({ success: true });
     } catch (error) {
-      console.error("Error setting current brand:", error);
-      res.status(500).json({ message: "Failed to set current brand" });
+      sendBrandRouteError(res, error, "Failed to set current brand");
     }
   });
 
   app.post('/api/brands/clear-current', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims?.sub || req.user.id;
+      const userId = getUserId(req);
+      if (!userId) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
       await storage.setCurrentBrand(userId, null);
+      if (req.session?.user) {
+        req.session.user.currentBrandId = null;
+      }
       res.json({ success: true });
     } catch (error) {
       console.error("Error clearing current brand:", error);
@@ -247,7 +366,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete('/api/brands/:id', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims?.sub || req.user.id;
+      const userId = getRequestUserId(req);
+      if (!userId) return res.status(401).json({ message: "Authentication required" });
       const brandId = parseInt(req.params.id);
       
       // Verify brand ownership
@@ -265,8 +385,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await storage.deleteBrand(brandId);
       res.json({ success: true });
     } catch (error) {
-      console.error("Error deleting brand:", error);
-      res.status(500).json({ message: "Failed to delete brand" });
+      sendBrandRouteError(res, error, "Failed to delete brand");
     }
   });
 
@@ -304,7 +423,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Dashboard analytics
   app.get('/api/dashboard/stats', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = getUserId(req);
+      const userId = getRequestUserId(req);
+      if (!userId) return res.status(401).json({ message: "Authentication required" });
       // Get current brand from database
       const user = await storage.getUser(userId);
       const currentBrandId = user?.currentBrandId;
@@ -319,7 +439,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Guide routes - handle multiple content types
   app.post('/api/guides', upload.single('file'), isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = getRequestUserId(req);
+      if (!userId) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
       
       let videoData: any;
       let transcript: string;
@@ -327,6 +450,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Extract common parameters
       const { youtubeUrl, leadTags, collectSms, smsConsentText, selectedTemplate } = req.body;
+      const briefResult = guideCreationBriefSchema.safeParse(
+        guideBriefFromRequest(req.body, selectedTemplate),
+      );
+      if (!briefResult.success) {
+        return res.status(400).json({
+          message: "Invalid guide creation brief",
+          issues: briefResult.error.issues.map((issue) => ({
+            path: issue.path.join("."),
+            message: issue.message,
+          })),
+        });
+      }
+      const creationBrief: GuideCreationBrief = briefResult.data;
       console.log(`Guide creation: inputMethod=${inputMethod}, youtubeUrl=${youtubeUrl}, template=${selectedTemplate}`);
       
       // Handle different input methods
@@ -438,8 +574,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Step 3: Get user's training settings for AI customization
+      const currentBrandId = await resolveBrandIdForUser(userId, undefined, "write_content");
       const trainingSettings = await storage.getTrainingSettings(userId);
-      const brandingSettings = await storage.getBrandingSettings(userId);
+      const brandingSettings = await resolveAppearanceForScope(userId, currentBrandId);
       
       // Step 4: Analyze content and generate practice guide
       let guideContent;
@@ -449,10 +586,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (videoData.segments && videoData.segments.length > 0) {
         // Use timestamped content generation for YouTube videos with timing data
         const { generateTimestampedContent } = await import('./services/aiContentWithTimestamps');
-        guideContent = await generateTimestampedContent(transcript, videoData.segments, videoData, trainingSettings, selectedTemplate);
+        guideContent = await generateTimestampedContent(
+          transcript,
+          videoData.segments,
+          videoData,
+          trainingSettings,
+          selectedTemplate,
+          creationBrief,
+        );
         
         // Still need analysis for guide metadata
-        analysis = await analyzeVideoContent(transcript, videoData.title, videoData.description);
+        analysis = await analyzeVideoContent(
+          transcript,
+          videoData.title,
+          videoData.description,
+          creationBrief,
+          selectedTemplate,
+        );
         
         // Step 4.5: Extract screenshots for YouTube videos if URL provided
         console.log(`Debug screenshot check: youtubeUrl=${youtubeUrl}, sections=${guideContent.sections?.length || 0}`);
@@ -492,8 +642,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       } else {
         // Fallback to regular content generation for manual/audio uploads
-        analysis = await analyzeVideoContent(transcript, videoData.title, videoData.description);
-        guideContent = await generatePracticeGuide(analysis, videoData.title, videoData.channelTitle, brandingSettings, selectedTemplate);
+        analysis = await analyzeVideoContent(
+          transcript,
+          videoData.title,
+          videoData.description,
+          creationBrief,
+          selectedTemplate,
+        );
+        guideContent = await generatePracticeGuide(
+          analysis,
+          videoData.title,
+          videoData.channelTitle,
+          brandingSettings,
+          selectedTemplate,
+          creationBrief,
+          transcript,
+        );
       }
       
       // Process lead tags (convert comma-separated string to array)
@@ -504,6 +668,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Step 6: Create guide in database
       const guide = await storage.createGuide({
         userId,
+        brandId: currentBrandId,
         title: guideContent.title,
         description: analysis.summary,
         youtubeUrl: youtubeUrl || null,
@@ -583,6 +748,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
     } catch (error) {
+      if (error instanceof BrandAccessError) {
+        return res.status(error.status).json({ message: error.message });
+      }
       console.error("=== GUIDE CREATION ERROR ===");
       console.error("Error details:", error);
       console.error("Error name:", (error as Error).name);
@@ -597,30 +765,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/guides', isAuthenticated, async (req: any, res) => {
     try {
       const userId = getUserId(req);
+      if (!userId) return res.status(401).json({ message: "Authentication required" });
       const { search, category } = req.query;
-      
-      // Get current user to check their current brand
-      const user = await storage.getUser(userId);
-      const currentBrandId = user?.currentBrandId || null;
-      
+      const currentBrandId = await resolveBrandIdForUser(userId, undefined, "read");
       const guides = await storage.getGuidesByUserAndBrand(userId, currentBrandId, search as string, category as string);
       res.json(guides);
     } catch (error) {
-      console.error("Error fetching guides:", error);
-      res.status(500).json({ message: "Failed to fetch guides" });
+      sendBrandRouteError(res, error, "Failed to fetch guides");
     }
   });
 
   // Endpoint to regenerate screenshots for an existing guide
   app.post('/api/guides/:id/regenerate-screenshots', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = getRequestUserId(req);
+      if (!userId) return res.status(401).json({ message: "Authentication required" });
       const guideId = parseInt(req.params.id);
       
       const guide = await storage.getGuide(guideId);
-      if (!guide || guide.userId !== userId) {
+      if (!guide) {
         return res.status(404).json({ message: "Guide not found" });
       }
+      await assertGuideAccess(userId, guide, "write_content");
 
       if (!guide.youtubeUrl || !(guide.content as any)?.sections) {
         return res.status(400).json({ message: "Guide must have YouTube URL and sections for screenshot extraction" });
@@ -667,39 +833,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
     } catch (error) {
-      console.error("Error regenerating screenshots:", error);
-      res.status(500).json({ message: "Failed to regenerate screenshots: " + (error as Error).message });
+      sendBrandRouteError(res, error, "Failed to regenerate screenshots");
     }
   });
 
   app.get('/api/guides/:id', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = getRequestUserId(req);
+      if (!userId) return res.status(401).json({ message: "Authentication required" });
       const guideId = parseInt(req.params.id);
       const guide = await storage.getGuide(guideId);
       
-      if (!guide || guide.userId !== userId) {
+      if (!guide) {
         return res.status(404).json({ message: "Guide not found" });
       }
+      await assertGuideAccess(userId, guide, "read");
 
       const analytics = await storage.getGuideAnalytics(guideId);
       res.json({ ...guide, analytics });
     } catch (error) {
-      console.error("Error fetching guide:", error);
-      res.status(500).json({ message: "Failed to fetch guide" });
+      sendBrandRouteError(res, error, "Failed to fetch guide");
     }
   });
 
   // Get landing page URL for guide editing
   app.get('/api/guides/:id/landing-page-url', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = getRequestUserId(req);
+      if (!userId) return res.status(401).json({ message: "Authentication required" });
       const guideId = parseInt(req.params.id);
       const guide = await storage.getGuide(guideId);
       
-      if (!guide || guide.userId !== userId) {
+      if (!guide) {
         return res.status(404).json({ message: "Guide not found" });
       }
+      await assertGuideAccess(userId, guide, "read");
 
       // Get the landing page for this guide
       const landingPage = await storage.getLandingPageByGuideId(guideId);
@@ -710,8 +878,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json({ customUrl: landingPage.customUrl });
     } catch (error) {
-      console.error("Error fetching landing page URL:", error);
-      res.status(500).json({ message: "Failed to fetch landing page URL" });
+      sendBrandRouteError(res, error, "Failed to fetch landing page URL");
     }
   });
 
@@ -721,7 +888,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const guideId = parseInt(req.params.id);
       const guide = await storage.getGuide(guideId);
       
-      if (!guide) {
+      if (!isDirectlyAccessibleGuide(guide)) {
         return res.status(404).json({ message: "Guide not found" });
       }
 
@@ -752,7 +919,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Update guide status with smart tagging for Practice Library
   app.patch('/api/guides/:id/status', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = getRequestUserId(req);
+      if (!userId) return res.status(401).json({ message: "Authentication required" });
       const guideId = parseInt(req.params.id);
       const { status } = req.body;
 
@@ -765,8 +933,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Guide not found" });
       }
 
-      if (guide.userId !== userId) {
-        return res.status(403).json({ message: "Unauthorized" });
+      await assertGuideAccess(userId, guide, "write_content");
+      if (guide.magnetType === "quiz") {
+        return res.status(409).json({
+          message: "Publish Outcome Quizzes from the quiz editor so scoring and result assets can be validated.",
+        });
       }
 
       let updateData: any = { status };
@@ -827,7 +998,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Transfer guide between Personal and Brand accounts
   app.patch('/api/guides/:id/transfer', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = getRequestUserId(req);
+      if (!userId) return res.status(401).json({ message: "Authentication required" });
       const guideId = parseInt(req.params.id);
       const { targetBrandId } = req.body;
 
@@ -842,31 +1014,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Guide not found" });
       }
 
-      if (guide.userId !== userId) {
-        return res.status(403).json({ message: "Unauthorized - you don't own this guide" });
+      await assertGuideAccess(userId, guide, "manage_brand");
+      const resolvedTargetBrandId = await resolveBrandIdForUser(
+        userId,
+        targetBrandId,
+        "manage_brand",
+      );
+      if (resolvedTargetBrandId === null && guide.userId !== userId) {
+        return res.status(403).json({ message: "Only the guide owner can move it to a personal account" });
       }
 
-      // If transferring to a brand, verify the user owns that brand
-      if (targetBrandId !== null) {
-        const targetBrand = await storage.getBrand(targetBrandId);
-        if (!targetBrand || targetBrand.userId !== userId) {
-          return res.status(403).json({ message: "Unauthorized - you don't own the target brand" });
+      const updatedGuide = await db.transaction(async (tx) => {
+        let nextStatus = guide.status;
+        const [updated] = await tx.update(guides).set({
+          brandId: resolvedTargetBrandId,
+          ...(guide.magnetType === "quiz" ? { status: "draft" } : {}),
+          updatedAt: new Date(),
+        }).where(eq(guides.id, guideId)).returning();
+        if (guide.magnetType === "quiz") {
+          const [quiz] = await tx
+            .select({ outcomes: quizzes.outcomes })
+            .from(quizzes)
+            .where(eq(quizzes.guideId, guideId));
+          const outcomes = (quiz?.outcomes || []).map((outcome) => ({
+            ...outcome,
+            giftAssetId: null,
+            ctaAssetId: null,
+          }));
+          await tx.update(quizzes).set({
+            brandId: resolvedTargetBrandId,
+            outcomes,
+            updatedAt: new Date(),
+          }).where(eq(quizzes.guideId, guideId));
+          nextStatus = "draft";
         }
-      }
-
-      // Perform the transfer
-      const updatedGuide = await storage.updateGuide(guideId, {
-        brandId: targetBrandId
+        return { ...updated, status: nextStatus };
       });
 
-      // Landing page transfer not implemented yet
-      // Landing pages will need to be recreated for the new brand if needed
-
       let message;
-      if (targetBrandId === null) {
+      if (resolvedTargetBrandId === null) {
         message = "Guide transferred to Personal account";
       } else {
-        const brand = await storage.getBrand(targetBrandId);
+        const brand = await storage.getBrand(resolvedTargetBrandId);
         message = `Guide transferred to ${brand?.name || 'Brand'} account`;
       }
 
@@ -875,16 +1064,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         message
       });
     } catch (error) {
-      console.error("Error transferring guide:", error);
-      res.status(500).json({ message: "Failed to transfer guide" });
+      sendBrandRouteError(res, error, "Failed to transfer guide");
     }
   });
 
-  // Import admin auth at the top of the route handler to avoid hoisting issues
-  const { isGlobalAdmin: adminAuth } = await import('./adminAuth');
-  
   // Admin-only guide transfer between any brand accounts  
-  app.patch('/api/admin/guides/:id/transfer', isAuthenticated, adminAuth, async (req: any, res) => {
+  app.patch('/api/admin/guides/:id/transfer', isAuthenticated, requireSuperAdmin, async (req: any, res) => {
     try {
       const guideId = parseInt(req.params.id);
       const { targetBrandId, targetUserId } = req.body;
@@ -896,6 +1081,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       if (!targetUserId) {
         return res.status(400).json({ message: "Target user ID is required" });
+      }
+      const targetUser = await storage.getUser(targetUserId);
+      if (!targetUser) {
+        return res.status(400).json({ message: "Target user does not exist" });
       }
 
       // Get the guide
@@ -912,14 +1101,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
-      // Perform the transfer
-      const updatedGuide = await storage.updateGuide(guideId, {
-        userId: targetUserId,
-        brandId: targetBrandId
-      });
+      const updatedGuide = await db.transaction(async (tx) => {
+        const [updated] = await tx.update(guides).set({
+          userId: targetUserId,
+          brandId: targetBrandId,
+          ...(guide.magnetType === "quiz" ? { status: "draft" } : {}),
+          updatedAt: new Date(),
+        }).where(eq(guides.id, guideId)).returning();
 
-      // Landing page transfer not implemented yet
-      // Landing pages will need to be recreated for the new user if needed
+        await tx.update(landingPages).set({
+          userId: targetUserId,
+          updatedAt: new Date(),
+        }).where(eq(landingPages.guideId, guideId));
+
+        if (guide.magnetType === "quiz") {
+          const [quiz] = await tx
+            .select({ outcomes: quizzes.outcomes })
+            .from(quizzes)
+            .where(eq(quizzes.guideId, guideId));
+          const outcomes = (quiz?.outcomes || []).map((outcome) => ({
+            ...outcome,
+            giftAssetId: null,
+            ctaAssetId: null,
+          }));
+          await tx.update(quizzes).set({
+            userId: targetUserId,
+            brandId: targetBrandId,
+            outcomes,
+            updatedAt: new Date(),
+          }).where(eq(quizzes.guideId, guideId));
+        }
+
+        return updated;
+      });
 
       let message;
       if (targetBrandId === null) {
@@ -941,16 +1155,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get('/api/guides/:id/landing-page', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = getRequestUserId(req);
+      if (!userId) return res.status(401).json({ message: "Authentication required" });
       const guideId = parseInt(req.params.id);
       const guide = await storage.getGuide(guideId);
       
-      if (!guide || guide.userId !== userId) {
+      if (!guide) {
         return res.status(404).json({ message: "Guide not found" });
       }
+      await assertGuideAccess(userId, guide, "read");
 
-      const landingPages = await storage.getLandingPagesByUser(userId);
-      const landingPage = landingPages.find(lp => lp.guideId === guideId);
+      const landingPage = await storage.getLandingPageByGuideId(guideId);
       
       if (!landingPage) {
         return res.status(404).json({ message: "Landing page not found" });
@@ -958,44 +1173,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json({ customUrl: landingPage.customUrl });
     } catch (error) {
-      console.error("Error fetching landing page:", error);
-      res.status(500).json({ message: "Failed to fetch landing page" });
+      sendBrandRouteError(res, error, "Failed to fetch landing page");
     }
   });
 
   app.put('/api/guides/:id', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = getRequestUserId(req);
+      if (!userId) return res.status(401).json({ message: "Authentication required" });
       const guideId = parseInt(req.params.id);
       const guide = await storage.getGuide(guideId);
       
-      if (!guide || guide.userId !== userId) {
+      if (!guide) {
         return res.status(404).json({ message: "Guide not found" });
       }
+      await assertGuideAccess(userId, guide, "write_content");
 
-      const updateData = insertGuideSchema.partial().parse(req.body);
+      const parsedUpdate = insertGuideSchema.partial().parse(req.body);
+      const {
+        userId: _userId,
+        brandId: _brandId,
+        magnetType: _magnetType,
+        ...updateData
+      } = parsedUpdate;
       const updatedGuide = await storage.updateGuide(guideId, updateData);
       res.json(updatedGuide);
     } catch (error) {
-      console.error("Error updating guide:", error);
-      res.status(500).json({ message: "Failed to update guide" });
+      sendBrandRouteError(res, error, "Failed to update guide");
     }
   });
 
   // PDF download route
   app.get('/api/guides/:id/download-pdf', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims?.sub || req.user.id;
+      const userId = getRequestUserId(req);
+      if (!userId) return res.status(401).json({ message: "Authentication required" });
       const guideId = parseInt(req.params.id);
       
-      // Get guide and verify ownership
       const guide = await storage.getGuide(guideId);
-      if (!guide || guide.userId !== userId) {
+      if (!guide) {
         return res.status(404).json({ message: "Guide not found" });
       }
+      await assertGuideAccess(userId, guide, "read");
 
-      // Get branding settings
-      const branding = await storage.getBrandingSettings(userId);
+      const branding = await resolvePublicAppearanceForGuide(guide);
       
       // Generate PDF (automatically uses lightweight service in deployment)
       if (serviceConfig.useLightweightPDF) {
@@ -1011,9 +1232,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         channelTitle: guide.channelTitle || undefined
       });
 
-      // Set response headers for PDF download
+      // The non-browser generator produces print-ready HTML. Label it truthfully
+      // instead of returning HTML bytes with a PDF MIME type.
       const filename = generatePDFFilename(guide);
-      res.setHeader('Content-Type', 'application/pdf');
+      const isPrintHtml = filename.toLowerCase().endsWith('.html');
+      res.setHeader('Content-Type', isPrintHtml ? 'text/html; charset=utf-8' : 'application/pdf');
       res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
       res.setHeader('Content-Length', pdfBuffer.length);
 
@@ -1022,7 +1245,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         userId,
         guideId,
         eventType: 'download',
-        eventData: { format: 'pdf' },
+        eventData: { format: isPrintHtml ? 'print_html' : 'pdf' },
         ipAddress: req.ip,
         userAgent: req.get('User-Agent'),
         referrer: req.get('Referer')
@@ -1030,8 +1253,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.send(pdfBuffer);
     } catch (error) {
-      console.error("Error generating PDF:", error);
-      res.status(500).json({ message: "Failed to generate PDF" });
+      sendBrandRouteError(res, error, "Failed to generate PDF");
     }
   });
 
@@ -1068,7 +1290,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const guide = await storage.getGuide(landingPage.guideId);
-      const brandingSettings = await storage.getBrandingSettings(landingPage.userId);
+      if (!isDirectlyAccessibleGuide(guide)) {
+        return res.status(404).json({ message: "Landing page not found" });
+      }
+      const branding = await resolvePublicAppearanceForGuide(guide);
 
       // Track page view
       await storage.createAnalyticsEvent({
@@ -1083,9 +1308,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       res.json({
-        landingPage,
-        guide,
-        brandingSettings
+        landingPage: {
+          id: landingPage.id,
+          title: landingPage.title,
+          headline: landingPage.headline,
+          subheadline: landingPage.subheadline,
+          description: landingPage.description,
+          bulletPoints: landingPage.bulletPoints,
+          buttonText: landingPage.buttonText,
+          disclaimer: landingPage.disclaimer,
+          customFields: landingPage.customFields,
+          collectSms: landingPage.collectSms,
+          smsConsentText: landingPage.smsConsentText,
+        },
+        guide: {
+          id: guide.id,
+          title: guide.title,
+          description: guide.description,
+          thumbnailUrl: guide.thumbnailUrl,
+          category: guide.category,
+          tags: guide.tags,
+          youtubeVideoId: guide.youtubeVideoId,
+          channelTitle: guide.channelTitle,
+          ctaLink: guide.ctaLink,
+          ctaText: guide.ctaText,
+        },
+        branding,
+        brandingSettings: branding,
       });
     } catch (error) {
       console.error("Error fetching landing page:", error);
@@ -1096,21 +1345,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Update landing page (for editor)
   app.put('/api/landing/:customUrl', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = getRequestUserId(req);
+      if (!userId) return res.status(401).json({ message: "Authentication required" });
       const { customUrl } = req.params;
       const landingPage = await storage.getLandingPageByUrl(customUrl);
       
-      if (!landingPage || landingPage.userId !== userId) {
+      if (!landingPage) {
         return res.status(404).json({ message: "Landing page not found" });
       }
+      const guide = await storage.getGuide(landingPage.guideId);
+      if (!guide) return res.status(404).json({ message: "Landing page not found" });
+      await assertGuideAccess(userId, guide, "write_content");
 
-      const updatedData = req.body;
-      const updatedLandingPage = await storage.updateLandingPage(landingPage.id, updatedData);
+      const parsedUpdate = insertLandingPageSchema.partial().parse(req.body);
+      const {
+        userId: _landingUserId,
+        guideId: _guideId,
+        customUrl: _customUrl,
+        ...updateData
+      } = parsedUpdate;
+      const updatedLandingPage = await storage.updateLandingPage(landingPage.id, updateData);
 
       res.json(updatedLandingPage);
     } catch (error) {
-      console.error("Error updating landing page:", error);
-      res.status(500).json({ message: "Failed to update landing page" });
+      sendBrandRouteError(res, error, "Failed to update landing page");
     }
   });
 
@@ -1123,15 +1381,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Landing page not found" });
       }
 
+      const guide = await storage.getGuide(landingPage.guideId);
+      if (!isDirectlyAccessibleGuide(guide)) {
+        return res.status(404).json({ message: "Landing page not found" });
+      }
+
       const { firstName, email, phone, smsConsent, customFieldData } = req.body;
 
       if (!email) {
         return res.status(400).json({ message: "Email is required" });
       }
 
-      // Get guide to access leadTags
-      const guide = await storage.getGuide(landingPage.guideId);
-      
       // Create lead
       const lead = await storage.createLead({
         landingPageId: landingPage.id,
@@ -1141,7 +1401,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         firstName,
         phone: phone && phone.trim() ? phone : undefined,
         smsConsent: phone && phone.trim() ? (smsConsent === "true") : false,
-        tags: guide?.leadTags || [], // Apply lead tags from guide
+        tags: guide.leadTags || [], // Apply lead tags from guide
         customFieldData,
         ipAddress: req.ip,
         userAgent: req.get('User-Agent'),
@@ -1183,13 +1443,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         await emailService.sendGuideDeliveryEmail(
           { email, firstName: firstName || 'Friend' },
-          guide?.title || 'Your Practice Guide',
+          guide.title || 'Your Practice Guide',
           guideDeliveryUrl,
           landingPageUrl
         );
       } catch (emailError) {
-        console.warn("📧 Email delivery failed (lead capture still successful):", emailError.message);
-        if (emailError.message?.includes("not authorized to send mail")) {
+        const emailMessage = emailError instanceof Error ? emailError.message : String(emailError);
+        console.warn("📧 Email delivery failed (lead capture still successful):", emailMessage);
+        if (emailMessage.includes("not authorized to send mail")) {
           console.warn("🔧 Fix needed: Verify your sender email (adamlinkenauger@gmail.com) in SendGrid Settings → Sender Authentication");
         }
         // Don't fail the lead creation if email fails
@@ -1213,12 +1474,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { customUrl, leadId } = req.params;
       const landingPage = await storage.getLandingPageByUrl(customUrl);
       
-      if (!landingPage) {
+      if (!landingPage || !landingPage.isActive) {
         return res.status(404).json({ message: "Page not found" });
       }
 
       const guide = await storage.getGuide(landingPage.guideId);
-      const brandingSettings = await storage.getBrandingSettings(landingPage.userId);
+      if (!isDirectlyAccessibleGuide(guide)) {
+        return res.status(404).json({ message: "Page not found" });
+      }
+      const branding = await resolvePublicAppearanceForGuide(guide);
       
       // Get lead data for personalization
       const leads = await storage.getLeadsByGuide(landingPage.guideId);
@@ -1227,15 +1491,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!lead) {
         return res.status(404).json({ message: "Access denied" });
       }
-
-      // Personalize the guide content
-      const personalizedContent = await personalizeGuideContent(
-        guide?.content as any,
-        {
-          firstName: lead.firstName || undefined,
-          customFieldData: lead.customFieldData as Record<string, any>
-        }
-      );
 
       // Track delivery page view
       await storage.createAnalyticsEvent({
@@ -1251,11 +1506,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json({
         guide: {
-          ...guide,
-          content: personalizedContent
+          id: guide.id,
+          title: guide.title,
+          description: guide.description,
+          thumbnailUrl: guide.thumbnailUrl,
+          youtubeUrl: guide.youtubeUrl,
+          youtubeVideoId: guide.youtubeVideoId,
+          channelTitle: guide.channelTitle,
+          navigationLinks: guide.navigationLinks,
+          ctaLink: guide.ctaLink,
+          ctaText: guide.ctaText,
+          content: guide.content,
         },
-        brandingSettings,
-        lead
+        branding,
+        brandingSettings: branding,
+        lead: {
+          id: lead.id,
+          firstName: lead.firstName,
+        },
       });
 
     } catch (error) {
@@ -1270,16 +1538,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const guideId = parseInt(req.params.id);
       const guide = await storage.getGuide(guideId);
       
-      if (!guide) {
+      if (!isDirectlyAccessibleGuide(guide)) {
         return res.status(404).json({ message: "Guide not found" });
       }
 
-      // Get branding settings for the guide owner
-      const brandingSettings = await storage.getBrandingSettings(guide.userId);
+      const branding = await resolvePublicAppearanceForGuide(guide);
 
       res.json({
-        guide,
-        brandingSettings
+        guide: {
+          id: guide.id,
+          title: guide.title,
+          description: guide.description,
+          thumbnailUrl: guide.thumbnailUrl,
+          youtubeUrl: guide.youtubeUrl,
+          youtubeVideoId: guide.youtubeVideoId,
+          channelTitle: guide.channelTitle,
+          views: guide.views,
+          screenshots: guide.screenshots,
+          navigationLinks: guide.navigationLinks,
+          ctaLink: guide.ctaLink,
+          ctaText: guide.ctaText,
+          content: guide.content,
+        },
+        branding,
+        brandingSettings: branding,
       });
     } catch (error) {
       console.error("Error fetching public guide:", error);
@@ -1290,20 +1572,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Regenerate guide content from transcript
   app.post('/api/guides/:id/regenerate', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = getRequestUserId(req);
+      if (!userId) return res.status(401).json({ message: "Authentication required" });
       const guideId = parseInt(req.params.id);
       
       const guide = await storage.getGuide(guideId);
-      if (!guide || guide.userId !== userId) {
+      if (!guide) {
         return res.status(404).json({ message: "Guide not found" });
       }
+      await assertGuideAccess(userId, guide, "write_content");
 
       if (!guide.transcript) {
         return res.status(400).json({ message: "No transcript available for regeneration" });
       }
 
-      // Get branding settings
-      const brandingSettings = await storage.getBrandingSettings(userId);
+      const brandingSettings = await resolveAppearanceForScope(guide.userId, guide.brandId);
 
       // Re-analyze the actual transcript
       const analysis = await analyzeVideoContent(guide.transcript || '', guide.title || '', guide.description || '');
@@ -1322,8 +1605,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         guide: updatedGuide
       });
     } catch (error) {
-      console.error("Error regenerating guide:", error);
-      res.status(500).json({ message: "Failed to regenerate guide" });
+      sendBrandRouteError(res, error, "Failed to regenerate guide");
     }
   });
 
@@ -1358,139 +1640,126 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Branding settings routes
+  // Current-scope compatibility endpoint. The envelope is canonical; top-level
+  // appearance aliases keep older authenticated settings consumers working.
+  const brandingResponse = async (userId: string) => {
+    const envelope = await resolveBrandingEnvelope(userId);
+    return { ...envelope.appearance, ...envelope };
+  };
+
   app.get('/api/branding', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = getUserId(req);
-      const settings = await storage.getBrandingSettings(userId);
-      res.json(settings);
+      const userId = getRequestUserId(req);
+      if (!userId) return res.status(401).json({ message: "Authentication required" });
+      res.json(await brandingResponse(userId));
     } catch (error) {
-      console.error("Error fetching branding settings:", error);
-      res.status(500).json({ message: "Failed to fetch branding settings" });
+      sendBrandRouteError(res, error, "Failed to fetch branding settings");
     }
   });
 
-  // Logo upload endpoint with automatic resizing
-  app.post('/api/branding/logo', isAuthenticated, logoUpload.single('logo'), async (req: any, res) => {
+  const saveCurrentBranding = async (req: any, res: Response) => {
     try {
-      const userId = req.user.claims?.sub || req.user.id;
-      
-      if (!req.file) {
-        return res.status(400).json({ message: "No file uploaded" });
+      const userId = getRequestUserId(req);
+      if (!userId) return res.status(401).json({ message: "Authentication required" });
+      const scope = await resolveCurrentBrandScope(userId, "read");
+      if (!scope.canEditBranding) {
+        throw new BrandAccessError(403, "Only brand owners and admins can edit branding");
       }
-
-      // Create a unique filename with PNG extension (since we'll convert all logos to PNG)
-      const timestamp = Date.now();
-      const fileName = `logo-${userId}-${timestamp}.png`;
-      const filePath = `public/uploads/logos/${fileName}`;
-
-      // Ensure uploads directory exists
-      const uploadDir = path.join(process.cwd(), 'public', 'uploads', 'logos');
-      if (!fs.existsSync(uploadDir)) {
-        fs.mkdirSync(uploadDir, { recursive: true });
+      const { appearance: update, expectedScope } = brandingUpdateFromBody(req.body);
+      if (expectedScope && !brandScopeMatches(expectedScope, scope)) {
+        throw new BrandAccessError(
+          409,
+          "The active brand changed while you were editing. Reload branding before saving.",
+        );
       }
-
-      // Process image with automatic resizing to 200x200 with transparent background
-      let processedBuffer: Buffer;
-      if (serviceConfig.useLightweightImage) {
-        processedBuffer = await processImage(req.file.buffer, {
-          width: 200,
-          height: 200,
-          fit: 'contain',
-          background: { r: 0, g: 0, b: 0, alpha: 0 }
-        });
-      } else {
-        processedBuffer = await sharp(req.file.buffer)
-          .resize(200, 200, {
-            fit: 'contain',
-            background: { r: 0, g: 0, b: 0, alpha: 0 }
-          })
-          .png()
-          .toBuffer();
-      }
-
-      // Save the processed file
-      fs.writeFileSync(path.join(process.cwd(), filePath), processedBuffer);
-
-      // Return the URL
-      const logoUrl = `/uploads/logos/${fileName}`;
-      res.json({ logoUrl });
+      const current = await resolveAppearanceForScope(scope.ownerUserId, scope.brandId);
+      const appearance = mergeBrandAppearance(current, update, scope.workspaceName);
+      await storage.upsertBrandingSettings(
+        toBrandingPersistence(appearance, scope.ownerUserId, scope.brandId),
+      );
+      res.json(await brandingResponse(userId));
     } catch (error) {
-      console.error("Error uploading logo:", error);
-      res.status(500).json({ message: "Failed to upload logo" });
+      sendBrandRouteError(res, error, "Failed to update branding settings");
     }
-  });
+  };
 
-  // Favicon upload endpoint with automatic resizing
-  app.post('/api/branding/favicon', isAuthenticated, logoUpload.single('favicon'), async (req: any, res) => {
+  app.put('/api/branding', isAuthenticated, saveCurrentBranding);
+  app.post('/api/branding', isAuthenticated, saveCurrentBranding);
+
+  type BrandAssetConfig = {
+    prefix: string;
+    responseField: "logoUrl" | "logoMarkUrl" | "faviconUrl" | "socialImageUrl";
+    width: number;
+    height: number;
+    fit: "contain" | "cover";
+  };
+
+  const uploadCurrentBrandAsset = async (req: any, res: Response, config: BrandAssetConfig) => {
     try {
-      const userId = req.user.claims?.sub || req.user.id;
-      
-      if (!req.file) {
-        return res.status(400).json({ message: "No file uploaded" });
+      const userId = getRequestUserId(req);
+      if (!userId) return res.status(401).json({ message: "Authentication required" });
+      const scope = await resolveCurrentBrandScope(userId, "read");
+      if (!scope.canEditBranding) {
+        throw new BrandAccessError(403, "Only brand owners and admins can edit branding");
+      }
+      if (!req.file) return res.status(400).json({ message: "No file uploaded" });
+      if (!hasAllowedBrandImageSignature(req.file.buffer, req.file.mimetype)) {
+        return res.status(400).json({ message: "The uploaded file does not match its image type" });
       }
 
-      // Create a unique filename with PNG extension
-      const timestamp = Date.now();
-      const fileName = `favicon-${userId}-${timestamp}.png`;
-      const filePath = `public/uploads/favicons/${fileName}`;
+      const sourceExtension = req.file.mimetype === "image/jpeg"
+        ? "jpg"
+        : req.file.mimetype === "image/webp" ? "webp" : "png";
+      const extension = serviceConfig.useLightweightImage ? sourceExtension : "png";
+      // Public asset names must not disclose internal user or brand identifiers.
+      const fileName = `${config.prefix}-${Date.now()}-${randomUUID().slice(0, 12)}.${extension}`;
+      const uploadDir = path.join(process.cwd(), 'public', 'uploads', 'branding');
+      fs.mkdirSync(uploadDir, { recursive: true });
 
-      // Ensure uploads directory exists
-      const uploadDir = path.join(process.cwd(), 'public', 'uploads', 'favicons');
-      if (!fs.existsSync(uploadDir)) {
-        fs.mkdirSync(uploadDir, { recursive: true });
-      }
+      const resizeOptions = {
+        width: config.width,
+        height: config.height,
+        fit: config.fit,
+        background: { r: 0, g: 0, b: 0, alpha: 0 },
+      } as const;
+      const processedBuffer = serviceConfig.useLightweightImage
+        ? await processImage(req.file.buffer, resizeOptions)
+        : await sharp(req.file.buffer).resize(config.width, config.height, {
+            fit: config.fit,
+            background: resizeOptions.background,
+          }).png().toBuffer();
 
-      // Process image with automatic resizing to 32x32 for favicon
-      let processedBuffer: Buffer;
-      if (serviceConfig.useLightweightImage) {
-        processedBuffer = await processImage(req.file.buffer, {
-          width: 32,
-          height: 32,
-          fit: 'cover'
-        });
-      } else {
-        processedBuffer = await sharp(req.file.buffer)
-          .resize(32, 32, {
-            fit: 'cover'
-          })
-          .png()
-          .toBuffer();
-      }
-
-      // Save the processed file
-      fs.writeFileSync(path.join(process.cwd(), filePath), processedBuffer);
-
-      // Return the URL
-      const faviconUrl = `/uploads/favicons/${fileName}`;
-      res.json({ faviconUrl });
+      fs.writeFileSync(path.join(uploadDir, fileName), processedBuffer);
+      res.json({ [config.responseField]: `/uploads/branding/${fileName}` });
     } catch (error) {
-      console.error("Error uploading favicon:", error);
-      res.status(500).json({ message: "Failed to upload favicon" });
+      sendBrandRouteError(res, error, `Failed to upload ${config.prefix}`);
     }
-  });
+  };
 
-  app.post('/api/branding', isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.claims?.sub || req.user.id;
-      const settingsData = insertBrandingSettingsSchema.parse({
-        ...req.body,
-        userId
-      });
-      
-      const settings = await storage.upsertBrandingSettings(settingsData);
-      res.json(settings);
-    } catch (error) {
-      console.error("Error updating branding settings:", error);
-      res.status(500).json({ message: "Failed to update branding settings" });
-    }
-  });
+  app.post('/api/branding/logo', isAuthenticated, logoUpload.single('logo'), (req, res) =>
+    uploadCurrentBrandAsset(req, res, {
+      prefix: "wordmark", responseField: "logoUrl", width: 800, height: 300, fit: "contain",
+    }));
+  app.post('/api/branding/logo-mark', isAuthenticated, logoUpload.single('logoMark'), (req, res) =>
+    uploadCurrentBrandAsset(req, res, {
+      prefix: "mark", responseField: "logoMarkUrl", width: 512, height: 512, fit: "contain",
+    }));
+  app.post('/api/branding/favicon', isAuthenticated, logoUpload.single('favicon'), (req, res) =>
+    uploadCurrentBrandAsset(req, res, {
+      prefix: "favicon", responseField: "faviconUrl", width: 64, height: 64, fit: "cover",
+    }));
+  app.post('/api/branding/social-image', isAuthenticated, logoUpload.single('socialImage'), (req, res) =>
+    uploadCurrentBrandAsset(req, res, {
+      prefix: "social", responseField: "socialImageUrl", width: 1200, height: 630, fit: "contain",
+    }));
 
   // Notifications routes
   app.get("/api/notifications", isAuthenticated, async (req: any, res) => {
     try {
+      const userId = getRequestUserId(req);
+      if (!userId) return res.status(401).json({ message: "Authentication required" });
       const unreadOnly = req.query.unread === 'true';
-      const notifications = await storage.getNotifications(getUserId(req), unreadOnly);
+      const notifications = await storage.getNotifications(userId, unreadOnly);
       res.json(notifications);
     } catch (error) {
       console.error('Error fetching notifications:', error);
@@ -1650,8 +1919,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Initialize default subscription plans (run once)
-  const { isGlobalAdmin } = await import('./adminAuth');
-  app.post('/api/subscription/init-plans', isGlobalAdmin, async (req, res) => {
+  app.post('/api/subscription/init-plans', isAuthenticated, requireSuperAdmin, async (req, res) => {
     try {
       const plans = [
         {
@@ -1852,121 +2120,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Global Admin routes
-  // Admin: Get all users with stats - temporary bypass for broken session
-  app.get('/api/admin/users', async (req, res) => {
-    try {
-      const users = await storage.getAllUsers();
-      res.json(users);
-    } catch (error) {
-      console.error("Error fetching users:", error);
-      res.status(500).json({ message: "Failed to fetch users" });
-    }
-  });
-
-  // Admin: Create new user - temporary bypass for broken session
-  app.post('/api/admin/users', async (req, res) => {
-    try {
-      const { email, firstName, lastName, role } = req.body;
-
-      if (!email || !firstName || !lastName) {
-        return res.status(400).json({ message: "Email, first name, and last name are required" });
-      }
-
-      // Check if user already exists
-      const existingUser = await storage.getUserByEmail(email);
-      if (existingUser) {
-        return res.status(400).json({ message: "User with this email already exists" });
-      }
-
-      // Generate a temporary password (user will need to reset it)
-      const tempPassword = Math.random().toString(36).slice(-8);
-
-      // Create the user
-      const userData = {
-        id: randomUUID(),
-        email,
-        firstName,
-        lastName,
-        role: role || 'user',
-        tempPassword, // Store temporarily for display to admin
-        isEmailVerified: false,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-
-      const user = await storage.upsertUser(userData);
-      
-      res.json({
-        ...user,
-        tempPassword, // Return temp password for admin to share with user
-        message: "User created successfully. Share the temporary password with the user."
-      });
-    } catch (error) {
-      console.error("Error creating user:", error);
-      res.status(500).json({ message: "Failed to create user" });
-    }
-  });
-
-  // Admin: Get specific user stats
-  app.get('/api/admin/users/:userId', isGlobalAdmin, async (req, res) => {
-    try {
-      const { userId } = req.params;
-      const userStats = await storage.getUserStats(userId);
-      res.json(userStats);
-    } catch (error) {
-      console.error("Error fetching user stats:", error);
-      res.status(500).json({ message: "Failed to fetch user stats" });
-    }
-  });
-
-  // Admin: Update user role
-  app.patch('/api/admin/users/:userId/role', isGlobalAdmin, async (req, res) => {
-    try {
-      const { userId } = req.params;
-      const { role } = req.body;
-
-      if (!['user', 'admin'].includes(role)) {
-        return res.status(400).json({ message: "Invalid role. Must be 'user' or 'admin'" });
-      }
-
-      const updatedUser = await storage.updateUserRole(userId, role);
-      res.json(updatedUser);
-    } catch (error) {
-      console.error("Error updating user role:", error);
-      res.status(500).json({ message: "Failed to update user role" });
-    }
-  });
-
-  // Admin: Delete user
-  app.delete('/api/admin/users/:userId', isGlobalAdmin, async (req, res) => {
-    try {
-      const { userId } = req.params;
-      await storage.deleteUser(userId);
-      res.json({ message: "User deleted successfully" });
-    } catch (error) {
-      console.error("Error deleting user:", error);
-      res.status(500).json({ message: "Failed to delete user" });
-    }
-  });
-
-  // Admin: Get system stats - temporary bypass for broken session
-  app.get('/api/admin/stats', async (req, res) => {
-    try {
-      const stats = await storage.getSystemStats();
-      res.json(stats);
-    } catch (error) {
-      console.error("Error fetching system stats:", error);
-      res.status(500).json({ message: "Failed to fetch system stats" });
-    }
-  });
-
-
-
-
-
   // Super admin endpoints (proper role-based access)
-  app.get('/api/admin/users', requireSuperAdmin, async (req, res) => {
+  app.get('/api/admin/users', isAuthenticated, requireSuperAdmin, async (req, res) => {
     try {
       const users = await storage.getAllUsers();
       res.json(users);
@@ -1976,7 +2131,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/admin/stats', requireSuperAdmin, async (req, res) => {
+  app.get('/api/admin/stats', isAuthenticated, requireSuperAdmin, async (req, res) => {
     try {
       const stats = await storage.getSystemStats();
       res.json(stats);
@@ -1986,7 +2141,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete('/api/admin/users/:userId', requireSuperAdmin, async (req, res) => {
+  app.delete('/api/admin/users/:userId', isAuthenticated, requireSuperAdmin, async (req, res) => {
     try {
       await storage.deleteUser(req.params.userId);
       res.json({ success: true });
@@ -1996,23 +2151,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch('/api/admin/users/:userId/role', requireSuperAdmin, async (req, res) => {
+  app.patch('/api/admin/users/:userId/role', isAuthenticated, requireSuperAdmin, async (req, res) => {
     try {
-      const { role } = req.body;
+      const role = adminRoleSchema.parse(req.body?.role);
       await storage.updateUserRole(req.params.userId, role);
       res.json({ success: true });
     } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid role" });
+      }
       console.error('Error updating user role:', error);
       res.status(500).json({ message: "Failed to update user role" });
     }
   });
 
-  app.post('/api/admin/users', requireSuperAdmin, async (req, res) => {
+  app.post('/api/admin/users', isAuthenticated, requireSuperAdmin, async (req, res) => {
     try {
-      const userData = req.body;
-      const newUser = await storage.createUser(userData);
-      res.json(newUser);
+      const input = adminCreateUserSchema.parse(req.body);
+      const temporaryPassword = randomBytes(18).toString("base64url");
+      const passwordHash = await bcrypt.hash(temporaryPassword, 12);
+      const { user, created } = await storage.createPendingUser({
+        id: randomUUID(),
+        email: input.email,
+        firstName: input.firstName,
+        lastName: input.lastName,
+        role: input.role,
+        tempPassword: null,
+        isEmailVerified: false,
+      });
+      if (!created) {
+        return res.status(409).json({ message: "User with this email already exists" });
+      }
+      await storage.updateUserPassword(user.id, passwordHash);
+      res.status(201).json({
+        id: user.id,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        role: user.role,
+        tempPassword: temporaryPassword,
+        message: "User created successfully. Share the temporary password securely.",
+      });
     } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid user details" });
+      }
       console.error('Error creating user:', error);
       res.status(500).json({ message: "Failed to create user" });
     }
@@ -2021,22 +2204,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Check if current user is super admin
   app.get('/api/admin/check', isAuthenticated, async (req: any, res) => {
     try {
-      // Handle both session-based and Replit Auth users
-      let userId: string;
-      let user: any;
-      
-      if (req.session && req.session.user) {
-        // Session-based authentication
-        userId = req.session.user.id;
-        user = req.session.user;
-      } else if (req.user && req.user.claims) {
-        // Replit Auth authentication
-        userId = req.user.claims.sub;
-        user = await storage.getUserById(userId);
-      } else {
-        return res.json({ isAdmin: false });
-      }
-      
+      const userId = getRequestUserId(req);
+      if (!userId) return res.json({ isAdmin: false });
+      const user = await storage.getUser(userId);
       const isSuper = user?.role === 'super_admin';
       res.json({ isAdmin: isSuper });
     } catch (error) {
@@ -2155,7 +2325,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Process cleanup jobs (admin endpoint)
-  app.post('/api/admin/storage/cleanup', isGlobalAdmin, async (req, res) => {
+  app.post('/api/admin/storage/cleanup', isAuthenticated, requireSuperAdmin, async (req, res) => {
     try {
       await StorageCostManager.processCleanupJobs();
       res.json({ success: true, message: "Cleanup jobs processed" });
@@ -2805,5 +2975,3 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const httpServer = createServer(app);
   return httpServer;
 }
-
-

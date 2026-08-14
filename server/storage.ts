@@ -75,7 +75,8 @@ import {
   type InsertNotification,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, and, sql, count, avg, isNull } from "drizzle-orm";
+import { eq, desc, and, or, gt, lte, sql, count, avg, isNull, isNotNull } from "drizzle-orm";
+import { normalizeBrandAppearance } from "@shared/branding";
 
 export interface IStorage {
   // User operations (required for Replit Auth)
@@ -83,12 +84,20 @@ export interface IStorage {
   getUserByEmail(email: string): Promise<User | undefined>;
   getUserByGoogleId(googleId: string): Promise<User | undefined>;
   upsertUser(user: UpsertUser): Promise<User>;
+  createPendingUser(user: UpsertUser): Promise<{ user: User; created: boolean }>;
   
   // Authentication operations for signup/password reset
   getUserByResetToken(token: string): Promise<User | undefined>;
   updateUserResetToken(userId: string, token: string, expiry: Date): Promise<void>;
   clearUserResetToken(userId: string): Promise<void>;
+  claimPasswordResetToken(userId: string, token: string, expiry: Date, now: Date): Promise<boolean>;
+  releasePasswordResetToken(userId: string, token: string): Promise<void>;
   updateUserPassword(userId: string, hashedPassword: string): Promise<void>;
+  getPendingUserByCompletionTokenHash(tokenHash: string): Promise<User | undefined>;
+  claimAccountCompletionToken(userId: string, tokenHash: string, expiry: Date, now: Date): Promise<boolean>;
+  releaseAccountCompletionToken(userId: string, tokenHash: string): Promise<void>;
+  completePendingUserById(userId: string, hashedPassword: string): Promise<User | undefined>;
+  completePendingUserWithTokenHash(tokenHash: string, hashedPassword: string, now: Date): Promise<User | undefined>;
   getUserByEmailVerificationToken(token: string): Promise<User | undefined>;
   updateUserEmailVerificationToken(userId: string, token: string): Promise<void>;
   markEmailAsVerified(userId: string): Promise<void>;
@@ -99,7 +108,7 @@ export interface IStorage {
   getBrand(id: number): Promise<Brand | undefined>;
   updateBrand(id: number, brand: Partial<InsertBrand>): Promise<Brand>;
   deleteBrand(id: number): Promise<void>;
-  setCurrentBrand(userId: string, brandId: number): Promise<void>;
+  setCurrentBrand(userId: string, brandId: number | null): Promise<void>;
 
   // Guide operations
   createGuide(guide: InsertGuide): Promise<Guide>;
@@ -160,7 +169,7 @@ export interface IStorage {
   }>;
 
   // Branding operations
-  getBrandingSettings(userId: string): Promise<BrandingSettings | undefined>;
+  getBrandingSettings(userId: string, brandId?: number | null): Promise<BrandingSettings | undefined>;
   upsertBrandingSettings(settings: InsertBrandingSettings): Promise<BrandingSettings>;
 
   // Training settings operations
@@ -241,6 +250,7 @@ export interface IStorage {
   // Subscription operations
   getSubscriptionPlans(): Promise<SubscriptionPlan[]>;
   getUserSubscription(userId: string): Promise<UserSubscription | null>;
+  ensureUserSubscription(subscription: InsertUserSubscription): Promise<UserSubscription>;
   createUserSubscription(subscription: InsertUserSubscription): Promise<UserSubscription>;
   updateUserSubscription(id: number, subscription: Partial<InsertUserSubscription>): Promise<UserSubscription>;
   
@@ -290,6 +300,89 @@ export interface IStorage {
 }
 
 export class DatabaseStorage implements IStorage {
+  private async ensureUserWorkspace(user: User): Promise<void> {
+    await db.transaction(async (tx) => {
+      // A signup retry can run in another browser at the same instant. Keep all
+      // first-workspace provisioning under one per-user transaction lock.
+      await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${`workspace:${user.id}`}))`);
+      let [personalBranding] = await tx
+        .select()
+        .from(brandingSettings)
+        .where(and(
+          eq(brandingSettings.userId, user.id),
+          isNull(brandingSettings.brandId),
+        ));
+
+      const displayName = [user.firstName, user.lastName].filter(Boolean).join(" ").trim()
+        || user.email?.split("@")[0]
+        || "My Brand";
+      if (!personalBranding) {
+        [personalBranding] = await tx
+          .insert(brandingSettings)
+          .values({
+            userId: user.id,
+            brandId: null,
+            displayName,
+            companyName: displayName,
+          })
+          .onConflictDoUpdate({
+            target: brandingSettings.userId,
+            targetWhere: isNull(brandingSettings.brandId),
+            set: { displayName, companyName: displayName, updatedAt: new Date() },
+          })
+          .returning();
+      }
+
+      const [existingBrand] = await tx
+        .select()
+        .from(brands)
+        .where(eq(brands.userId, user.id))
+        .limit(1);
+      if (existingBrand) return;
+
+      const [defaultBrand] = await tx
+        .insert(brands)
+        .values({
+          userId: user.id,
+          name: "My Brand",
+          description: "Your default workspace",
+          isDefault: true,
+        })
+        .returning();
+      const appearance = normalizeBrandAppearance(personalBranding, defaultBrand.name);
+      await tx.insert(brandingSettings).values({
+        userId: user.id,
+        brandId: defaultBrand.id,
+        displayName: defaultBrand.name,
+        companyName: defaultBrand.name,
+        tagline: appearance.tagline,
+        logoUrl: appearance.logoUrl,
+        logoMarkUrl: appearance.logoMarkUrl,
+        logoAltText: appearance.logoAltText,
+        faviconUrl: appearance.faviconUrl,
+        socialImageUrl: appearance.socialImageUrl,
+        primaryColor: appearance.primaryColor,
+        secondaryColor: appearance.secondaryColor,
+        accentColor: appearance.accentColor,
+        backgroundColor: appearance.backgroundColor,
+        surfaceColor: appearance.surfaceColor,
+        textColor: appearance.textColor,
+        headingFontFamily: appearance.headingFontFamily,
+        bodyFontFamily: appearance.bodyFontFamily,
+        fontFamily: appearance.bodyFontFamily,
+        websiteUrl: appearance.websiteUrl,
+        privacyUrl: appearance.privacyUrl,
+        termsUrl: appearance.termsUrl,
+        brandVoice: appearance.brandVoice,
+        targetAudience: appearance.targetAudience,
+      });
+      await tx
+        .update(users)
+        .set({ currentBrandId: defaultBrand.id, updatedAt: new Date() })
+        .where(eq(users.id, user.id));
+    });
+  }
+
   // User operations
   async getUser(id: string): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.id, id));
@@ -323,21 +416,33 @@ export class DatabaseStorage implements IStorage {
       })
       .returning();
 
-    // Check if user has any brands, if not create a default brand
-    const existingBrands = await this.getBrandsByUser(user.id);
-    if (existingBrands.length === 0) {
-      const defaultBrand = await this.createBrand({
-        userId: user.id,
-        name: "My Brand",
-        description: "Your default workspace",
-        isDefault: true,
-      });
-      
-      // Set as current brand
-      await this.setCurrentBrand(user.id, defaultBrand.id);
-    }
+    await this.ensureUserWorkspace(user);
 
     return user;
+  }
+
+  async createPendingUser(userData: UpsertUser): Promise<{ user: User; created: boolean }> {
+    if (!userData.email) {
+      throw new Error("Pending users require an email address");
+    }
+
+    const [createdUser] = await db
+      .insert(users)
+      .values(userData)
+      .onConflictDoNothing({ target: users.email })
+      .returning();
+
+    const resolvedUser = createdUser ?? await this.getUserByEmail(userData.email);
+    if (!resolvedUser) {
+      throw new Error("Unable to resolve the existing signup");
+    }
+
+    // Retrying a pending signup also repairs interrupted workspace provisioning
+    // without overwriting an existing account with caller-supplied profile data.
+    if (!resolvedUser.tempPassword) {
+      await this.ensureUserWorkspace(resolvedUser);
+    }
+    return { user: resolvedUser, created: Boolean(createdUser) };
   }
 
   // Authentication operations for signup/password reset
@@ -371,6 +476,31 @@ export class DatabaseStorage implements IStorage {
       .where(eq(users.id, userId));
   }
 
+  async claimPasswordResetToken(
+    userId: string,
+    token: string,
+    expiry: Date,
+    now: Date,
+  ): Promise<boolean> {
+    const [claimed] = await db
+      .update(users)
+      .set({ resetToken: token, resetTokenExpiry: expiry, updatedAt: new Date() })
+      .where(and(
+        eq(users.id, userId),
+        isNotNull(users.tempPassword),
+        or(isNull(users.resetToken), isNull(users.resetTokenExpiry), lte(users.resetTokenExpiry, now)),
+      ))
+      .returning({ id: users.id });
+    return Boolean(claimed);
+  }
+
+  async releasePasswordResetToken(userId: string, token: string): Promise<void> {
+    await db
+      .update(users)
+      .set({ resetToken: null, resetTokenExpiry: null, updatedAt: new Date() })
+      .where(and(eq(users.id, userId), eq(users.resetToken, token)));
+  }
+
   async updateUserPassword(userId: string, hashedPassword: string): Promise<void> {
     // Clear temp password when user changes their password (no longer first-time user)
     await db
@@ -382,15 +512,88 @@ export class DatabaseStorage implements IStorage {
       .where(eq(users.id, userId));
   }
 
-  async clearTempPasswordFlag(userId: string): Promise<void> {
-    // Mark user as no longer first-time by clearing temp password flag
-    await db
+  async getPendingUserByCompletionTokenHash(tokenHash: string): Promise<User | undefined> {
+    const [user] = await db
+      .select()
+      .from(users)
+      .where(and(
+        eq(users.resetToken, tokenHash),
+        isNull(users.tempPassword),
+      ));
+    return user;
+  }
+
+  async claimAccountCompletionToken(
+    userId: string,
+    tokenHash: string,
+    expiry: Date,
+    now: Date,
+  ): Promise<boolean> {
+    const [claimed] = await db
       .update(users)
       .set({
-        tempPassword: null,
+        resetToken: tokenHash,
+        resetTokenExpiry: expiry,
         updatedAt: new Date(),
       })
-      .where(eq(users.id, userId));
+      .where(and(
+        eq(users.id, userId),
+        isNull(users.tempPassword),
+        or(isNull(users.resetToken), isNull(users.resetTokenExpiry), lte(users.resetTokenExpiry, now)),
+      ))
+      .returning({ id: users.id });
+    return Boolean(claimed);
+  }
+
+  async releaseAccountCompletionToken(userId: string, tokenHash: string): Promise<void> {
+    await db
+      .update(users)
+      .set({ resetToken: null, resetTokenExpiry: null, updatedAt: new Date() })
+      .where(and(
+        eq(users.id, userId),
+        eq(users.resetToken, tokenHash),
+        isNull(users.tempPassword),
+      ));
+  }
+
+  async completePendingUserById(userId: string, hashedPassword: string): Promise<User | undefined> {
+    const [user] = await db
+      .update(users)
+      .set({
+        tempPassword: hashedPassword,
+        resetToken: null,
+        resetTokenExpiry: null,
+        updatedAt: new Date(),
+      })
+      .where(and(
+        eq(users.id, userId),
+        isNull(users.tempPassword),
+      ))
+      .returning();
+    return user;
+  }
+
+  async completePendingUserWithTokenHash(
+    tokenHash: string,
+    hashedPassword: string,
+    now: Date,
+  ): Promise<User | undefined> {
+    const [user] = await db
+      .update(users)
+      .set({
+        tempPassword: hashedPassword,
+        resetToken: null,
+        resetTokenExpiry: null,
+        isEmailVerified: true,
+        updatedAt: now,
+      })
+      .where(and(
+        eq(users.resetToken, tokenHash),
+        gt(users.resetTokenExpiry, now),
+        isNull(users.tempPassword),
+      ))
+      .returning();
+    return user;
   }
 
   async getUserByEmailVerificationToken(token: string): Promise<User | undefined> {
@@ -424,8 +627,45 @@ export class DatabaseStorage implements IStorage {
 
   // Brand operations
   async createBrand(brand: InsertBrand): Promise<Brand> {
-    const [newBrand] = await db.insert(brands).values(brand).returning();
-    return newBrand;
+    return db.transaction(async (tx) => {
+      const [newBrand] = await tx.insert(brands).values(brand).returning();
+      const [personalSettings] = await tx
+        .select()
+        .from(brandingSettings)
+        .where(and(
+          eq(brandingSettings.userId, brand.userId),
+          isNull(brandingSettings.brandId),
+        ));
+      const appearance = normalizeBrandAppearance(personalSettings, newBrand.name);
+
+      await tx.insert(brandingSettings).values({
+        userId: newBrand.userId,
+        brandId: newBrand.id,
+        displayName: newBrand.name,
+        companyName: newBrand.name,
+        tagline: appearance.tagline,
+        logoUrl: newBrand.logoUrl || appearance.logoUrl,
+        logoMarkUrl: appearance.logoMarkUrl,
+        logoAltText: appearance.logoAltText,
+        faviconUrl: appearance.faviconUrl,
+        socialImageUrl: appearance.socialImageUrl,
+        primaryColor: appearance.primaryColor,
+        secondaryColor: appearance.secondaryColor,
+        accentColor: appearance.accentColor,
+        backgroundColor: appearance.backgroundColor,
+        surfaceColor: appearance.surfaceColor,
+        textColor: appearance.textColor,
+        headingFontFamily: appearance.headingFontFamily,
+        bodyFontFamily: appearance.bodyFontFamily,
+        fontFamily: appearance.bodyFontFamily,
+        websiteUrl: appearance.websiteUrl,
+        privacyUrl: appearance.privacyUrl,
+        termsUrl: appearance.termsUrl,
+        brandVoice: appearance.brandVoice,
+        targetAudience: appearance.targetAudience,
+      });
+      return newBrand;
+    });
   }
 
   async getBrandsByUser(userId: string): Promise<Brand[]> {
@@ -484,10 +724,9 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getGuidesByUserAndBrand(userId: string, brandId: number | null, query?: string, category?: string): Promise<Guide[]> {
-    let whereConditions = [
-      eq(guides.userId, userId),
-      brandId ? eq(guides.brandId, brandId) : isNull(guides.brandId)
-    ];
+    let whereConditions = brandId === null
+      ? [eq(guides.userId, userId), isNull(guides.brandId)]
+      : [eq(guides.brandId, brandId)];
 
     // Add search conditions if provided
     if (query) {
@@ -552,29 +791,50 @@ export class DatabaseStorage implements IStorage {
         views: guides.views,
         downloads: guides.downloads,
         createdAt: guides.createdAt,
-        companyName: brandingSettings.companyName,
+        companyName: brandingSettings.displayName,
+        legacyCompanyName: brandingSettings.companyName,
         logoUrl: brandingSettings.logoUrl,
       })
       .from(guides)
-      .leftJoin(brandingSettings, eq(guides.userId, brandingSettings.userId))
-      .where(eq(guides.status, 'published'))
+      .leftJoin(brandingSettings, or(
+        and(
+          isNull(guides.brandId),
+          isNull(brandingSettings.brandId),
+          eq(guides.userId, brandingSettings.userId),
+        ),
+        and(
+          isNotNull(guides.brandId),
+          eq(guides.brandId, brandingSettings.brandId),
+        ),
+      ))
+      .where(and(
+        eq(guides.status, 'published'),
+        eq(guides.magnetType, 'guide'),
+      ))
       .orderBy(desc(guides.createdAt));
 
-    return guidesWithBranding.map(guide => ({
-      id: guide.id,
-      title: guide.title,
-      description: guide.description || '',
-      thumbnailUrl: guide.thumbnailUrl || '',
-      category: guide.category || '',
-      tags: guide.tags || [],
-      views: guide.views || 0,
-      downloads: guide.downloads || 0,
-      createdAt: guide.createdAt?.toISOString() || new Date().toISOString(),
-      author: {
-        companyName: guide.companyName || undefined,
-        logoUrl: guide.logoUrl || undefined,
-      },
-    }));
+    return guidesWithBranding.map(guide => {
+      const appearance = normalizeBrandAppearance({
+        displayName: guide.companyName,
+        companyName: guide.legacyCompanyName,
+        logoUrl: guide.logoUrl,
+      });
+      return {
+        id: guide.id,
+        title: guide.title,
+        description: guide.description || '',
+        thumbnailUrl: guide.thumbnailUrl || '',
+        category: guide.category || '',
+        tags: guide.tags || [],
+        views: guide.views || 0,
+        downloads: guide.downloads || 0,
+        createdAt: guide.createdAt?.toISOString() || new Date().toISOString(),
+        author: {
+          companyName: appearance.displayName,
+          logoUrl: appearance.logoUrl || undefined,
+        },
+      };
+    });
   }
 
   // Landing page operations
@@ -806,7 +1066,7 @@ export class DatabaseStorage implements IStorage {
   async updateGuideConversionRate(guideId: number, conversionRate: number): Promise<void> {
     await db
       .update(guides)
-      .set({ conversionRate })
+      .set({ conversionRate: conversionRate.toFixed(2) })
       .where(eq(guides.id, guideId));
   }
 
@@ -845,26 +1105,32 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Branding operations
-  async getBrandingSettings(userId: string): Promise<BrandingSettings | undefined> {
+  async getBrandingSettings(userId: string, brandId: number | null = null): Promise<BrandingSettings | undefined> {
+    const scope = brandId === null
+      ? and(eq(brandingSettings.userId, userId), isNull(brandingSettings.brandId))
+      : eq(brandingSettings.brandId, brandId);
     const [settings] = await db
       .select()
       .from(brandingSettings)
-      .where(eq(brandingSettings.userId, userId));
+      .where(scope);
     return settings;
   }
 
   async upsertBrandingSettings(settings: InsertBrandingSettings): Promise<BrandingSettings> {
-    const [result] = await db
-      .insert(brandingSettings)
-      .values(settings)
-      .onConflictDoUpdate({
-        target: brandingSettings.userId,
-        set: {
-          ...settings,
-          updatedAt: new Date(),
-        },
-      })
-      .returning();
+    const { userId: _userId, brandId: _brandId, ...appearance } = settings;
+    const insert = db.insert(brandingSettings).values(settings);
+    const conflict = settings.brandId === null || settings.brandId === undefined
+      ? insert.onConflictDoUpdate({
+          target: brandingSettings.userId,
+          targetWhere: isNull(brandingSettings.brandId),
+          set: { ...appearance, updatedAt: new Date() },
+        })
+      : insert.onConflictDoUpdate({
+          target: brandingSettings.brandId,
+          targetWhere: isNotNull(brandingSettings.brandId),
+          set: { ...appearance, updatedAt: new Date() },
+        });
+    const [result] = await conflict.returning();
     return result;
   }
 
@@ -1393,6 +1659,27 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(userSubscriptions.createdAt))
       .limit(1);
     return subscription || null;
+  }
+
+  async ensureUserSubscription(subscription: InsertUserSubscription): Promise<UserSubscription> {
+    return db.transaction(async (tx) => {
+      // Serialize subscription creation per user without changing the historical
+      // subscription schema or preventing future plan changes.
+      await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${subscription.userId}))`);
+      const [existingSubscription] = await tx
+        .select()
+        .from(userSubscriptions)
+        .where(eq(userSubscriptions.userId, subscription.userId))
+        .orderBy(desc(userSubscriptions.createdAt))
+        .limit(1);
+      if (existingSubscription) return existingSubscription;
+
+      const [newSubscription] = await tx
+        .insert(userSubscriptions)
+        .values(subscription)
+        .returning();
+      return newSubscription;
+    });
   }
 
   async createUserSubscription(subscription: InsertUserSubscription): Promise<UserSubscription> {

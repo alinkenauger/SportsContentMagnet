@@ -57,7 +57,7 @@ export default function CreateGuide() {
     { id: "metadata", title: "Extracting video metadata", status: "pending" },
     { id: "transcript", title: "Transcribing video content", status: "pending" },
     { id: "analysis", title: "Analyzing coaching insights with AI", status: "pending" },
-    { id: "guide", title: "Generating personalized practice guide", status: "pending" },
+    { id: "guide", title: "Building your implementation asset", status: "pending" },
     { id: "landing", title: "Creating landing page", status: "pending" },
   ]);
   const [currentStep, setCurrentStep] = useState("");
@@ -208,13 +208,15 @@ export default function CreateGuide() {
         if (inputMethod === "youtube") {
           requestData.youtubeUrl = youtubeUrl;
         } else if (inputMethod === "manual") {
-          requestData.manualTranscript = manualTranscript;
-          requestData.manualTitle = manualTitle;
+          // Keep the creator form aligned with the server's canonical guide contract.
+          requestData.transcript = manualTranscript;
+          requestData.title = manualTitle;
         } else if (inputMethod === "link") {
           requestData.contentUrl = contentUrl;
           requestData.title = contentTitle || "Web Content";
         } else if (inputMethod === "stream") {
-          requestData.contentUrl = contentUrl;
+          requestData.inputMethod = "streaming";
+          requestData.streamingUrl = contentUrl;
           requestData.title = contentTitle || "Stream Content";
         }
         
@@ -634,7 +636,7 @@ export default function CreateGuide() {
                     </SelectContent>
                   </Select>
                   <p className="text-xs text-muted-foreground mt-1">
-                    💡 This helps the AI know what aspects of your video to emphasize in the practice guide. If unsure, leave it blank for a balanced approach.
+                    This helps the AI decide what to turn into steps, checklists, worksheets, scorecards, and examples. If unsure, leave it blank for a balanced approach.
                   </p>
                 </div>
 
@@ -741,7 +743,7 @@ export default function CreateGuide() {
               <CardContent>
                 <div className="text-center space-y-4">
                   <p className="text-muted-foreground">
-                    Ready to create your practice guide? Our AI will analyze your video and extract valuable coaching insights.
+                    Ready to create your lead magnet? VidMagnet will turn the source into a structured resource your audience can put to work.
                   </p>
                   <Button 
                     onClick={handleCreateGuide}
@@ -786,7 +788,7 @@ export default function CreateGuide() {
                     <div className="w-6 h-6 bg-primary rounded-full flex items-center justify-center text-white text-xs font-bold">3</div>
                     <div>
                       <p className="font-medium">Guide Generation</p>
-                      <p className="text-sm text-muted-foreground">We create a branded practice guide with actionable steps</p>
+                      <p className="text-sm text-muted-foreground">We build a branded resource with actions, checks, tools, and a clear next step</p>
                     </div>
                   </div>
                   <div className="flex items-start space-x-3">
@@ -879,7 +881,7 @@ export default function CreateGuide() {
                   id="guide-prompt"
                   value={customTemplate.guidePrompt}
                   onChange={(e) => setCustomTemplate(prev => ({ ...prev, guidePrompt: e.target.value }))}
-                  placeholder="Instructions for how AI should structure the practice guide..."
+                  placeholder="Instructions for the outcome, structure, exercises, templates, or tools this resource should include..."
                   className="mt-1"
                   rows={3}
                 />

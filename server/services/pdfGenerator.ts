@@ -2,6 +2,7 @@ import handlebars from 'handlebars';
 import fs from 'fs';
 import path from 'path';
 import type { Guide, BrandingSettings } from '@shared/schema';
+import { normalizeGuideContent } from '@shared/guideContent';
 
 interface PDFOptions {
   guide: Guide;
@@ -19,19 +20,24 @@ export async function generateGuidePDF(options: PDFOptions): Promise<Buffer> {
   const template = handlebars.compile(templateSource);
 
   // Prepare template data
-  const content = guide.content as any;
+  const content = normalizeGuideContent(guide.content);
   const templateData = {
     title: guide.title,
     description: guide.description,
     channelTitle: channelTitle,
-    companyName: branding?.companyName || 'ConvertMag',
+    companyName: branding?.companyName || 'VidMagnet',
     logoUrl: branding?.logoUrl,
     primaryColor: branding?.primaryColor || '#2563eb',
     secondaryColor: branding?.secondaryColor || '#1d4ed8',
-    content: content,
+    introduction: content.introduction,
+    promise: content.promise,
+    sections: content.sections,
+    conclusion: content.conclusion,
+    nextSteps: content.callToAction,
     createdAt: new Date().toLocaleDateString(),
-    disclaimer: `This guide was created from video content. Original creator: ${channelTitle || 'Unknown'}`,
-    drillBreakdowns: content?.drillBreakdowns || []
+    disclaimer: channelTitle
+      ? `Prepared from source content by ${channelTitle}. Review recommendations for your specific context.`
+      : 'Prepared from supplied source content. Review recommendations for your specific context.',
   };
 
   // Generate HTML
