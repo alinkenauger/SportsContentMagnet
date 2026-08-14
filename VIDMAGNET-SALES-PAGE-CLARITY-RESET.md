@@ -503,7 +503,7 @@ Signup state contract:
 - Submitting → duplicate, retryable error, or success/redirecting.
 - Duplicate → Sign in or edit email.
 - Retryable error → retry with values intact.
-- Success/redirecting → best-effort local storage, then complete-account.
+- Success/redirecting → server-bound session or emailed one-time proof, then complete-account; no PII is stored in the browser handoff.
 - Escape and overlay dismissal are disabled only while submitting; focus returns to the exact CTA that opened the dialog otherwise.
 
 ### Pass 3 — User journey and emotional arc: 7/10 → 10/10
@@ -849,7 +849,7 @@ SERVER                                                    POST signup
           +-- missing/expired/used -> recover / start over / sign in
 ~~~
 
-No new distributable artifact is introduced. Vite continues to build the client and esbuild the Express server; the only new deployment requirement is running the already-standard application build and any auth storage change explicitly named by the implementation. The selected session-plus-existing-reset-token recovery design requires no new database table.
+This pre-implementation architecture note applied to the sales-page/auth slice only: it introduced no new distributable artifact or auth table. The broader v1.1 release also adds the ordered Quiz and brand-appearance migrations documented in the implementation evidence and `replit.md`.
 
 ### Codepath and test coverage map
 
@@ -1112,7 +1112,7 @@ Gap: the redesign can ship without new analytics code, but it cannot be declared
 
 ## Section 9 — Deployment & Rollout Review
 
-This is a migration-free marketing and auth-boundary change. It must be released as separable commits so the visual page can be reverted without reverting the completion fix.
+This was the pre-implementation rollout for the marketing/auth slice, which needed no dedicated auth migration. The broader v1.1 release now runs two ordered product-schema migrations; the visual page remains independently reversible from those data changes and the completion fix.
 
 ~~~mermaid
 sequenceDiagram
@@ -1136,7 +1136,7 @@ Rollout:
 
 - Preserve the current page in git history; do not delete simulations until the replacement builds and passes QA.
 - Verify new signup, same-session resume, emailed recovery, completion, login, and session-save failure against a production-like staging environment.
-- Ship without a database migration by using server session state plus the existing expiring reset-token storage for recovery; if implementation discovers that storage cannot safely express one-time recovery, stop and write a dedicated migration rather than weakening the proof.
+- The auth recovery path uses server session state plus existing expiring token storage and requires no dedicated auth migration. The wider v1.1 production start still applies `0001_quiz_lead_magnets.sql` and `0002_brand_scoped_appearance.sql` before serving traffic.
 - If traffic permits, compare against a pre-release baseline; do not invent statistical significance.
 - Monitor registration failures and post-signup navigation immediately after release.
 
@@ -1243,10 +1243,12 @@ flowchart TD
   G -->|No| H["Continue measurement"]
   G -->|Yes| E
   E --> I["Restore prior static assets and page bundle"]
-  I --> J["No database rollback required"]
+  I --> J["Marketing rollback leaves v1.1 schema migrations in place"]
 ~~~
 
-## Error & Rescue Registry
+## Pre-Implementation Error & Rescue Registry
+
+This registry records the baseline that drove the work. The v1.1 implementation resolved the auth, CRM timeout, response typing, keyboard, reduced-motion, and responsive release blockers; current evidence is summarized under Implementation evidence.
 
 | Method/path | Failure class | Rescued now? | Planned rescue | User impact |
 |---|---|---:|---|---|
@@ -1267,7 +1269,7 @@ flowchart TD
 | Narrow viewport/zoom | Overflow or hidden CTA | Previously QA’d, but redesign changes layout | Responsive matrix and scroll-width assertion | Blocks comprehension/action |
 | Product capability copy | Stale/unsupported claim | No systematic rescue | Truth-table signoff before release | Trust/reputation risk |
 
-## Failure Modes Registry
+## Pre-Implementation Failure Modes Registry
 
 | Codepath | Failure mode | Rescued? | Test? | User sees? | Logged? |
 |---|---|---:|---:|---|---:|
@@ -1287,7 +1289,7 @@ flowchart TD
 | Motion | Reduced-motion ignored | Not yet for new design | Planned | Discomfort/confusion | No |
 | Post-signup | ConvertMag naming appears | No | Manual | Trust break | No |
 
-Critical gaps for implementation: account identity is caller-selected, pending signup is not recoverable, session save is not awaited, and no durable frontend regression runner exists. These block public CTA release. ConvertMag continuity and the raw-Response bug are same-branch P2 fixes.
+These were the critical implementation gaps at planning time. The v1.1 release closes them with server-bound completion proof, recoverable pending signup, awaited session persistence, typed responses, and durable Node plus Playwright regression gates.
 
 ## NOT in Scope
 
@@ -1377,15 +1379,15 @@ Synthesized across CEO, Design, and Engineering. Every P0/P1 task below blocks p
 
 - [ ] **T7 (PARTIAL, P1, human: ~3h / CC: ~35min)** — Release QA — Prove clarity, accessibility, performance, and safe cleanup
   - Surfaced by: Engineering findings 4, 6, 8 and all Design passes.
-  - Files: affected marketing/auth files, QA screenshots/reports, then unreferenced `content-reactor.tsx`, `publishing-system.tsx`, both marketing PNGs, and Framer Motion package entries.
-  - Verify: approved desktop/mobile comparison; five-second comprehension; production-like signup/recovery/completion smoke; browser console; 375/768/1024/1280/1440; 200% zoom; keyboard/screen-reader semantics; reduced motion; LCP ≤2.5 s; CLS <0.1; no horizontal overflow; zero-reference search before deletion; `npm run build` passes; full `npm run check` failures are documented as pre-existing and touched-file errors are zero.
+  - Files: affected marketing/auth files and QA screenshots/reports. The obsolete simulations, their PNGs, and Framer Motion were already removed after reference and build checks during T0–T6.
+  - Verify: approved desktop/mobile comparison; five-second comprehension; production-like signup/recovery/completion smoke; browser console; 375/768/1024/1280/1440; 200% zoom; keyboard/screen-reader semantics; reduced motion; LCP ≤2.5 s; CLS <0.1; no horizontal overflow; `npm run build` passes; full `npm run check` failures are documented as pre-existing and touched-file errors are zero.
 
 This sales-page plan did not originate a database, guide-generation, quiz-scoring, billing, or public-recipient API task. The broader user-approved VidMagnet branch also contains quiz, richer-guide, and brand-scoping work; those additions received separate migration, contract, security, performance, and coverage review before shipping. Secure one-time recovery was implemented with the existing user token fields rather than weakening the proof contract.
 
 ### Implementation evidence — 2026-08-14
 
 - T0–T6 are complete. The protected dirty-worktree baseline is retained under the project-scoped `.gstack` record.
-- `npm run test:release`: 62/62 Node contract, security, scoring, migration, branding, and content tests pass.
+- `npm run test:release`: 64/64 Node contract, security, scoring, migration, branding, and content tests pass.
 - `npm run test:e2e:marketing`: 29 passed and one intentional project-scope skip across desktop and mobile Chromium.
 - `npm run build`, `npm run check:marketing`, and `git diff --check` pass. The sales-page chunk is 11.84 kB gzip and the initial application chunk is 97.12 kB gzip.
 - Responsive browser QA covered 375, 640, 768, 1024, 1280, and 1440 px plus 200% reflow, keyboard/focus behavior, reduced motion, console output, and horizontal overflow.
@@ -1405,14 +1407,14 @@ This sales-page plan did not originate a database, guide-generation, quiz-scorin
 | Review area | Result |
 |---|---|
 | Mode selected | SELECTIVE EXPANSION |
-| System audit | 2,337 lines across current sales-page/design surface; 1,588 are single-use simulations |
+| System audit | Pre-implementation: 2,337 lines, including 1,588 lines of simulations. Shipped sales-page/design surface: 1,021 lines with no simulation components. |
 | Step 0 | Artifact-led Alternative B confirmed; premises passed |
 | Architecture | Direction A retained; contained auth boundary and public route split added |
 | Errors | Signup/completion/recovery/session/CRM paths mapped; no silent proof failure accepted |
 | Security | Pending-account claim path fixed; canonical session identity, one-time recovery, rate limits, and protected admin routes reviewed |
 | Data/UX | Full signup and recovery states specified; analytics baseline remains deferred |
-| Code quality | Single-use simulations, raw Response typing, PII handoff, and vocabulary drift identified |
-| Tests | 62/62 Node tests and 29-pass/1-skip desktop/mobile browser release suite |
+| Code quality | Single-use simulations and the PII handoff were removed; response contracts and shipped vocabulary were tightened. Repository-wide legacy TypeScript debt remains documented. |
+| Tests | 64/64 Node tests and 29-pass/1-skip desktop/mobile browser release suite |
 | Performance | Lazy route split lands below the ≤200 kB public-route budget; recorded LCP/CLS remains T7 follow-up evidence |
 | Observability | Funnel contract defined; transport unresolved |
 | Deployment | Ordered, checksummed, fail-closed migrations run before every production start; visual rollback remains independent |
@@ -1426,7 +1428,7 @@ This sales-page plan did not originate a database, guide-generation, quiz-scorin
 | Scope proposals | Seven accepted, six deferred, four skipped |
 | Outside voices | Independent engineering + test audits ran; Codex CLI was blocked by the privacy boundary |
 | Diagrams | Architecture, dream state, data flow, state machine, error, deployment, rollback |
-| Stale diagram audit | No ASCII or Mermaid diagrams in planned source files; current marketing simulations are visual UI and will be removed |
+| Stale diagram audit | No ASCII or Mermaid diagrams in planned source files; the shipped marketing surface has no simulation, marketing PNG, or Framer Motion references. |
 | Unresolved decisions | No release decision remains; three T7 evidence tasks and lower-priority scale/maintainability work are tracked in TODOS.md |
 
 ## Decision Audit Trail
@@ -1468,7 +1470,7 @@ This sales-page plan did not originate a database, guide-generation, quiz-scorin
 
 ## Unresolved Decision
 
-None. All CEO, Design, and Engineering decisions are resolved. The plan is approved; implementation and deployment remain separate actions.
+None. All CEO, Design, and Engineering decisions are resolved, and implementation is complete on the release branch. Deployment plus the remaining T7 production evidence are separate actions.
 
 ## GSTACK REVIEW REPORT
 
@@ -1484,6 +1486,6 @@ None. All CEO, Design, and Engineering decisions are resolved. The plan is appro
 
 **CROSS-MODEL:** Available engineering voices independently found the same pending-account completion blocker and supported the same visual direction. CEO and Design voices also converged on one literal source-to-output proof rather than another system simulation.
 
-**VERDICT:** APPROVED AS-IS — CEO + DESIGN + ENG CLEARED. The plan is ready to implement. Secure account completion remains mandatory before the public signup CTA can ship.
+**VERDICT:** IMPLEMENTED — CEO + DESIGN + ENG CLEARED. Secure account completion and the release gates are complete; deployment and the remaining T7 production evidence have not been claimed.
 
 NO UNRESOLVED DECISIONS

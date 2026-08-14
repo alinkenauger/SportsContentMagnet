@@ -10,6 +10,7 @@ const { mergeBrandAppearance, toBrandingPersistence } = await import("./brandApp
 const { isDirectlyAccessibleGuide } = await import("./guideVisibility");
 const { formatCreationBrief, sourceGroundingRules } = await import("./services/guideContentPrompt");
 const { formatTime } = await import("./services/aiContentWithTimestamps");
+const { escapeHtml, sanitizeEmailSubject } = await import("./services/emailService");
 
 test("Guide V2 prompt helpers preserve the requested format, safe source rules, and timestamps", () => {
   const brief = formatCreationBrief({
@@ -116,4 +117,18 @@ test("direct guide links preserve unlisted access while discovery remains publis
   assert.match(publicGuideQuery, /eq\(guides\.status, ['\"]published['\"]\)/);
   assert.match(publicGuideQuery, /eq\(guides\.magnetType, ['\"]guide['\"]\)/);
   assert.doesNotMatch(publicGuideQuery, /unlisted/);
+});
+
+test("email helpers neutralize HTML and header injection in recipient-controlled fields", () => {
+  assert.equal(
+    escapeHtml(`<a href="https://attacker.example">Click</a> & 'share'`),
+    "&lt;a href=&quot;https://attacker.example&quot;&gt;Click&lt;/a&gt; &amp; &#039;share&#039;",
+  );
+  assert.equal(sanitizeEmailSubject("Guide\r\nBcc: victim@example.com"), "Guide Bcc: victim@example.com");
+
+  const source = readFileSync(new URL("./services/emailService.ts", import.meta.url), "utf8");
+  assert.doesNotMatch(source, /ConvertMag/);
+  assert.doesNotMatch(source, /\$\{user\.firstName\}/);
+  assert.doesNotMatch(source, /\$\{leadData\./);
+  assert.doesNotMatch(source, /\$\{planName\}/);
 });

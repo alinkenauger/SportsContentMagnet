@@ -9,7 +9,7 @@ All notable changes to VidMagnet are documented in this file.
 - Create personalized Outcome Quizzes from existing content, publish a recipient experience, capture a lead, and reveal a scored result with a relevant free gift and call to action.
 - Build a brand-scoped Benefit Library and Brand Studio so each personal or team workspace can reuse its own identity, gifts, and calls to action safely.
 - Generate richer Guides with source-grounded steps, checklists, worksheets, scorecards, templates, troubleshooting, and action plans instead of a light video summary.
-- Render the richer Guide experience consistently on public pages, delivery pages, editors, and PDFs while preserving legacy Guide content.
+- Preserve richer Guide blocks through generation and editing while retaining legacy-compatible fields for existing public and delivery renderers.
 - Run ordered, checksummed database migrations automatically before every production start, with migration and container release checks.
 - Cover the release with contract, security, scoring, content, migration, and responsive browser regression suites.
 
@@ -29,8 +29,10 @@ All notable changes to VidMagnet are documented in this file.
 - Snapshotted completed Quiz outcomes and attached offers so an existing result link cannot be rewritten by later Quiz or Benefit Library edits.
 - Made Guide and Quiz transfers draft and re-scope related records atomically, clearing benefit assignments that belong to another workspace.
 - Added bounded auth, password-recovery, Quiz-generation, and public-Quiz rate limits without repeated full-map sweeps at capacity.
+- Removed the production debug-email trigger and restricted its local replacement to authenticated super administrators.
+- Escaped recipient-controlled inline email content and stripped header-breaking characters from dynamic subject text.
 - Made public Quiz analytics claims concurrency-safe and added indexes for view deduplication, attempt throttling, and stale-attempt cleanup.
 
 ### Removed
 
-- Removed the oversized marketing simulations, unused generated marketing artwork, and the now-unneeded Framer Motion dependency.
+- Removed the now-unneeded Framer Motion dependency from the shipped application.

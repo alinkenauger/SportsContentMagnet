@@ -79,3 +79,19 @@ test("admin user and stats routes have one authenticated registration each", asy
   assert.doesNotMatch(source, /temporary bypass for broken session/i);
   assert.doesNotMatch(source, /isGlobalAdmin|\badminAuth\b/);
 });
+
+test("the arbitrary-recipient test email route is local-only and super-admin protected", async () => {
+  const source = await readFile(new URL("./routes.ts", import.meta.url), "utf8");
+  const start = source.indexOf("// Local debugging only.");
+  const end = source.indexOf("// Primary auth route", start);
+  const route = source.slice(start, end);
+
+  assert.ok(start >= 0 && end > start);
+  assert.match(route, /process\.env\.NODE_ENV !== ["']production["']/);
+  assert.match(
+    route,
+    /app\.post\(["']\/api\/test-email["'], isAuthenticated, requireSuperAdmin/,
+  );
+  assert.doesNotMatch(route, /email:\s*email/);
+  assert.doesNotMatch(route, /details:\s*error/);
+});

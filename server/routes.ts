@@ -230,35 +230,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Register outcome quiz authoring, public runner, and benefit-library routes.
   registerQuizRoutes(app);
 
-  // Test email endpoint for debugging
-  app.post("/api/test-email", async (req, res) => {
-    try {
-      const { email } = req.body;
-      if (!email) {
-        return res.status(400).json({ error: "Email is required" });
+  // Local debugging only. Never expose an arbitrary-recipient email trigger in production.
+  if (process.env.NODE_ENV !== "production") {
+    app.post("/api/test-email", isAuthenticated, requireSuperAdmin, async (req, res) => {
+      try {
+        const email = z.string().trim().email().max(320).parse(req.body?.email);
+        const { EmailService } = await import('./services/emailService');
+        const emailService = new EmailService();
+
+        const result = await emailService.sendGuideDeliveryEmail(
+          { email, firstName: 'Test User' },
+          'Test Guide',
+          'https://example.com/guide',
+          'https://example.com/landing'
+        );
+
+        res.json({
+          success: result,
+          message: result ? 'Test email sent successfully' : 'Failed to send test email',
+        });
+      } catch (error) {
+        if (error instanceof z.ZodError) {
+          return res.status(400).json({ error: "A valid email is required" });
+        }
+        console.error('Email delivery failed:', error);
+        res.status(500).json({ error: 'Failed to send test email' });
       }
-
-      const { EmailService } = await import('./services/emailService');
-      const emailService = new EmailService();
-      
-
-      const result = await emailService.sendGuideDeliveryEmail(
-        { email, firstName: 'Test User' },
-        'Test Guide',
-        'https://example.com/guide',
-        'https://example.com/landing'
-      );
-
-      res.json({ 
-        success: result,
-        message: result ? 'Test email sent successfully' : 'Failed to send test email',
-        email: email
-      });
-    } catch (error) {
-      console.error('Email delivery failed:', error);
-      res.status(500).json({ error: 'Failed to send test email', details: error.message });
-    }
-  });
+    });
+  }
 
   // Primary auth route (Google OAuth)
   app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {

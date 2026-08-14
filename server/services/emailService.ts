@@ -37,7 +37,7 @@ export function publicAppBaseUrl(): string | undefined {
   }
 }
 
-function escapeHtml(value: string): string {
+export function escapeHtml(value: string): string {
   return value.replace(/[&<>"']/g, (character) => ({
     "&": "&amp;",
     "<": "&lt;",
@@ -45,6 +45,10 @@ function escapeHtml(value: string): string {
     '"': "&quot;",
     "'": "&#039;",
   })[character] || character);
+}
+
+export function sanitizeEmailSubject(value: string): string {
+  return value.replace(/[\r\n]+/g, " ").replace(/\s+/g, " ").trim().slice(0, 200);
 }
 
 export class EmailService {
@@ -236,6 +240,8 @@ export class EmailService {
       return false;
     }
     const resetUrl = `${appBaseUrl}/reset-password?token=${encodeURIComponent(resetToken)}`;
+    const firstName = escapeHtml(user.firstName || "there");
+    const safeResetUrl = escapeHtml(resetUrl);
 
     // If we have a dynamic template, use it
     if (this.templates.passwordReset) {
@@ -277,12 +283,12 @@ export class EmailService {
           </div>
           
           <div class="content">
-            <h2>Hi ${user.firstName},</h2>
+            <h2>Hi ${firstName},</h2>
             
             <p>We received a request to reset your VidMagnet account password.</p>
             
             <div style="text-align: center;">
-              <a href="${resetUrl}" class="button">Reset Your Password</a>
+              <a href="${safeResetUrl}" class="button">Reset Your Password</a>
             </div>
             
             <div class="warning">
@@ -292,7 +298,7 @@ export class EmailService {
             <p>If you didn't request this password reset, please ignore this email. Your account remains secure.</p>
             
             <p>If you're having trouble clicking the button, copy and paste this URL into your browser:</p>
-            <p style="word-break: break-all; color: #666;">${resetUrl}</p>
+            <p style="word-break: break-all; color: #666;">${safeResetUrl}</p>
             
             <p>Best regards,<br>The VidMagnet Team</p>
           </div>
@@ -313,6 +319,11 @@ export class EmailService {
   }
 
   async sendGuideDeliveryEmail(user: { email: string; firstName: string }, guideTitle: string, guideUrl: string, landingPageUrl: string): Promise<boolean> {
+    const firstName = escapeHtml(user.firstName || "there");
+    const safeGuideTitle = escapeHtml(guideTitle);
+    const safeGuideUrl = escapeHtml(guideUrl);
+    const safeLandingPageUrl = escapeHtml(landingPageUrl);
+    const subjectGuideTitle = sanitizeEmailSubject(guideTitle);
     const html = `
       <!DOCTYPE html>
       <html>
@@ -338,9 +349,9 @@ export class EmailService {
           </div>
           
           <div class="content">
-            <h2>Hi ${user.firstName},</h2>
+            <h2>Hi ${firstName},</h2>
             
-            <p>Great news! Your lead magnet "<strong>${guideTitle}</strong>" has been created and is ready to start capturing leads.</p>
+            <p>Great news! Your lead magnet "<strong>${safeGuideTitle}</strong>" has been created and is ready to start capturing leads.</p>
             
             <div class="guide-preview">
               <h3>What's included:</h3>
@@ -353,8 +364,8 @@ export class EmailService {
             </div>
             
             <div style="text-align: center;">
-              <a href="${landingPageUrl}" class="button">View Landing Page</a>
-              <a href="${guideUrl}" class="button">Preview Guide</a>
+              <a href="${safeLandingPageUrl}" class="button">View Landing Page</a>
+              <a href="${safeGuideUrl}" class="button">Preview Guide</a>
             </div>
             
             <h3>Next Steps:</h3>
@@ -366,12 +377,11 @@ export class EmailService {
             
             <p>Start sharing and watch your leads grow! If you need any help, our support team is here for you.</p>
             
-            <p>Best regards,<br>The ConvertMag.net Team</p>
+            <p>Best regards,<br>The VidMagnet Team</p>
           </div>
           
           <div class="footer">
-            <p>&copy; 2025 ConvertMag.net. All rights reserved.</p>
-            <p>Transform ANY content into high-converting lead magnets.</p>
+            <p>&copy; ${new Date().getFullYear()} VidMagnet. All rights reserved.</p>
           </div>
         </div>
       </body>
@@ -380,12 +390,21 @@ export class EmailService {
 
     return this.sendEmail({
       to: user.email,
-      subject: `🎉 "${guideTitle}" is ready to capture leads!`,
+      subject: `🎉 "${subjectGuideTitle}" is ready to capture leads!`,
       html,
     });
   }
 
   async sendLeadNotificationEmail(userEmail: string, leadData: { firstName: string; lastName: string; email: string; guideTitle: string; landingPageUrl: string }): Promise<boolean> {
+    const firstName = escapeHtml(leadData.firstName);
+    const lastName = escapeHtml(leadData.lastName);
+    const leadEmail = escapeHtml(leadData.email);
+    const guideTitle = escapeHtml(leadData.guideTitle);
+    const landingPageUrl = escapeHtml(leadData.landingPageUrl);
+    const leadsUrl = escapeHtml(
+      process.env.REPLIT_DOMAINS ? `https://${process.env.REPLIT_DOMAINS.split(',')[0]}/leads` : '#',
+    );
+    const subjectGuideTitle = sanitizeEmailSubject(leadData.guideTitle);
     const html = `
       <!DOCTYPE html>
       <html>
@@ -413,14 +432,14 @@ export class EmailService {
           <div class="content">
             <h2>Congratulations!</h2>
             
-            <p>You just captured a new lead with your ConvertMag.net guide. Here are the details:</p>
+            <p>You just captured a new lead with your VidMagnet Guide. Here are the details:</p>
             
             <div class="lead-info">
               <h3>Lead Information:</h3>
-              <p><strong>Name:</strong> ${leadData.firstName} ${leadData.lastName}</p>
-              <p><strong>Email:</strong> ${leadData.email}</p>
-              <p><strong>Guide:</strong> ${leadData.guideTitle}</p>
-              <p><strong>Source:</strong> <a href="${leadData.landingPageUrl}">Landing Page</a></p>
+              <p><strong>Name:</strong> ${firstName} ${lastName}</p>
+              <p><strong>Email:</strong> ${leadEmail}</p>
+              <p><strong>Guide:</strong> ${guideTitle}</p>
+              <p><strong>Source:</strong> <a href="${landingPageUrl}">Landing Page</a></p>
             </div>
             
             <p>This lead has been automatically added to your dashboard where you can:</p>
@@ -431,16 +450,16 @@ export class EmailService {
             </ul>
             
             <div style="text-align: center;">
-              <a href="${process.env.REPLIT_DOMAINS ? `https://${process.env.REPLIT_DOMAINS.split(',')[0]}/leads` : '#'}" class="button">View All Leads</a>
+              <a href="${leadsUrl}" class="button">View All Leads</a>
             </div>
             
-            <p>Keep up the great work! Your ConvertMag.net system is working perfectly.</p>
+            <p>Keep up the great work! Your VidMagnet lead magnet is working.</p>
             
-            <p>Best regards,<br>The ConvertMag.net Team</p>
+            <p>Best regards,<br>The VidMagnet Team</p>
           </div>
           
           <div class="footer">
-            <p>&copy; 2025 ConvertMag.net. All rights reserved.</p>
+            <p>&copy; ${new Date().getFullYear()} VidMagnet. All rights reserved.</p>
           </div>
         </div>
       </body>
@@ -449,12 +468,18 @@ export class EmailService {
 
     return this.sendEmail({
       to: userEmail,
-      subject: `🚀 New lead from "${leadData.guideTitle}"`,
+      subject: `🚀 New lead from "${subjectGuideTitle}"`,
       html,
     });
   }
 
   async sendSubscriptionConfirmationEmail(user: { email: string; firstName: string }, planName: string, amount: number): Promise<boolean> {
+    const firstName = escapeHtml(user.firstName || "there");
+    const safePlanName = escapeHtml(planName);
+    const subjectPlanName = sanitizeEmailSubject(planName);
+    const dashboardUrl = escapeHtml(
+      process.env.REPLIT_DOMAINS ? `https://${process.env.REPLIT_DOMAINS.split(',')[0]}/dashboard` : '#',
+    );
     const html = `
       <!DOCTYPE html>
       <html>
@@ -475,18 +500,18 @@ export class EmailService {
       <body>
         <div class="container">
           <div class="header">
-            <h1>🎉 Welcome to ${planName}!</h1>
+            <h1>🎉 Welcome to ${safePlanName}!</h1>
             <p>Your subscription is now active</p>
           </div>
           
           <div class="content">
-            <h2>Hi ${user.firstName},</h2>
+            <h2>Hi ${firstName},</h2>
             
-            <p>Thank you for upgrading to ConvertMag.net ${planName}! Your payment has been processed successfully.</p>
+            <p>Thank you for upgrading to VidMagnet ${safePlanName}! Your payment has been processed successfully.</p>
             
             <div class="plan-details">
               <h3>Subscription Details:</h3>
-              <p><strong>Plan:</strong> ${planName}</p>
+              <p><strong>Plan:</strong> ${safePlanName}</p>
               <p><strong>Amount:</strong> $${amount.toFixed(2)}/month</p>
               <p><strong>Status:</strong> Active</p>
               <p><strong>Next billing:</strong> ${new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString()}</p>
@@ -502,17 +527,16 @@ export class EmailService {
             </ul>
             
             <div style="text-align: center;">
-              <a href="${process.env.REPLIT_DOMAINS ? `https://${process.env.REPLIT_DOMAINS.split(',')[0]}/dashboard` : '#'}" class="button">Access Your Dashboard</a>
+              <a href="${dashboardUrl}" class="button">Access Your Dashboard</a>
             </div>
             
             <p>Start creating unlimited lead magnets and growing your business!</p>
             
-            <p>Best regards,<br>The ConvertMag.net Team</p>
+            <p>Best regards,<br>The VidMagnet Team</p>
           </div>
           
           <div class="footer">
-            <p>&copy; 2025 ConvertMag.net. All rights reserved.</p>
-            <p>Questions? Contact us at support@convertmag.net</p>
+            <p>&copy; ${new Date().getFullYear()} VidMagnet. All rights reserved.</p>
           </div>
         </div>
       </body>
@@ -521,7 +545,7 @@ export class EmailService {
 
     return this.sendEmail({
       to: user.email,
-      subject: `🎉 ${planName} subscription confirmed - Welcome aboard!`,
+      subject: `🎉 ${subjectPlanName} subscription confirmed - Welcome aboard!`,
       html,
     });
   }

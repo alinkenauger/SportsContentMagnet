@@ -1,6 +1,8 @@
-# Google OAuth 403 Troubleshooting Guide
+# Legacy Google OAuth 403 Troubleshooting Record
 
-## Current Status
+> **Status: legacy troubleshooting note.** The current VidMagnet release uses password/session authentication plus Replit OpenID Connect at `https://<REPLIT_DOMAINS host>/api/callback`. The Google callback and dated hostname below are inactive archive material; do not copy them into production.
+
+## Historical Status
 - Server redirects correctly (302 status confirmed)
 - Google returns 403 "You do not have access to this page"
 - Issue persists even with basic profile/email scopes
