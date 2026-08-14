@@ -41,7 +41,7 @@ test("marketing Guide fixture is a strict, implementation-ready V2 guide", () =>
   assert.equal(parsed.sections[0].sourceRefs, undefined);
 });
 
-test("marketing Outcome Quiz fixture satisfies reachability and lead-capture rules", () => {
+test("marketing Interactive Quiz fixture satisfies reachability and lead-capture rules", () => {
   const parsed = quizDefinitionSchema.parse(marketingQuizFixture);
   const reachableOutcomeIds = new Set(
     parsed.questions.flatMap((question) =>

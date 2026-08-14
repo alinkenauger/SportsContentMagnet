@@ -92,7 +92,7 @@
 
 **Why:** Contract tests prove structure and safeguards but do not measure the quality of actual model outputs across representative content.
 
-**Context:** Cover Guide formats, Outcome Quiz reachability, unsupported timestamps/facts, full-source grounding, and hostile source text. Keep fixtures free of customer-sensitive content.
+**Context:** Cover Guide formats, Interactive Quiz reachability, unsupported timestamps/facts, full-source grounding, and hostile source text. Keep fixtures free of customer-sensitive content.
 
 **Effort:** L
 **Priority:** P2
@@ -116,7 +116,7 @@
 
 ### Ship the VidMagnet clarity and product-depth release
 
-**What:** Deliver Outcome Quizzes, richer Guides, brand-scoped appearance and benefits, secure onboarding, the artifact-led sales page, and release regression gates.
+**What:** Deliver Interactive Quizzes, richer Guides, brand-scoped appearance and benefits, secure onboarding, the artifact-led sales page, and release regression gates.
 
 **Why:** Visitors and recipients needed a clearer product promise, genuinely useful lead magnets, consistent brand control, and a safe path from signup through delivery.
 

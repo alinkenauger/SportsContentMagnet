@@ -6,7 +6,7 @@ All notable changes to VidMagnet are documented in this file.
 
 ### Added
 
-- Create personalized Outcome Quizzes from existing content, publish a recipient experience, capture a lead, and reveal a scored result with a relevant free gift and call to action.
+- Create personalized Interactive Quizzes from existing content, publish a recipient experience, capture a lead, and reveal a scored result with a relevant free gift and call to action.
 - Build a brand-scoped Benefit Library and Brand Studio so each personal or team workspace can reuse its own identity, gifts, and calls to action safely.
 - Generate richer Guides with source-grounded steps, checklists, worksheets, scorecards, templates, troubleshooting, and action plans instead of a light video summary.
 - Preserve richer Guide blocks through generation and editing while retaining legacy-compatible fields for existing public and delivery renderers.

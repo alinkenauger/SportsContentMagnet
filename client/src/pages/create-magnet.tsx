@@ -158,7 +158,7 @@ export default function CreateMagnet() {
               </div>
               <h1 className="text-2xl font-bold text-foreground">What do you want to create?</h1>
               <p className="mt-1 text-muted-foreground">
-                Turn one source into a useful free resource or a personalized outcome quiz.
+                Turn one source into a useful free resource or a personalized interactive quiz.
               </p>
             </div>
           </div>
@@ -223,7 +223,7 @@ export default function CreateMagnet() {
                         <Badge className="bg-purple-100 text-purple-700 hover:bg-purple-100">Interactive</Badge>
                       </div>
                       <CardTitle className="flex items-center justify-between gap-2">
-                        Outcome Quiz
+                        Interactive Quiz
                         {selectedType === "quiz" ? (
                           <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-primary-foreground">
                             <Check className="h-4 w-4" aria-hidden="true" />
@@ -454,7 +454,7 @@ export default function CreateMagnet() {
                       ) : (
                         <Sparkles className="mr-2 h-5 w-5" aria-hidden="true" />
                       )}
-                      {generateQuizMutation.isPending ? "Generating quiz..." : "Generate outcome quiz"}
+                      {generateQuizMutation.isPending ? "Generating quiz..." : "Generate interactive quiz"}
                     </Button>
                   </CardContent>
                 </Card>

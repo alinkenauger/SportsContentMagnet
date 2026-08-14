@@ -205,7 +205,7 @@ export default function QuizEditor() {
     if (!quizQuery.data || isInitialized) return;
 
     const { guide, quiz } = quizQuery.data;
-    setTitle(guide.title || "Untitled outcome quiz");
+    setTitle(guide.title || "Untitled interactive quiz");
     setDescription(guide.description || "");
     setStatus(guide.status || "draft");
     setQuestions(Array.isArray(quiz.questions) ? quiz.questions : []);
@@ -343,7 +343,7 @@ export default function QuizEditor() {
       queryClient.invalidateQueries({ queryKey: ["/api/guides"] });
       toast({
         title: "Quiz published",
-        description: "Your outcome quiz is ready to share.",
+        description: "Your interactive quiz is ready to share.",
       });
     },
     onError: (error) => {
@@ -603,7 +603,7 @@ export default function QuizEditor() {
               <div className="min-w-0 flex-1">
                 <div className="mb-1 flex flex-wrap items-center gap-2">
                   <Badge variant="outline" className={statusClasses(status)}>{status}</Badge>
-                  <Badge variant="secondary">Outcome Quiz</Badge>
+                  <Badge variant="secondary">Interactive Quiz</Badge>
                   {isDirty && <span className="text-xs font-medium text-amber-600">Unsaved changes</span>}
                 </div>
                 <Input

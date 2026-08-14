@@ -63,12 +63,12 @@ const faqs = [
   {
     question: "What content can I start with?",
     answer:
-      "Paste text to create a Guide or Outcome Quiz. If you are making a Guide, you can also start from a YouTube video. VidMagnet structures the useful parts instead of simply shortening the source.",
+      "Paste text to create a Guide or Interactive Quiz. If you are making a Guide, you can also start from a YouTube video. VidMagnet structures the useful parts instead of simply shortening the source.",
   },
   {
-    question: "When should I choose a Guide or an Outcome Quiz?",
+    question: "When should I choose a Guide or an Interactive Quiz?",
     answer:
-      "Choose a Guide when your lead needs an implementation path. Choose an Outcome Quiz when their best next step depends on their answers.",
+      "Choose a Guide when your lead needs an implementation path. Choose an Interactive Quiz when their best next step depends on their answers.",
   },
   {
     question: "Can each brand have its own look?",
@@ -266,7 +266,7 @@ export default function SalesPage() {
                 </article>
                 <article className="grid gap-5 border-b border-[#101419]/[0.18] py-8 sm:grid-cols-[72px_1fr]">
                   <span className="text-3xl italic text-[#3157F6]" style={editorialFont}>02</span>
-                  <div><h3 className="text-2xl font-bold tracking-[-0.03em]">Make an Outcome Quiz</h3><p className="mt-3 leading-7 text-[#101419]/[0.62]">Paste your source text, ask diagnostic questions, and give each lead a personalized result, recommendations, and relevant next step.</p></div>
+                  <div><h3 className="text-2xl font-bold tracking-[-0.03em]">Make an Interactive Quiz</h3><p className="mt-3 leading-7 text-[#101419]/[0.62]">Paste your source text, ask diagnostic questions, and give each lead a personalized result, recommendations, and relevant next step.</p></div>
                 </article>
               </div>
             </div>
@@ -357,7 +357,7 @@ export default function SalesPage() {
           <DialogHeader className="pr-6 text-left">
             <div className="mb-3"><Wordmark /></div>
             <DialogTitle className="text-2xl font-bold tracking-[-0.035em] text-[#101419]">Build your first magnet</DialogTitle>
-            <DialogDescription className="pt-1 leading-6 text-[#101419]/[0.58]">Create your free account, then choose a Guide or Outcome Quiz.</DialogDescription>
+            <DialogDescription className="pt-1 leading-6 text-[#101419]/[0.58]">Create your free account, then choose a Guide or Interactive Quiz.</DialogDescription>
           </DialogHeader>
 
           {shouldCheckEmail ? (

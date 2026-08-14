@@ -75,7 +75,7 @@ function ArtifactHeader({ kind }: { kind: OutputKind }) {
         </div>
       </div>
       <span className="inline-flex min-h-8 items-center rounded-full border border-white/[0.15] px-3 text-xs font-bold text-white/[0.68]">
-        {kind === "guide" ? "Guide" : "Outcome Quiz"}
+        {kind === "guide" ? "Guide" : "Interactive Quiz"}
       </span>
     </header>
   );
@@ -275,7 +275,7 @@ export function ArtifactProof() {
                 value="quiz"
                 className="min-h-9 rounded-full px-4 text-xs font-bold data-[state=active]:bg-[#101419] data-[state=active]:text-white data-[state=active]:shadow-none"
               >
-                Outcome Quiz
+                Interactive Quiz
               </TabsTrigger>
             </TabsList>
           </div>
@@ -292,7 +292,7 @@ export function ArtifactProof() {
       </div>
 
       <figcaption id={descriptionId} className="sr-only">
-        The same coaching lesson becomes either a step-by-step implementation Guide or a personalized Outcome Quiz. Guide is selected by default; use the arrow, Home, and End keys while focused on the output tabs to change examples.
+        The same coaching lesson becomes either a step-by-step implementation Guide or a personalized Interactive Quiz. Guide is selected by default; use the arrow, Home, and End keys while focused on the output tabs to change examples.
       </figcaption>
     </figure>
   );

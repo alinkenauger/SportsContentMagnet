@@ -2,11 +2,11 @@
 
 ## Product Context
 
-- **What this is:** VidMagnet turns existing content into branded lead-generation assets: implementation guides, outcome quizzes, capture pages, reusable free gifts, and calls to action.
+- **What this is:** VidMagnet turns existing content into branded lead-generation assets: implementation guides, interactive quizzes, capture pages, reusable free gifts, and calls to action.
 - **Who it's for:** Creators, coaches, consultants, agencies, and content-led businesses that need to turn audience attention into owned leads.
 - **Space/industry:** Creator marketing, lead-generation software, quiz funnels, and AI-assisted content repurposing.
 - **Project type:** Product-led SaaS application with a marketing site and white-label public experiences.
-- **Memorable idea:** One trusted source becomes a Guide or Outcome Quiz a lead can actually use.
+- **Memorable idea:** One trusted source becomes a Guide or Interactive Quiz a lead can actually use.
 
 ## Aesthetic Direction
 

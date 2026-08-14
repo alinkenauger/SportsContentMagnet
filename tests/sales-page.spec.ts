@@ -68,11 +68,11 @@ test.describe("VidMagnet sales page", () => {
     await page.screenshot({ path: testInfo.outputPath("sales-page-full.png"), fullPage: true });
   });
 
-  test("uses one keyboard-operable Guide and Outcome Quiz proof", async ({ page }) => {
+  test("uses one keyboard-operable Guide and Interactive Quiz proof", async ({ page }) => {
     await openSalesPage(page);
 
     const guideTab = page.getByRole("tab", { name: "Guide" });
-    const quizTab = page.getByRole("tab", { name: "Outcome Quiz" });
+    const quizTab = page.getByRole("tab", { name: "Interactive Quiz" });
     await expect(page.getByRole("tablist", { name: "Choose an example output" })).toHaveCount(1);
     await expect(guideTab).toHaveAttribute("aria-selected", "true");
     await expect(page.getByRole("tabpanel")).toContainText("The Client Follow-Through Playbook");
@@ -90,7 +90,7 @@ test.describe("VidMagnet sales page", () => {
     await page.emulateMedia({ reducedMotion: "reduce" });
     await openSalesPage(page);
 
-    await page.getByRole("tab", { name: "Outcome Quiz" }).click();
+    await page.getByRole("tab", { name: "Interactive Quiz" }).click();
     const animationName = await page.getByRole("tabpanel").locator("> div").evaluate(
       (element) => getComputedStyle(element).animationName,
     );

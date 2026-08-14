@@ -227,7 +227,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Register custom auth routes (signup, password reset, etc.)
   registerAuthRoutes(app);
 
-  // Register outcome quiz authoring, public runner, and benefit-library routes.
+  // Register interactive quiz authoring, public runner, and benefit-library routes.
   registerQuizRoutes(app);
 
   // Local debugging only. Never expose an arbitrary-recipient email trigger in production.
@@ -935,7 +935,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await assertGuideAccess(userId, guide, "write_content");
       if (guide.magnetType === "quiz") {
         return res.status(409).json({
-          message: "Publish Outcome Quizzes from the quiz editor so scoring and result assets can be validated.",
+          message: "Publish Interactive Quizzes from the quiz editor so scoring and result assets can be validated.",
         });
       }
 

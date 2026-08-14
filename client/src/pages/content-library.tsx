@@ -226,7 +226,7 @@ export default function ContentLibrary() {
             <div>
               <h2 className="text-2xl font-bold text-foreground">Lead Magnet Library</h2>
               <p className="text-muted-foreground mt-1">
-                Manage your guides and outcome quizzes in one place
+                Manage your guides and interactive quizzes in one place
               </p>
             </div>
             <Button className="gradient-primary text-white" onClick={() => navigate("/create")}>
@@ -563,7 +563,7 @@ export default function ContentLibrary() {
                   <p className="text-muted-foreground mb-4">
                     {searchQuery || selectedCategory !== "all" || selectedStatus !== "all"
                       ? "Try adjusting your filters or search query"
-                      : "Create your first guide or outcome quiz to get started"
+                      : "Create your first guide or interactive quiz to get started"
                     }
                   </p>
                   <Button className="gradient-primary text-white" onClick={() => navigate("/create")}>

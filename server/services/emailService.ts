@@ -158,7 +158,7 @@ export class EmailService {
           <div class="content">
             <h2>Hi ${escapeHtml(user.firstName)},</h2>
             
-            <p>Welcome to VidMagnet. Your account is ready, and you can now turn content you already trust into a useful Guide or personalized Outcome Quiz.</p>
+            <p>Welcome to VidMagnet. Your account is ready, and you can now turn content you already trust into a useful Guide or personalized Interactive Quiz.</p>
             
             <div style="text-align: center;">
               <a href="${loginUrl}" class="button">Login to Your Account</a>
@@ -166,7 +166,7 @@ export class EmailService {
             
             <h3>What's Next?</h3>
             <ul>
-              <li>Create your first Guide or Outcome Quiz</li>
+              <li>Create your first Guide or Interactive Quiz</li>
               <li>Apply your brand to the recipient experience</li>
               <li>Add a useful next step for your lead</li>
             </ul>

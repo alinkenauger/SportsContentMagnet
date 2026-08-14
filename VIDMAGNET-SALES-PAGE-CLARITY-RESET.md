@@ -9,7 +9,7 @@ The fix is not another prettier system diagram.
 
 The next page should prove one useful transformation:
 
-**Bring content you already own. VidMagnet turns it into a branded Guide or personalized Outcome Quiz that helps a lead act, captures the lead, and points them to the right next step.**
+**Bring content you already own. VidMagnet turns it into a branded Guide or personalized Interactive Quiz that helps a lead act, captures the lead, and points them to the right next step.**
 
 The current page has gained polish but lost product clarity. It contains a 673-line sales page plus 1,588 lines of simulated marketing UI in Content Reactor and Publishing System. Those simulations repeat the same mechanics while asking visitors to learn internal metaphors such as “publishing infrastructure,” “system,” “reactor,” and “instrument.”
 
@@ -77,7 +77,7 @@ flowchart LR
   A["Expert brings proven content"] --> B["VidMagnet understands the source"]
   B --> C{"Job for the lead"}
   C -->|Teach or implement| D["Useful branded Guide"]
-  C -->|Diagnose or segment| E["Personalized Outcome Quiz"]
+  C -->|Diagnose or segment| E["Personalized Interactive Quiz"]
   D --> F["Lead captures value and acts"]
   E --> F
   F --> G["Relevant gift or next offer"]
@@ -189,14 +189,14 @@ Its 10x hypothesis was a future connected funnel—diagnostic Quiz → personali
 | VidMagnet | Product name | ConvertMag, ConvertMag.net |
 | Existing content / source | Pasted text, notes, article excerpts, transcripts, or a verified YouTube-to-Guide source | “Paste anything,” “upload anything,” or identical Guide/Quiz source support |
 | Guide | Useful educational or implementation output; subtype can be report, SOP, workout, or workbook | Mixing Lead Magnet, Practice Guide, Implementation Guide as peer product names |
-| Outcome Quiz | Diagnostic questions that lead to a personalized result and next steps | Assessment engine, segmentation infrastructure |
+| Interactive Quiz | Diagnostic questions that lead to a personalized result and next steps | Assessment engine, segmentation infrastructure |
 | Brand Studio | Saved brand appearance and identity | Branding layer in the hero |
 | Benefit Library | Reusable free gifts and calls to action | Offer mechanics before the product is understood |
 | Publish | Make the recipient experience available | Deploy a publishing system |
 
 ### Capability truth table to verify before copy freezes
 
-| Capability | Guide | Outcome Quiz | Marketing wording |
+| Capability | Guide | Interactive Quiz | Marketing wording |
 |---|---|---|---|
 | Manual text/source | Yes | Yes | Supported; this is the shared public umbrella |
 | YouTube/video URL | Yes | Not the same creation path today | Say “YouTube-to-Guide” only when format specificity helps |
@@ -218,7 +218,7 @@ The design review consolidated six sections into five. The page must stop teachi
 
 Buyer question: **What does VidMagnet do for me?**
 
-- Supporting sentence: “Create a branded, step-by-step Guide or personalized Outcome Quiz—with lead capture and a clear next step built in.”
+- Supporting sentence: “Create a branded, step-by-step Guide or personalized Interactive Quiz—with lead capture and a clear next step built in.”
 - Primary CTA: **Start free**.
 - Secondary link: **See what it makes**; scrolls to the artifact.
 - Desktop composition: 5/12 copy and 7/12 artifact.
@@ -230,10 +230,10 @@ Buyer question: **What does VidMagnet do for me?**
 
 ### Section 2 — “Teach the next move—or diagnose where to start.”
 
-Buyer question: **Should I make a Guide or an Outcome Quiz?**
+Buyer question: **Should I make a Guide or an Interactive Quiz?**
 
 - Guide conclusion: “Use a Guide when someone needs a clear path they can follow.”
-- Quiz conclusion: “Use an Outcome Quiz when the right next step depends on their answers.”
+- Quiz conclusion: “Use an Interactive Quiz when the right next step depends on their answers.”
 - Annotate the same canonical example so the visitor sees two different jobs, not two identical builders.
 - Explain usefulness here as part of the comparison; do not create a second Guide-versus-Quiz lesson later.
 - Repeat **Start free** after this proof on long viewports.
@@ -303,9 +303,9 @@ The checked-in `GuideContentV2` fixture must be complete, not a visual-only frag
 - One `technique` section, `follow_through_sequence`, contains three concrete blocks: a `steps` block with the exact three steps, a `checklist` block with One owner / One deadline / One proof, and a `worksheet` block titled Weekly Reset Sheet with prompts for priority, calendar slot, and visible proof.
 - Each step includes an instruction and observable success criterion. No timestamps, duration claims, or source references are fabricated.
 
-**Outcome Quiz view**
+**Interactive Quiz view**
 
-- Type label: Outcome Quiz
+- Type label: Interactive Quiz
 - Title: “What Is Breaking Your Follow-Through?”
 - Selected answer: “Everything feels equally important.”
 - Outcome: “The Priority Pile-Up”
@@ -444,13 +444,13 @@ Both outside voices supported the confirmed artifact-led direction. No Autoplan 
 First, second, and third:
 
 1. **First:** plain promise and Start free.
-2. **Second:** stationary source becoming one useful Guide by default, with Outcome Quiz available as the only alternate view.
+2. **Second:** stationary source becoming one useful Guide by default, with Interactive Quiz available as the only alternate view.
 3. **Third:** proof that value continues through brand, capture, delivery, and next step.
 
 If only three ideas survive the whole page, they are:
 
 - Your existing expertise is the input.
-- A useful Guide or personalized Outcome Quiz is the output.
+- A useful Guide or personalized Interactive Quiz is the output.
 - The published experience captures the lead and gives them a relevant next step.
 
 Desktop page structure:
@@ -461,7 +461,7 @@ Desktop page structure:
 │                                                   Sign in · Start free   │
 ├───────────────────────────────┬─────────────────────────────────────────┤
 │ H1 + one supporting sentence  │ small SOURCE  →  one ARTIFACT surface   │
-│ Start free · See what it makes│                 [Guide | Outcome Quiz]  │
+│ Start free · See what it makes│                 [Guide | Interactive Quiz]  │
 ├───────────────────────────────┴─────────────────────────────────────────┤
 │ TEACH THE NEXT MOVE — OR DIAGNOSE WHERE TO START                        │
 │ One open comparison using the same source; repeated CTA follows         │
@@ -571,7 +571,7 @@ Mobile structure:
 ├──────────────────────────────┤
 │ EXAMPLE SOURCE               │
 │ three short source lines     │
-│ [ Guide | Outcome Quiz ]     │
+│ [ Guide | Interactive Quiz ]     │
 │ FINISHED OUTPUT              │
 │ readable full-width content  │
 ├──────────────────────────────┤

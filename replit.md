@@ -7,7 +7,7 @@ Current release: **v1.1.0.0 (2026-08-14)**. This opening section is the operatin
 VidMagnet turns content a creator already trusts into one of two branded lead magnets:
 
 - A **Guide** that helps a lead implement the source through concrete steps, checklists, worksheets, scorecards, templates, troubleshooting, and an action plan.
-- An **Outcome Quiz** that scores answers, captures the lead when configured, reveals a personalized result, and connects that result to a reusable free gift or call to action.
+- An **Interactive Quiz** that scores answers, captures the lead when configured, reveals a personalized result, and connects that result to a reusable free gift or call to action.
 
 Creators can save appearance in Brand Studio and offers in the Benefit Library, then reuse both inside a personal or team workspace. Public recipient pages receive only safe projections; pasted source material and private creator fields are not returned by public APIs.
 
@@ -52,7 +52,7 @@ public/       Static uploads and generated public assets
 4. Review the landing page, recipient experience, brand appearance, and next action.
 5. Publish or share an unlisted direct link. Unlisted Guides remain directly accessible but do not appear in public discovery.
 
-### Create and publish an Outcome Quiz
+### Create and publish an Interactive Quiz
 
 1. Choose the owning workspace and paste at least 50 characters of source content.
 2. Generate, edit, and validate questions, outcomes, lead-capture settings, theme, and reachable answer mappings.
@@ -69,7 +69,7 @@ public/       Static uploads and generated public assets
 
 | Surface | Authenticated routes | Public routes |
 |---|---|---|
-| Outcome Quizzes | `POST /api/quizzes/generate`, `GET/PUT /api/quizzes/:guideId`, `POST /api/quizzes/:guideId/publish` | `GET /api/public/quizzes/:customUrl`, `POST .../start`, `POST .../complete`, `GET /api/public/quiz-results/:attemptId`, `POST .../click` |
+| Interactive Quizzes | `POST /api/quizzes/generate`, `GET/PUT /api/quizzes/:guideId`, `POST /api/quizzes/:guideId/publish` | `GET /api/public/quizzes/:customUrl`, `POST .../start`, `POST .../complete`, `GET /api/public/quiz-results/:attemptId`, `POST .../click` |
 | Benefit Library | `GET/POST /api/benefit-assets`, `PUT /api/benefit-assets/:assetId` | Attached active offers are projected through a completed Quiz result |
 | Account completion | `GET /api/auth/me`, password change, and logout after authentication | `POST /api/auth/signup`, `POST /api/auth/pending-signup`, `POST /api/auth/complete-account`, `POST /api/auth/login` |
 

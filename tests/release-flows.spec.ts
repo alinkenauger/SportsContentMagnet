@@ -273,14 +273,14 @@ test("an authenticated creator can choose Quiz, submit a grounded brief, and rea
 
   await page.goto("/create");
   await expect(page.getByRole("heading", { name: "What do you want to create?" })).toBeVisible();
-  await page.getByRole("button", { name: /Outcome Quiz/ }).click();
+  await page.getByRole("button", { name: /Interactive Quiz/ }).click();
   await page.getByLabel("Quiz title").fill("  Follow-through diagnostic  ");
   await page.getByRole("textbox", { name: "Content", exact: true }).fill(
     "End every coaching call with one priority, schedule the action, and define visible proof before the conversation ends.",
   );
   await page.getByLabel("Who is this for?").fill("  Coaches with active clients  ");
   await page.getByLabel("What should the quiz reveal?").fill("  Where follow-through breaks  ");
-  await page.getByRole("button", { name: "Generate outcome quiz" }).click();
+  await page.getByRole("button", { name: "Generate interactive quiz" }).click();
 
   await page.waitForURL("**/quiz-editor/91");
   expect(generationBody).toMatchObject({

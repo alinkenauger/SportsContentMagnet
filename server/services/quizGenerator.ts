@@ -99,7 +99,7 @@ ${input.sourceContent}
       messages: [
         {
           role: "system",
-          content: "You create concise, useful outcome quizzes. Return valid JSON matching the requested shape.",
+          content: "You create concise, useful interactive quizzes. Return valid JSON matching the requested shape.",
         },
         { role: "user", content: prompt },
       ],
