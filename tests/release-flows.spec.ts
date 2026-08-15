@@ -2,6 +2,13 @@ import { expect, test, type Page } from "@playwright/test";
 
 const browserErrors = new WeakMap<Page, string[]>();
 
+async function expectNoHorizontalOverflow(page: Page) {
+  const overflow = await page.evaluate(
+    () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+  );
+  expect(overflow, "the recipient experience does not overflow horizontally").toBeLessThanOrEqual(1);
+}
+
 test.beforeEach(async ({ page }) => {
   const errors: string[] = [];
   browserErrors.set(page, errors);
@@ -154,6 +161,91 @@ test("a public quiz completes the question, lead, result, gift, and CTA journey"
           summary: "Your plan needs one visible next move.",
           description: "Reduce the active plan to one commitment.",
           recommendations: ["Choose one action", "Schedule it"],
+          prescription: {
+            strengths: [
+              "You can recognize when too many priorities are competing.",
+              "You are ready to make completion visible.",
+            ],
+            bottleneck: "Every task is competing for attention, so no single commitment becomes the obvious next move.",
+            opportunity: "A one-priority reset can turn scattered intent into a visible commitment this week.",
+            watchout: "Do not turn the reset into another long planning exercise.",
+            quickWin: {
+              title: "Choose one visible commitment",
+              action: "Write the single action that would make this week feel meaningfully complete.",
+              why: "One named commitment removes the competition between equally urgent tasks.",
+              timeframe: "10 minutes",
+              successCriteria: "The action has an owner, a deadline, and visible proof of completion.",
+            },
+            nextSteps: [
+              {
+                title: "Name the finish line",
+                action: "Describe the artifact or behavior that will prove the commitment is complete.",
+                why: "Visible proof prevents subjective completion.",
+                timeframe: "Today",
+                successCriteria: "Anyone can tell whether the action is finished.",
+              },
+              {
+                title: "Protect the action",
+                action: "Put the action on the calendar before adding another priority.",
+                why: "Protected time turns a priority into a commitment.",
+                timeframe: "Within 24 hours",
+                successCriteria: "A specific calendar block exists for the work.",
+              },
+            ],
+            mistakes: [
+              {
+                mistake: "Keeping three backup priorities active.",
+                correction: "Move every non-primary item to a clearly labeled later list.",
+              },
+            ],
+            implementationAsset: {
+              type: "worksheet",
+              title: "One-action follow-through worksheet",
+              description: "Turn this result into one protected behavior with a visible finish line.",
+              instructions: "Fill in each prompt, then keep the completed line where you will see it this week.",
+              content: "MY ONE ACTION\n\nThe behavior I will repeat: [write one observable behavior]\nWhere I will use it: [real situation]\nI will know it worked when: [visible finish line]\nMy review date: [date]",
+            },
+          },
+        },
+        diagnostic: {
+          responsePattern: "You see the work clearly, but competing priorities and invisible proof weaken follow-through.",
+          strongestSignal: {
+            title: "Priority clarity",
+            description: "Your answers show that choosing one move is the highest-leverage change.",
+            normalizedScore: 88,
+            direction: "high",
+            label: "Strong signal",
+          },
+          dimensions: [
+            {
+              title: "Priority clarity",
+              description: "How clearly one next move stands above the rest.",
+              normalizedScore: 88,
+              direction: "high",
+              label: "Needs immediate focus",
+            },
+            {
+              title: "Visible proof",
+              description: "How clearly completion can be verified.",
+              normalizedScore: 72,
+              direction: "high",
+              label: "Needs a finish line",
+            },
+          ],
+          answerEvidence: [
+            {
+              question: "What happens after the call?",
+              answer: "Everything feels equally important.",
+              answerInsight: "Competing priorities are preventing a clear first action.",
+              evidence: "Follow-through improves when one commitment becomes visibly primary.",
+            },
+            {
+              question: "How is completion verified?",
+              answer: "There is no visible proof.",
+              answerInsight: "Without a finish line, progress stays subjective.",
+              evidence: "A saved artifact or observable behavior makes completion unambiguous.",
+            },
+          ],
         },
         gift: {
           title: "Weekly Reset Sheet",
@@ -182,8 +274,27 @@ test("a public quiz completes the question, lead, result, gift, and CTA journey"
   await page.getByRole("button", { name: "Reveal my result" }).click();
 
   await expect(page.getByRole("heading", { name: "The Priority Pile-Up" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "What your answers revealed" })).toBeVisible();
+  await expect(page.getByText("Strongest signal", { exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Priority clarity", exact: true }).first()).toBeVisible();
+  await expect(page.getByRole("progressbar", { name: "Priority clarity" })).toHaveAttribute("aria-valuenow", "88");
+  await expect(page.getByRole("heading", { name: "Why this is your result" })).toBeVisible();
+  await page.getByText("What happens after the call?", { exact: true }).click();
+  await expect(page.getByText("Your answer: Everything feels equally important.")).toBeVisible();
+  await expect(page.getByText("Competing priorities are preventing a clear first action.")).toBeVisible();
+  await expect(page.getByText("Do this first", { exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Choose one visible commitment" })).toBeVisible();
+  await expect(page.getByText("Ready-to-use tool", { exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "One-action follow-through worksheet" })).toBeVisible();
+  await expect(page.getByText("Copy tool", { exact: true })).toBeVisible();
+  await expect(page.locator("pre").filter({ hasText: "The behavior I will repeat: [write one observable behavior]" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Your ordered action plan" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Name the finish line" })).toBeVisible();
   await expect(page.getByRole("link", { name: "Get the reset sheet" })).toHaveAttribute("href", "https://example.com/reset");
   await expect(page.getByRole("link", { name: "Build the system" })).toHaveAttribute("href", "https://example.com/system");
+  await expect(page.getByText("Why it fits:")).toBeVisible();
+  await expect(page.getByText("Why now:")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Print or save PDF" })).toBeVisible();
   expect(completionBody).toEqual({
     attemptId,
     answers: { focus: "too_many", proof: "invisible" },
@@ -191,6 +302,125 @@ test("a public quiz completes the question, lead, result, gift, and CTA journey"
     email: "jordan@example.com",
   });
   await expect(page).toHaveURL(new RegExp(`attemptId=${attemptId}`));
+  await expectNoHorizontalOverflow(page);
+});
+
+test("a public guide saves workbook progress across reload and can reset it", async ({ page }) => {
+  await page.route("**/api/guide/303/public", (route) => route.fulfill({
+    status: 200,
+    contentType: "application/json",
+    body: JSON.stringify({
+      guide: {
+        id: 303,
+        title: "The One-Move Follow-Through Workbook",
+        description: "Turn one priority into visible proof.",
+        views: 12,
+        content: {
+          schemaVersion: 2,
+          format: "workbook",
+          title: "The One-Move Follow-Through Workbook",
+          promise: "Leave with one protected commitment and a finish line anyone can verify.",
+          introduction: "Use this workbook to reduce competing priorities and make follow-through visible.",
+          quickStart: {
+            desiredOutcome: "Choose and protect the most useful next action.",
+            timeRequired: "15 minutes",
+            prerequisites: ["Your current task list"],
+            firstAction: "Circle the one action that matters most.",
+          },
+          sections: [
+            {
+              id: "commitment",
+              title: "Make the commitment visible",
+              content: "A useful commitment has one action and one observable finish line.",
+              type: "tip",
+              objective: "Turn an intention into a verifiable commitment.",
+              blocks: [
+                {
+                  type: "checklist",
+                  title: "Commitment check",
+                  items: [
+                    {
+                      id: "one_move",
+                      text: "Define the one visible commitment",
+                      why: "One priority removes competition.",
+                      evidence: "The commitment is written in one sentence.",
+                      required: true,
+                    },
+                    {
+                      id: "finish_line",
+                      text: "Name the finish line",
+                      why: "Visible proof makes completion objective.",
+                      evidence: "Another person can verify completion.",
+                      required: true,
+                    },
+                  ],
+                },
+                {
+                  type: "worksheet",
+                  title: "Put it into practice",
+                  instructions: "Write the action you will protect this week.",
+                  prompts: [
+                    {
+                      id: "next_action",
+                      prompt: "What is the next visible action?",
+                      responseType: "long_text",
+                      placeholder: "Write one concrete action",
+                    },
+                  ],
+                },
+              ],
+            },
+          ],
+          conclusion: "Keep the commitment visible until the proof exists.",
+          callToAction: "Protect the action on your calendar now.",
+        },
+      },
+      branding: {
+        companyName: "Northstar Coaching",
+        tagline: "Make progress visible",
+        primaryColor: "#173F5F",
+        secondaryColor: "#158A63",
+        accentColor: "#E79B32",
+      },
+    }),
+  }));
+  await page.route("**/api/guides/303/view", (route) => route.fulfill({
+    status: 200,
+    contentType: "application/json",
+    body: JSON.stringify({ ok: true }),
+  }));
+
+  await page.goto("/guide/303");
+  await expect(page.getByRole("heading", { name: "The One-Move Follow-Through Workbook" })).toBeVisible();
+  await expect(page.getByRole("progressbar", { name: "Completed guide activities" })).toHaveAttribute("aria-valuenow", "0");
+
+  const commitmentItem = page.getByRole("button", { name: /Define the one visible commitment/ });
+  await commitmentItem.click();
+  await page.getByLabel("What is the next visible action?").fill("Schedule the client recap before noon.");
+  await expect(page.getByRole("progressbar", { name: "Completed guide activities" })).toHaveAttribute("aria-valuenow", "2");
+  await expect.poll(() => page.evaluate(() =>
+    Object.values(window.localStorage).some((value) =>
+      value.includes("Schedule the client recap before noon."),
+    ),
+  )).toBe(true);
+
+  await page.reload();
+  await expect(page.getByRole("button", { name: /Define the one visible commitment/ })).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByLabel("What is the next visible action?")).toHaveValue("Schedule the client recap before noon.");
+  await expect(page.getByRole("progressbar", { name: "Completed guide activities" })).toHaveAttribute("aria-valuenow", "2");
+
+  page.once("dialog", (dialog) => dialog.accept());
+  await page.getByRole("button", { name: "Reset progress" }).click();
+  await expect(page.getByRole("button", { name: /Define the one visible commitment/ })).toHaveAttribute("aria-pressed", "false");
+  await expect(page.getByLabel("What is the next visible action?")).toHaveValue("");
+  await expect(page.getByRole("progressbar", { name: "Completed guide activities" })).toHaveAttribute("aria-valuenow", "0");
+
+  await page.reload();
+  await expect(page.getByRole("button", { name: /Define the one visible commitment/ })).toHaveAttribute("aria-pressed", "false");
+  await expect(page.getByLabel("What is the next visible action?")).toHaveValue("");
+  await expect(page.getByRole("progressbar", { name: "Completed guide activities" })).toHaveAttribute("aria-valuenow", "0");
+  await expect(page.getByRole("button", { name: "Print or save PDF" })).toBeVisible();
+  await expectNoHorizontalOverflow(page);
 });
 
 test("a public quiz gives a retryable error when starting fails", async ({ page }) => {

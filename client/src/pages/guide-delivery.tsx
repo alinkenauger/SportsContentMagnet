@@ -155,7 +155,7 @@ export default function GuideDelivery() {
 
   return (
     <div className="min-h-screen" style={{ backgroundColor, color: textColor, fontFamily: bodyFont }}>
-      <header className="border-b" style={{ backgroundColor: surfaceColor, borderColor: primaryColor + "22" }}>
+      <header className="border-b print:hidden" style={{ backgroundColor: surfaceColor, borderColor: primaryColor + "22" }}>
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-4 sm:px-6">
           <div className="flex min-w-0 items-center gap-3">
             {logoUrl ? (
@@ -198,9 +198,9 @@ export default function GuideDelivery() {
         </div>
       </header>
 
-      <main className="mx-auto max-w-5xl px-4 py-8 sm:px-6 sm:py-12">
+      <main className="mx-auto max-w-5xl px-4 py-8 print:max-w-none print:p-0 sm:px-6 sm:py-12">
         <section
-          className="mb-6 flex items-start gap-4 border p-4 sm:items-center sm:p-5"
+          className="mb-6 flex items-start gap-4 border p-4 print:hidden sm:items-center sm:p-5"
           style={{
             borderRadius: "16px",
             borderColor: secondaryColor + "35",
@@ -224,7 +224,7 @@ export default function GuideDelivery() {
         </section>
 
         <div
-          className="border p-5 shadow-sm sm:p-8 lg:p-12"
+          className="border p-5 shadow-sm print:border-0 print:p-0 print:shadow-none sm:p-8 lg:p-12"
           style={{ backgroundColor: surfaceColor, borderColor: primaryColor + "20", borderRadius: "24px" }}
         >
           <GuideContentRenderer
@@ -242,7 +242,7 @@ export default function GuideDelivery() {
 
         {guide.youtubeVideoId ? (
           <details
-            className="group mt-6 border"
+            className="group mt-6 border print:hidden"
             style={{ backgroundColor: surfaceColor, borderColor: primaryColor + "20", borderRadius: "16px" }}
           >
             <summary className="flex cursor-pointer list-none items-center justify-between gap-4 px-5 py-4 font-semibold">
@@ -268,7 +268,7 @@ export default function GuideDelivery() {
         ) : null}
       </main>
 
-      <footer className="border-t" style={{ backgroundColor: surfaceColor, borderColor: primaryColor + "20" }}>
+      <footer className="border-t print:hidden" style={{ backgroundColor: surfaceColor, borderColor: primaryColor + "20" }}>
         <div className="mx-auto flex max-w-6xl flex-col gap-4 px-4 py-6 text-xs opacity-65 sm:flex-row sm:items-center sm:justify-between sm:px-6">
           <p>Published by {publicBrandName(branding)}</p>
           <div className="flex flex-wrap items-center gap-4">

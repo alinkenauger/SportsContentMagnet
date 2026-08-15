@@ -61,6 +61,7 @@ import {
   inferGuideFormatFromTemplate,
   type GuideCreationBrief,
 } from "@shared/guideContent";
+import { GuideQualityError } from "./services/guideQuality";
 import Stripe from "stripe";
 // import pdf from 'pdf-parse'; // Temporarily disabled due to module issues
 
@@ -124,6 +125,14 @@ function sendBrandRouteError(res: Response, error: unknown, fallback: string): v
   }
   if (error instanceof BrandAccessError) {
     res.status(error.status).json({ message: error.message });
+    return;
+  }
+  if (error instanceof GuideQualityError) {
+    res.status(422).json({
+      code: error.code,
+      message: "The source could not yet produce a publish-quality guide. Add more source detail or adjust the requested format.",
+      issues: error.audit.issues.map((issue) => ({ code: issue.code, message: issue.message })),
+    });
     return;
   }
   console.error(fallback, error);
@@ -592,6 +601,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           trainingSettings,
           selectedTemplate,
           creationBrief,
+          brandingSettings,
         );
         
         // Still need analysis for guide metadata
@@ -749,6 +759,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       if (error instanceof BrandAccessError) {
         return res.status(error.status).json({ message: error.message });
+      }
+      if (error instanceof GuideQualityError) {
+        return res.status(422).json({
+          code: error.code,
+          message: "The source could not yet produce a publish-quality guide. Add more source detail or adjust the requested format.",
+          issues: error.audit.issues.map((issue) => ({ code: issue.code, message: issue.message })),
+        });
       }
       console.error("=== GUIDE CREATION ERROR ===");
       console.error("Error details:", error);
@@ -1217,14 +1234,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const branding = await resolvePublicAppearanceForGuide(guide);
       
-      // Generate PDF (automatically uses lightweight service in deployment)
-      if (serviceConfig.useLightweightPDF) {
-        // In lightweight mode, provide helpful message
-        return res.status(503).json({ 
-          message: "PDF generation is temporarily disabled. Please contact support for alternative download options or access your guide via the web interface." 
-        });
-      }
-
+      // Lightweight deployments return a print-ready HTML workbook that can be
+      // opened in any browser and saved as PDF without a headless-browser runtime.
       const pdfBuffer = await generateGuidePDF({
         guide,
         branding: branding || undefined,

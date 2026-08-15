@@ -2,6 +2,20 @@
 
 All notable changes to VidMagnet are documented in this file.
 
+## [Unreleased]
+
+### Added
+
+- Added a deterministic Guide quality gate that audits requested format, source references, useful action density, repetition, and format-specific implementation tools; one targeted repair is allowed before a below-bar draft is rejected.
+- Added answer-aware Interactive Quiz reports with response evidence, diagnostic dimensions, a strongest signal, strengths, a bottleneck, a quick win, an ordered action plan, common corrections, and a ready-to-use takeaway tool.
+- Added branded Interactive Quiz result email, matched Benefit Library rationale, and print-or-save-PDF controls for recipient reports.
+- Added device-local Guide workbook progress for checklists and worksheets, plus reset and print-ready export behavior.
+
+### Changed
+
+- Guide creation now captures the recipient's desired outcome, available time, focus, and requested tools, then sends the generation request immediately with truthful processing status.
+- Lightweight deployments now export a complete, branded print-ready Guide workbook instead of returning a PDF-unavailable error.
+
 ## [1.1.0.0] - 2026-08-14
 
 ### Added

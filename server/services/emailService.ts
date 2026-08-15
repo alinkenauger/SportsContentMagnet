@@ -549,6 +549,67 @@ export class EmailService {
       html,
     });
   }
+
+  async sendQuizResultEmail(params: {
+    to: string;
+    firstName?: string;
+    quizTitle: string;
+    outcomeTitle: string;
+    outcomeSummary: string;
+    quickWin?: { title: string; action: string; timeframe: string };
+    resultUrl: string;
+    brandName?: string;
+    primaryColor?: string;
+    onPrimaryColor?: string;
+  }): Promise<boolean> {
+    const firstName = escapeHtml(params.firstName?.trim() || "there");
+    const quizTitle = escapeHtml(params.quizTitle);
+    const outcomeTitle = escapeHtml(params.outcomeTitle);
+    const outcomeSummary = escapeHtml(params.outcomeSummary);
+    const brandName = escapeHtml(params.brandName?.trim() || "VidMagnet");
+    const resultUrl = escapeHtml(params.resultUrl);
+    const primaryColor = /^#[0-9a-fA-F]{6}$/.test(params.primaryColor || "")
+      ? params.primaryColor
+      : "#2563EB";
+    const onPrimaryColor = /^#[0-9a-fA-F]{6}$/.test(params.onPrimaryColor || "")
+      ? params.onPrimaryColor
+      : "#FFFFFF";
+    const quickWin = params.quickWin
+      ? `<div style="margin:24px 0;padding:18px;border:1px solid #dbe4f0;border-radius:14px;background:#f8fafc;">
+          <p style="margin:0 0 6px;color:#64748b;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;">Do this first · ${escapeHtml(params.quickWin.timeframe)}</p>
+          <h3 style="margin:0 0 8px;color:#0f172a;">${escapeHtml(params.quickWin.title)}</h3>
+          <p style="margin:0;color:#334155;line-height:1.65;">${escapeHtml(params.quickWin.action)}</p>
+        </div>`
+      : "";
+    const html = `<!doctype html>
+      <html><body style="margin:0;background:#f1f5f9;font-family:Arial,sans-serif;color:#0f172a;">
+        <div style="max-width:620px;margin:0 auto;padding:28px 16px;">
+          <div style="overflow:hidden;border-radius:18px;background:#ffffff;box-shadow:0 10px 30px rgba(15,23,42,.08);">
+            <div style="padding:30px;background:${primaryColor};color:${onPrimaryColor};">
+              <p style="margin:0 0 10px;font-size:13px;font-weight:700;opacity:.78;">${brandName} · Interactive Quiz</p>
+              <h1 style="margin:0;font-size:28px;line-height:1.18;">Your result is ready</h1>
+            </div>
+            <div style="padding:30px;">
+              <p style="margin:0 0 18px;color:#475569;">Hi ${firstName},</p>
+              <p style="margin:0 0 8px;color:#64748b;font-size:13px;font-weight:700;">${quizTitle}</p>
+              <h2 style="margin:0 0 10px;font-size:24px;">${outcomeTitle}</h2>
+              <p style="margin:0;color:#334155;line-height:1.7;">${outcomeSummary}</p>
+              ${quickWin}
+              <p style="margin:24px 0 0;text-align:center;">
+                <a href="${resultUrl}" style="display:inline-block;padding:13px 22px;border-radius:10px;background:${primaryColor};color:${onPrimaryColor};font-weight:700;text-decoration:none;">Open my full diagnostic report</a>
+              </p>
+              <p style="margin:22px 0 0;color:#64748b;font-size:12px;line-height:1.6;">Keep this email to return to your result, answer evidence, action plan, and matched resources.</p>
+            </div>
+          </div>
+        </div>
+      </body></html>`;
+
+    return this.sendEmail({
+      to: params.to,
+      subject: sanitizeEmailSubject(`${params.outcomeTitle} — your ${params.quizTitle} result`),
+      html,
+    });
+  }
 }
 
 export class HighLevelService {

@@ -5,6 +5,7 @@ import { z } from "zod";
 import {
   benefitAssetCreateSchema,
   benefitAssetUpdateSchema,
+  composeQuizResultSnapshotV2,
   completeQuizRequestSchema,
   normalizeStoredQuizLeadCapture,
   publicQuizResultFromSnapshot,
@@ -74,6 +75,100 @@ function validQuiz(): QuizDefinition {
       fontFamily: "Inter",
     },
   };
+}
+
+function validAnswerAwareQuiz(): QuizDefinition {
+  const quiz = validQuiz();
+  quiz.dimensions = [
+    {
+      id: "readiness",
+      title: "Readiness",
+      description: "How prepared the participant is to move from foundations to refinement.",
+      lowLabel: "Foundation first",
+      highLabel: "Ready to optimize",
+    },
+    {
+      id: "execution",
+      title: "Execution clarity",
+      description: "How clearly the participant can turn the idea into action.",
+      lowLabel: "Needs a concrete plan",
+      highLabel: "Clear execution path",
+    },
+  ];
+
+  const optionSignals = {
+    foundation: {
+      answerInsight: "You are prioritizing a stable foundation before adding complexity.",
+      evidence: "The source recommends securing the core behavior before refinement.",
+      dimensionWeights: { readiness: -2, execution: -1 },
+    },
+    details: {
+      answerInsight: "You already have a foundation and are looking for leverage in the details.",
+      evidence: "Choosing refinement signals that the core behavior is already repeatable.",
+      dimensionWeights: { readiness: 2, execution: 1 },
+    },
+    low: {
+      answerInsight: "Your next move needs more structure and a visible finish line.",
+      evidence: "Low confidence is most actionable when converted into an observable step.",
+      dimensionWeights: { readiness: -1, execution: -2 },
+    },
+    high: {
+      answerInsight: "You can move quickly once the highest-leverage adjustment is named.",
+      evidence: "High confidence makes a focused refinement more useful than another overview.",
+      dimensionWeights: { readiness: 1, execution: 2 },
+    },
+  } as const;
+
+  quiz.questions.forEach((question) => {
+    question.options.forEach((option) => {
+      Object.assign(option, optionSignals[option.id as keyof typeof optionSignals]);
+    });
+  });
+
+  quiz.outcomes.forEach((outcome) => {
+    outcome.prescription = {
+      strengths: ["You can identify the part of the process that deserves attention."],
+      bottleneck: "The next action is not yet specific enough to repeat.",
+      opportunity: "Turn the diagnosis into one observable behavior this week.",
+      watchout: "Adding more ideas before the first behavior is stable will dilute progress.",
+      quickWin: {
+        title: "Name the next visible move",
+        action: "Write one action that can be completed without further interpretation.",
+        why: "A visible action removes ambiguity and creates momentum.",
+        timeframe: "Today — 10 minutes",
+        successCriteria: "The action has one owner and one observable finish line.",
+      },
+      nextSteps: [
+        {
+          title: "Practice the core behavior",
+          action: "Repeat the selected behavior in three real situations.",
+          why: "Repetition reveals whether the foundation is actually stable.",
+          timeframe: "This week",
+          successCriteria: "Three repetitions are recorded with the same success measure.",
+        },
+        {
+          title: "Review the evidence",
+          action: "Compare the three repetitions and choose one adjustment.",
+          why: "Evidence keeps the next decision focused.",
+          timeframe: "At the end of the week",
+          successCriteria: "One adjustment is selected from observed results.",
+        },
+      ],
+      mistakes: [{
+        mistake: "Changing several variables at once.",
+        correction: "Keep one behavior fixed long enough to evaluate it.",
+      }],
+      implementationAsset: {
+        type: "worksheet",
+        title: `${outcome.title} one-action worksheet`,
+        description: "Turn this result into one visible behavior with a clear finish line.",
+        instructions: "Fill in each prompt, then keep the completed line where you will see it this week.",
+        content: "MY ONE ACTION\n\nThe behavior I will repeat: [write one observable behavior]\nWhere I will use it: [real situation]\nI will know it worked when: [visible finish line]\nMy review date: [date]",
+      },
+    };
+  });
+
+  return quizDefinitionSchema.parse(quiz);
 }
 
 test("quiz contracts accept a reachable definition and optional unanswered questions", () => {
@@ -191,6 +286,167 @@ test("completed quiz snapshots project stable public outcomes without internal a
   assert.equal(result.outcome.title, "The Builder");
   assert.equal(result.gift?.url, "https://example.com/original-gift");
   assert.equal("assetId" in (result.gift || {}), false);
+});
+
+test("V1 quiz definitions and result snapshots remain valid without diagnostic fields", () => {
+  const quiz = quizDefinitionSchema.parse(validQuiz());
+  assert.equal(quiz.dimensions, undefined);
+  assert.equal(quiz.questions[0].options[0].answerInsight, undefined);
+  assert.equal(quiz.outcomes[0].prescription, undefined);
+
+  const snapshot = quizResultSnapshotSchema.parse({
+    version: 1,
+    outcome: {
+      id: "builder",
+      title: "Builder",
+      summary: "Strengthen the foundation.",
+      description: "Start with the core behavior before adding complexity.",
+      recommendations: ["Choose one foundational habit"],
+    },
+    gift: null,
+    cta: null,
+  });
+  assert.equal(snapshot.version, 1);
+});
+
+test("stored prescriptions remain valid without a ready-to-use implementation asset", () => {
+  const storedQuiz = structuredClone(validAnswerAwareQuiz());
+  storedQuiz.outcomes.forEach((outcome) => {
+    if (outcome.prescription) delete outcome.prescription.implementationAsset;
+  });
+
+  const parsed = quizDefinitionSchema.parse(storedQuiz);
+  assert.equal(parsed.outcomes[0].prescription?.implementationAsset, undefined);
+});
+
+test("implementation assets use a strict, bounded ready-to-use contract", () => {
+  const quiz = validAnswerAwareQuiz();
+  const asset = quiz.outcomes[0].prescription?.implementationAsset;
+
+  assert.equal(asset?.type, "worksheet");
+  assert.match(asset?.content || "", /MY ONE ACTION/);
+
+  const invalidType = structuredClone(quiz) as unknown as {
+    outcomes: Array<{ prescription: { implementationAsset: { type: string } } }>;
+  };
+  invalidType.outcomes[0].prescription.implementationAsset.type = "download";
+  assert.throws(() => quizDefinitionSchema.parse(invalidType), z.ZodError);
+
+  const oversized = structuredClone(quiz);
+  oversized.outcomes[0].prescription!.implementationAsset!.content = "x".repeat(8001);
+  assert.throws(() => quizDefinitionSchema.parse(oversized), z.ZodError);
+});
+
+test("V2 composition captures exact answers, normalized dimensions, and rich prescriptions", () => {
+  const quiz = validAnswerAwareQuiz();
+  const snapshot = composeQuizResultSnapshotV2({
+    definition: quiz,
+    answers: { focus: "foundation", confidence: "low" },
+    expectedOutcomeId: "builder",
+    gift: null,
+    cta: null,
+  });
+
+  assert.equal(snapshot.version, 2);
+  assert.equal(snapshot.outcome.id, "builder");
+  assert.equal(snapshot.outcome.prescription?.quickWin.timeframe, "Today — 10 minutes");
+  assert.equal(snapshot.outcome.prescription?.implementationAsset?.type, "worksheet");
+  assert.match(snapshot.outcome.prescription?.implementationAsset?.content || "", /visible finish line/);
+  assert.deepEqual(snapshot.diagnostic.outcomeScoreMap, { builder: 3, optimizer: 0 });
+  assert.deepEqual(
+    snapshot.diagnostic.answerEvidence.map((answer) => ({
+      questionId: answer.questionId,
+      optionId: answer.optionId,
+    })),
+    [
+      { questionId: "focus", optionId: "foundation" },
+      { questionId: "confidence", optionId: "low" },
+    ],
+  );
+  assert.deepEqual(
+    snapshot.diagnostic.dimensionScores.map((dimension) => ({
+      id: dimension.dimensionId,
+      raw: dimension.rawScore,
+      normalized: dimension.normalizedScore,
+      direction: dimension.direction,
+    })),
+    [
+      { id: "readiness", raw: -3, normalized: 0, direction: "low" },
+      { id: "execution", raw: -3, normalized: 0, direction: "low" },
+    ],
+  );
+  assert.equal(snapshot.diagnostic.strongestSignalDimensionId, "readiness");
+  assert.match(snapshot.diagnostic.responsePattern, /stable foundation/);
+  assert.match(snapshot.diagnostic.responsePattern, /visible finish line/);
+  assert.equal("confidence" in snapshot.diagnostic, false);
+});
+
+test("V2 public results expose useful evidence while minimizing internal scoring data", () => {
+  const snapshot = composeQuizResultSnapshotV2({
+    definition: validAnswerAwareQuiz(),
+    answers: { focus: "details", confidence: "high" },
+    expectedOutcomeId: "optimizer",
+    gift: {
+      assetId: 84,
+      title: "Optimization worksheet",
+      description: "A focused worksheet.",
+      benefitSummary: "Choose one high-leverage adjustment.",
+      url: "https://example.com/optimization",
+      buttonLabel: "Get the worksheet",
+    },
+    cta: null,
+  });
+  const result = publicQuizResultFromSnapshot(
+    "00000000-0000-4000-8000-000000000002",
+    snapshot,
+  );
+
+  assert.equal(result.diagnostic?.strongestSignal?.title, "Readiness");
+  assert.equal(result.diagnostic?.strongestSignal?.normalizedScore, 100);
+  assert.equal(result.diagnostic?.answerEvidence[0].answer, "Details");
+  assert.equal(result.outcome.prescription?.nextSteps[0].why.length! > 0, true);
+  assert.match(result.outcome.prescription?.implementationAsset?.content || "", /MY ONE ACTION/);
+  assert.equal(result.gift?.url, "https://example.com/optimization");
+
+  const serialized = JSON.stringify(result);
+  for (const privateField of [
+    "assetId",
+    "questionId",
+    "optionId",
+    "dimensionId",
+    "outcomeScoreMap",
+    "rawScore",
+    "minPossible",
+    "maxPossible",
+    "strongestSignalDimensionId",
+  ]) {
+    assert.equal(serialized.includes(`\"${privateField}\"`), false, privateField);
+  }
+});
+
+test("V2 contracts reject invalid diagnostic mappings and inconsistent selected outcomes", () => {
+  const unknownDimension = structuredClone(validAnswerAwareQuiz());
+  unknownDimension.questions[0].options[0].dimensionWeights = { unknown_dimension: 2 };
+  assert.throws(() => quizDefinitionSchema.parse(unknownDimension), z.ZodError);
+
+  const unscoredDimension = structuredClone(validAnswerAwareQuiz());
+  unscoredDimension.questions.forEach((question) => {
+    question.options.forEach((option) => {
+      option.dimensionWeights = { ...option.dimensionWeights, readiness: 0 };
+    });
+  });
+  assert.throws(() => quizDefinitionSchema.parse(unscoredDimension), z.ZodError);
+
+  assert.throws(
+    () => composeQuizResultSnapshotV2({
+      definition: validAnswerAwareQuiz(),
+      answers: { focus: "foundation", confidence: "low" },
+      expectedOutcomeId: "optimizer",
+      gift: null,
+      cta: null,
+    }),
+    (error: unknown) => error instanceof QuizScoringError && error.code === "INVALID_QUIZ",
+  );
 });
 
 test("benefit assets only accept web URLs and mutation contracts reject empty updates", () => {

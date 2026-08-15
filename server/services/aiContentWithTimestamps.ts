@@ -2,7 +2,6 @@ import OpenAI from 'openai';
 import {
   guideCreationBriefSchema,
   inferGuideFormatFromTemplate,
-  parseGeneratedGuideContent,
   type GuideContentV2,
   type GuideCreationBrief,
 } from '@shared/guideContent';
@@ -11,6 +10,13 @@ import {
   guideV2JsonShape,
   sourceGroundingRules,
 } from './guideContentPrompt';
+import {
+  buildGuideQualityRepairPrompt,
+  ensurePublishableGuide,
+  GuideQualityError,
+  guideQualityGenerationRequirements,
+  guideQualityRepairSystemPrompt,
+} from './guideQuality';
 
 interface TranscriptSegment {
   start: number;
@@ -27,6 +33,7 @@ export async function generateTimestampedContent(
   trainingSettings?: any,
   selectedTemplate?: string,
   creationBrief?: GuideCreationBrief,
+  brandingSettings?: any,
 ): Promise<GuideContentV2> {
   // Create a detailed prompt that includes both transcript and segment timing
   const segmentData = segments.map(seg => 
@@ -64,7 +71,16 @@ ${template?.analysisPrompt || 'Extract every source-supported idea that helps th
 
 ${formatCreationBrief(brief)}
 
+${guideQualityGenerationRequirements(brief.format)}
+
 ${sourceGroundingRules}
+
+BRAND CONTEXT
+- Name: ${brandingSettings?.displayName || brandingSettings?.companyName || 'Your Coach'}
+- Tagline: ${brandingSettings?.tagline || 'Not provided'}
+- Voice: ${brandingSettings?.brandVoice || 'Clear, direct, encouraging, and practical'}
+- Intended audience: ${brandingSettings?.targetAudience || brief.audience || 'Infer from the source'}
+Use this context for vocabulary, tone, and examples. It must never override source grounding or introduce unsupported claims.
 
 <source_content>
 TRANSCRIPT WITH TIMESTAMPS:
@@ -120,7 +136,53 @@ CRITICAL REQUIREMENTS:
     });
 
     const rawResult = JSON.parse(response.choices[0].message.content || '{}');
-    const result = parseGeneratedGuideContent(rawResult, brief.format);
+    const sourceTimingRanges = segments.map((segment) => ({
+      startSeconds: segment.start,
+      endSeconds: segment.end,
+    }));
+
+    const result = await ensurePublishableGuide(rawResult, async (guide, audit) => {
+      const repairPrompt = buildGuideQualityRepairPrompt({
+        brief,
+        draft: guide,
+        audit,
+        sourceContext: {
+          title: videoData.title || "Not provided",
+          creator: videoData.channelTitle || "Not provided",
+          duration: videoData.duration || "Not provided",
+          timestampedTranscript: segments.map((segment) => ({
+            start: formatTime(segment.start),
+            startSeconds: segment.start,
+            end: formatTime(segment.end),
+            endSeconds: segment.end,
+            text: segment.text.trim(),
+          })),
+          fullTranscript: transcript,
+        },
+      });
+
+      const repairResponse = await openai.chat.completions.create({
+        model: "gpt-4o",
+        messages: [
+          {
+            role: "system",
+            content: guideQualityRepairSystemPrompt,
+          },
+          {
+            role: "user",
+            content: repairPrompt,
+          },
+        ],
+        response_format: { type: "json_object" },
+        max_tokens: 7000,
+        temperature: 0.2,
+      });
+
+      return JSON.parse(repairResponse.choices[0].message.content || "{}");
+    }, {
+      expectedFormat: brief.format,
+      sourceTimingRanges,
+    });
 
     result.sections.sort((first, second) =>
       (first.timestampSeconds ?? Number.MAX_SAFE_INTEGER) -
@@ -130,6 +192,7 @@ CRITICAL REQUIREMENTS:
     return result;
   } catch (error) {
     console.error('Error generating timestamped content:', error);
+    if (error instanceof GuideQualityError) throw error;
     throw new Error('Failed to generate timestamped content');
   }
 }

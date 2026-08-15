@@ -4,17 +4,24 @@ import { useParams } from "wouter";
 import {
   ArrowLeft,
   ArrowRight,
+  BarChart3,
   Check,
   CheckCircle2,
+  Clock3,
+  Copy,
   Download,
   ExternalLink,
   Gift,
+  Lightbulb,
   Loader2,
   LockKeyhole,
   Mail,
+  Printer,
   RotateCcw,
+  ShieldAlert,
   Sparkles,
   Target,
+  TrendingUp,
 } from "lucide-react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -104,6 +111,39 @@ interface ResultAction {
   label?: string;
 }
 
+interface PrescriptionStep {
+  title: string;
+  action: string;
+  why: string;
+  timeframe: string;
+  successCriteria: string;
+}
+
+interface OutcomePrescription {
+  strengths: string[];
+  bottleneck: string;
+  opportunity: string;
+  watchout: string;
+  quickWin: PrescriptionStep;
+  nextSteps: PrescriptionStep[];
+  mistakes: Array<{ mistake: string; correction: string }>;
+  implementationAsset?: {
+    type: "script" | "template" | "checklist" | "worksheet";
+    title: string;
+    description: string;
+    instructions: string;
+    content: string;
+  };
+}
+
+interface DiagnosticDimension {
+  title: string;
+  description: string;
+  normalizedScore: number;
+  direction: "low" | "balanced" | "high";
+  label: string;
+}
+
 interface PublicQuizResult {
   attemptId: string;
   outcome: {
@@ -112,6 +152,18 @@ interface PublicQuizResult {
     summary: string;
     description: string;
     recommendations: string[];
+    prescription?: OutcomePrescription;
+  };
+  diagnostic?: {
+    responsePattern: string;
+    strongestSignal: DiagnosticDimension | null;
+    dimensions: DiagnosticDimension[];
+    answerEvidence: Array<{
+      question: string;
+      answer: string;
+      answerInsight?: string;
+      evidence?: string;
+    }>;
   };
   gift?: ResultAction | null;
   cta?: ResultAction | null;
@@ -166,6 +218,40 @@ function actionSummary(action: ResultAction | null | undefined) {
   return action?.benefitSummary || action?.summary || action?.description || "";
 }
 
+function clampScore(score: number) {
+  return Math.max(0, Math.min(100, Math.round(score)));
+}
+
+async function copyTextToClipboard(value: string) {
+  if (navigator.clipboard?.writeText) {
+    try {
+      await navigator.clipboard.writeText(value);
+      return;
+    } catch {
+      // Fall back for browsers that expose the API but block it outside HTTPS.
+    }
+  }
+
+  const textarea = document.createElement("textarea");
+  textarea.value = value;
+  textarea.setAttribute("readonly", "");
+  textarea.style.position = "fixed";
+  textarea.style.opacity = "0";
+  const previouslyFocused = document.activeElement instanceof HTMLElement
+    ? document.activeElement
+    : null;
+  document.body.appendChild(textarea);
+  let copied = false;
+  try {
+    textarea.select();
+    copied = document.execCommand("copy");
+  } finally {
+    textarea.remove();
+    previouslyFocused?.focus();
+  }
+  if (!copied) throw new Error("Copy was blocked by the browser");
+}
+
 export default function QuizRunner() {
   const { customUrl } = useParams<{ customUrl: string }>();
   const { toast } = useToast();
@@ -183,6 +269,7 @@ export default function QuizRunner() {
   const [email, setEmail] = useState("");
   const [result, setResult] = useState<PublicQuizResult | null>(null);
   const [inlineError, setInlineError] = useState<string | null>(null);
+  const [implementationAssetCopied, setImplementationAssetCopied] = useState(false);
 
   const quizQuery = useQuery<PublicQuizPayload, Error>({
     queryKey: ["/api/public/quizzes", customUrl],
@@ -395,7 +482,31 @@ export default function QuizRunner() {
     setQuestionIndex(0);
     setResult(null);
     setInlineError(null);
+    setImplementationAssetCopied(false);
     setStage("welcome");
+  };
+
+  const copyImplementationAsset = async () => {
+    const asset = result?.outcome.prescription?.implementationAsset;
+    if (!asset) return;
+
+    try {
+      await copyTextToClipboard(
+        `${asset.title}\n\nHow to use it:\n${asset.instructions}\n\n${asset.content}`,
+      );
+      setImplementationAssetCopied(true);
+      toast({
+        title: "Ready-to-use tool copied",
+        description: "Paste it wherever you plan, write, or work.",
+      });
+      window.setTimeout(() => setImplementationAssetCopied(false), 2500);
+    } catch {
+      toast({
+        title: "Copy was blocked",
+        description: "Select the tool text and copy it manually.",
+        variant: "destructive",
+      });
+    }
   };
 
   if (quizQuery.isLoading || (initialResultId && resultQuery.isLoading)) {
@@ -451,6 +562,12 @@ export default function QuizRunner() {
 
   return (
     <div className="min-h-screen text-slate-900" style={pageStyles}>
+      <style>{`
+        @media print {
+          .quiz-answer-evidence summary { display: none !important; }
+          .quiz-answer-evidence > div { display: block !important; }
+        }
+      `}</style>
       <header className="border-b border-slate-200/80 bg-white/95 backdrop-blur">
         <div className="mx-auto flex max-w-4xl items-center justify-between gap-4 px-4 py-4 sm:px-6">
           <div className="flex min-w-0 items-center gap-3">
@@ -804,7 +921,7 @@ export default function QuizRunner() {
                         <Sparkles className="h-7 w-7" />
                       </div>
                       <Badge variant="outline" className="mb-4 border-blue-200 bg-blue-50 text-blue-700">
-                        Your personalized result
+                        {firstName.trim() ? `${firstName.trim()}, here is your result` : "Your personalized result"}
                       </Badge>
                       <h1
                         ref={headingRef}
@@ -825,7 +942,252 @@ export default function QuizRunner() {
                       </p>
                     </div>
 
-                    {result.outcome.recommendations?.length > 0 && (
+                    {result.diagnostic && (
+                      <div className="mt-10 space-y-9">
+                        <section aria-labelledby="response-pattern-heading">
+                          <div className="flex items-center gap-2 text-blue-700">
+                            <BarChart3 className="h-5 w-5" aria-hidden="true" />
+                            <h2 id="response-pattern-heading" className="text-xl font-bold text-slate-950">
+                              What your answers revealed
+                            </h2>
+                          </div>
+                          <p className="mt-3 text-base leading-7 text-slate-700">
+                            {result.diagnostic.responsePattern}
+                          </p>
+                        </section>
+
+                        {result.diagnostic.strongestSignal && (
+                          <section
+                            className="rounded-2xl border p-5 sm:p-6"
+                            style={{ borderColor: `${secondaryColor}45`, backgroundColor: `${secondaryColor}0D` }}
+                            aria-labelledby="strongest-signal-heading"
+                          >
+                            <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+                              <div className="max-w-xl">
+                                <p className="text-xs font-bold uppercase tracking-[0.16em]" style={{ color: secondaryColor }}>
+                                  Strongest signal
+                                </p>
+                                <h2 id="strongest-signal-heading" className="mt-2 text-xl font-bold text-slate-950">
+                                  {result.diagnostic.strongestSignal.title}
+                                </h2>
+                                <p className="mt-2 leading-6 text-slate-600">
+                                  {result.diagnostic.strongestSignal.label}. {result.diagnostic.strongestSignal.description}
+                                </p>
+                              </div>
+                              <div
+                                className="grid h-24 w-24 shrink-0 place-items-center rounded-full border-[10px] bg-white text-center"
+                                style={{ borderColor: `${secondaryColor}35` }}
+                                aria-label={`${result.diagnostic.strongestSignal.normalizedScore} out of 100 response signal`}
+                              >
+                                <span>
+                                  <strong className="block text-2xl text-slate-950">
+                                    {clampScore(result.diagnostic.strongestSignal.normalizedScore)}
+                                  </strong>
+                                  <span className="text-[10px] font-bold uppercase tracking-wide text-slate-500">signal</span>
+                                </span>
+                              </div>
+                            </div>
+                          </section>
+                        )}
+
+                        {result.diagnostic.dimensions.length > 0 && (
+                          <section aria-labelledby="dimension-heading">
+                            <h2 id="dimension-heading" className="text-xl font-bold text-slate-950">Your response pattern</h2>
+                            <p className="mt-2 text-sm leading-6 text-slate-500">
+                              These are relative signals from your answers—not a clinical score or guarantee.
+                            </p>
+                            <div className="mt-5 divide-y divide-slate-200 border-y border-slate-200">
+                              {result.diagnostic.dimensions.map((dimension) => {
+                                const score = clampScore(dimension.normalizedScore);
+                                return (
+                                  <div key={dimension.title} className="py-5">
+                                    <div className="flex items-start justify-between gap-4">
+                                      <div>
+                                        <h3 className="font-bold text-slate-900">{dimension.title}</h3>
+                                        <p className="mt-1 text-sm leading-6 text-slate-600">{dimension.label}</p>
+                                      </div>
+                                      <span className="text-lg font-bold text-slate-900">{score}</span>
+                                    </div>
+                                    <div
+                                      className="mt-3 h-2 overflow-hidden rounded-full bg-slate-100"
+                                      role="progressbar"
+                                      aria-label={dimension.title}
+                                      aria-valuemin={0}
+                                      aria-valuemax={100}
+                                      aria-valuenow={score}
+                                    >
+                                      <div className="h-full rounded-full" style={{ width: `${score}%`, backgroundColor: primaryColor }} />
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </section>
+                        )}
+
+                        {result.diagnostic.answerEvidence.length > 0 && (
+                          <section aria-labelledby="evidence-heading">
+                            <h2 id="evidence-heading" className="text-xl font-bold text-slate-950">Why this is your result</h2>
+                            <div className="mt-4 divide-y divide-slate-200 border-y border-slate-200">
+                              {result.diagnostic.answerEvidence.map((item, index) => (
+                                <details key={`${item.question}-${index}`} className="quiz-answer-evidence group py-4">
+                                  <summary className="flex cursor-pointer list-none items-start justify-between gap-4 font-semibold text-slate-900">
+                                    <span>{item.question}</span>
+                                    <span className="shrink-0 text-xs font-medium text-slate-500 group-open:hidden">Show why</span>
+                                  </summary>
+                                  <div className="mt-3 border-l-2 pl-4" style={{ borderColor: `${primaryColor}55` }}>
+                                    <p className="text-sm font-semibold text-slate-700">Your answer: {item.answer}</p>
+                                    {item.answerInsight && <p className="mt-2 text-sm leading-6 text-slate-600">{item.answerInsight}</p>}
+                                    {item.evidence && <p className="mt-2 text-xs leading-5 text-slate-500"><strong>Why it matters:</strong> {item.evidence}</p>}
+                                  </div>
+                                </details>
+                              ))}
+                            </div>
+                          </section>
+                        )}
+                      </div>
+                    )}
+
+                    {result.outcome.prescription && (
+                      <div className="mt-12 space-y-10">
+                        <section className="grid gap-6 md:grid-cols-2" aria-label="Diagnosis">
+                          <div className="border-t-2 pt-4" style={{ borderColor: secondaryColor }}>
+                            <div className="flex items-center gap-2">
+                              <TrendingUp className="h-5 w-5" style={{ color: secondaryColor }} aria-hidden="true" />
+                              <h2 className="text-lg font-bold text-slate-950">Strengths to use</h2>
+                            </div>
+                            <ul className="mt-3 space-y-2 text-sm leading-6 text-slate-700">
+                              {result.outcome.prescription.strengths.map((strength) => (
+                                <li key={strength} className="flex gap-2"><Check className="mt-1 h-4 w-4 shrink-0" style={{ color: secondaryColor }} />{strength}</li>
+                              ))}
+                            </ul>
+                          </div>
+                          <div className="border-t-2 pt-4" style={{ borderColor: accentColor }}>
+                            <div className="flex items-center gap-2">
+                              <Target className="h-5 w-5" style={{ color: accentColor }} aria-hidden="true" />
+                              <h2 className="text-lg font-bold text-slate-950">Primary bottleneck</h2>
+                            </div>
+                            <p className="mt-3 text-sm leading-6 text-slate-700">{result.outcome.prescription.bottleneck}</p>
+                            <p className="mt-3 text-sm leading-6 text-slate-600"><strong>Opportunity:</strong> {result.outcome.prescription.opportunity}</p>
+                          </div>
+                        </section>
+
+                        <section
+                          className="rounded-2xl p-6 text-white sm:p-7"
+                          style={{ backgroundColor: primaryColor }}
+                          aria-labelledby="quick-win-heading"
+                        >
+                          <div className="flex flex-wrap items-center justify-between gap-3">
+                            <p className="text-xs font-bold uppercase tracking-[0.16em] text-white/70">Do this first</p>
+                            <span className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-xs font-semibold">
+                              <Clock3 className="h-3.5 w-3.5" />
+                              {result.outcome.prescription.quickWin.timeframe}
+                            </span>
+                          </div>
+                          <h2 id="quick-win-heading" className="mt-3 text-2xl font-bold">{result.outcome.prescription.quickWin.title}</h2>
+                          <p className="mt-3 leading-7 text-white/90">{result.outcome.prescription.quickWin.action}</p>
+                          <div className="mt-5 grid gap-4 border-t border-white/20 pt-5 sm:grid-cols-2">
+                            <p className="text-sm leading-6 text-white/80"><strong className="text-white">Why:</strong> {result.outcome.prescription.quickWin.why}</p>
+                            <p className="text-sm leading-6 text-white/80"><strong className="text-white">You are done when:</strong> {result.outcome.prescription.quickWin.successCriteria}</p>
+                          </div>
+                        </section>
+
+                        {result.outcome.prescription.implementationAsset && (
+                          <section
+                            className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"
+                            aria-labelledby="implementation-asset-heading"
+                          >
+                            <div className="border-b border-slate-200 bg-gradient-to-r from-slate-50 to-white p-5 sm:p-6">
+                              <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                                <div>
+                                  <div className="flex flex-wrap items-center gap-2">
+                                    <Badge
+                                      variant="outline"
+                                      className="bg-white text-slate-700 hover:bg-white"
+                                      style={{ borderColor: `${secondaryColor}80` }}
+                                    >
+                                      Ready-to-use tool
+                                    </Badge>
+                                    <span className="text-xs font-bold uppercase tracking-[0.14em] text-slate-500">
+                                      {result.outcome.prescription.implementationAsset.type}
+                                    </span>
+                                  </div>
+                                  <h2 id="implementation-asset-heading" className="mt-3 text-2xl font-bold text-slate-950">
+                                    {result.outcome.prescription.implementationAsset.title}
+                                  </h2>
+                                  <p className="mt-2 max-w-2xl leading-6 text-slate-600">
+                                    {result.outcome.prescription.implementationAsset.description}
+                                  </p>
+                                </div>
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  onClick={copyImplementationAsset}
+                                  className="shrink-0 print:hidden"
+                                  aria-label={`Copy ${result.outcome.prescription.implementationAsset.title}`}
+                                >
+                                  {implementationAssetCopied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                                  {implementationAssetCopied ? "Copied" : "Copy tool"}
+                                </Button>
+                              </div>
+                              <p className="mt-4 rounded-xl border border-blue-100 bg-blue-50/70 px-4 py-3 text-sm leading-6 text-blue-950">
+                                <strong>How to use it:</strong> {result.outcome.prescription.implementationAsset.instructions}
+                              </p>
+                            </div>
+                            <div className="p-5 sm:p-6">
+                              <pre className="whitespace-pre-wrap break-words font-sans text-sm leading-7 text-slate-800">{result.outcome.prescription.implementationAsset.content}</pre>
+                            </div>
+                          </section>
+                        )}
+
+                        <section aria-labelledby="plan-heading">
+                          <div className="flex items-center gap-2">
+                            <Lightbulb className="h-5 w-5" style={{ color: accentColor }} aria-hidden="true" />
+                            <h2 id="plan-heading" className="text-xl font-bold text-slate-950">Your ordered action plan</h2>
+                          </div>
+                          <ol className="mt-5 divide-y divide-slate-200 border-y border-slate-200">
+                            {result.outcome.prescription.nextSteps.map((step, index) => (
+                              <li key={`${step.title}-${index}`} className="grid gap-4 py-6 sm:grid-cols-[44px_1fr]">
+                                <span className="grid h-10 w-10 place-items-center rounded-full text-sm font-bold text-white" style={{ backgroundColor: secondaryColor }}>{index + 1}</span>
+                                <div>
+                                  <div className="flex flex-wrap items-start justify-between gap-2">
+                                    <h3 className="text-lg font-bold text-slate-900">{step.title}</h3>
+                                    <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">{step.timeframe}</span>
+                                  </div>
+                                  <p className="mt-2 leading-7 text-slate-700">{step.action}</p>
+                                  <div className="mt-3 grid gap-3 text-sm leading-6 text-slate-600 sm:grid-cols-2">
+                                    <p><strong>Why:</strong> {step.why}</p>
+                                    <p><strong>Complete when:</strong> {step.successCriteria}</p>
+                                  </div>
+                                </div>
+                              </li>
+                            ))}
+                          </ol>
+                        </section>
+
+                        {(result.outcome.prescription.watchout || result.outcome.prescription.mistakes.length > 0) && (
+                          <section className="rounded-2xl border border-amber-200 bg-amber-50 p-5 sm:p-6" aria-labelledby="watchout-heading">
+                            <div className="flex items-center gap-2 text-amber-800">
+                              <ShieldAlert className="h-5 w-5" aria-hidden="true" />
+                              <h2 id="watchout-heading" className="text-lg font-bold">What to watch for</h2>
+                            </div>
+                            {result.outcome.prescription.watchout && <p className="mt-3 leading-6 text-amber-950">{result.outcome.prescription.watchout}</p>}
+                            {result.outcome.prescription.mistakes.length > 0 && (
+                              <div className="mt-4 divide-y divide-amber-200 border-t border-amber-200">
+                                {result.outcome.prescription.mistakes.map((item) => (
+                                  <div key={item.mistake} className="grid gap-1 py-3 text-sm sm:grid-cols-2 sm:gap-5">
+                                    <p className="text-amber-950"><strong>Avoid:</strong> {item.mistake}</p>
+                                    <p className="text-amber-900"><strong>Instead:</strong> {item.correction}</p>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </section>
+                        )}
+                      </div>
+                    )}
+
+                    {!result.outcome.prescription && result.outcome.recommendations?.length > 0 && (
                       <div className="mt-9">
                         <h2 className="text-xl font-bold text-slate-950">Your recommended next steps</h2>
                         <div className="mt-4 grid gap-3">
@@ -867,6 +1229,11 @@ export default function QuizRunner() {
                             {actionSummary(result.gift) && (
                               <p className="mt-2 leading-6 text-slate-600">{actionSummary(result.gift)}</p>
                             )}
+                            {result.outcome.prescription && (
+                              <p className="mt-3 text-sm leading-6 text-amber-900">
+                                <strong>Why it fits:</strong> {result.outcome.prescription.opportunity}
+                              </p>
+                            )}
                           </div>
                         </div>
                         {result.gift.url && (
@@ -901,6 +1268,11 @@ export default function QuizRunner() {
                             {actionSummary(result.cta) && (
                               <p className="mt-2 leading-6 text-slate-600">{actionSummary(result.cta)}</p>
                             )}
+                            {result.outcome.prescription && (
+                              <p className="mt-3 text-sm leading-6 text-blue-900">
+                                <strong>Why now:</strong> This next step is matched to the primary bottleneck identified in your result.
+                              </p>
+                            )}
                           </div>
                         </div>
                         {result.cta.url && (
@@ -922,7 +1294,11 @@ export default function QuizRunner() {
                 </div>
               )}
 
-              <div className="flex justify-center py-2">
+              <div className="flex flex-wrap justify-center gap-2 py-2 print:hidden">
+                <Button variant="outline" onClick={() => window.print()}>
+                  <Printer className="h-4 w-4" />
+                  Print or save PDF
+                </Button>
                 <Button variant="ghost" onClick={resetQuiz} className="text-slate-500">
                   <RotateCcw className="h-4 w-4" />
                   Take it again

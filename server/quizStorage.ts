@@ -16,6 +16,7 @@ import {
   type QuizAttempt,
 } from "@shared/schema";
 import {
+  composeQuizResultSnapshotV2,
   normalizeStoredQuizLeadCapture,
   quizDefinitionSchema,
   quizResultSnapshotSchema,
@@ -40,6 +41,7 @@ import {
 } from "./brandAccess";
 import { resolveAppearanceForScope } from "./brandAppearance";
 import { toPublicBrandAppearance } from "@shared/branding";
+import { emailService, publicAppBaseUrl } from "./services/emailService";
 
 export class QuizStorageError extends Error {
   constructor(public readonly status: number, message: string) {
@@ -77,9 +79,17 @@ function slugify(value: string): string {
 }
 
 function parseQuizDefinition(guide: Guide, quiz: Quiz): QuizDefinition {
+  const guideContent = guide.content && typeof guide.content === "object" && !Array.isArray(guide.content)
+    ? guide.content as Record<string, unknown>
+    : {};
+  const storedDimensions = Array.isArray(guideContent.quizDimensions)
+    && guideContent.quizDimensions.length > 0
+    ? guideContent.quizDimensions
+    : undefined;
   return quizDefinitionSchema.parse({
     title: guide.title,
     description: guide.description || "Take this quiz to discover your best next step.",
+    ...(storedDimensions ? { dimensions: storedDimensions } : {}),
     questions: quiz.questions,
     outcomes: quiz.outcomes,
     leadCapture: normalizeStoredQuizLeadCapture(quiz.leadCapture),
@@ -108,6 +118,7 @@ function toPublicQuizOutcome(outcome: QuizDefinition["outcomes"][number]): Publi
     summary: outcome.summary,
     description: outcome.description,
     recommendations: outcome.recommendations,
+    ...(outcome.prescription ? { prescription: outcome.prescription } : {}),
   };
 }
 
@@ -205,6 +216,9 @@ export async function createQuizFunnel(params: {
       content: {
         title: params.definition.title,
         description: params.definition.description,
+        ...(params.definition.dimensions
+          ? { quizDimensions: params.definition.dimensions }
+          : {}),
       },
       category: "quiz",
       tags: ["quiz"],
@@ -258,9 +272,20 @@ export async function updateQuizForUser(
   await validateOutcomeAssets(userId, bundle.quiz.brandId, definition);
 
   await db.transaction(async (tx) => {
+    const currentGuideContent = bundle.guide.content
+      && typeof bundle.guide.content === "object"
+      && !Array.isArray(bundle.guide.content)
+      ? bundle.guide.content as Record<string, unknown>
+      : {};
     await tx.update(guides).set({
       title: definition.title,
       description: definition.description,
+      content: {
+        ...currentGuideContent,
+        title: definition.title,
+        description: definition.description,
+        ...(definition.dimensions ? { quizDimensions: definition.dimensions } : {}),
+      },
       status: "draft",
       updatedAt: new Date(),
     }).where(eq(guides.id, guideId));
@@ -581,13 +606,14 @@ export async function completeQuizAttempt(params: {
   }
 
   const resultAssets = await getResultAssets(outcome, bundle);
-  const resultSnapshot = quizResultSnapshotSchema.parse({
-    version: 1,
-    outcome: toPublicQuizOutcome(outcome),
+  const resultSnapshot = composeQuizResultSnapshotV2({
+    definition,
+    answers: params.answers,
+    expectedOutcomeId: outcome.id,
     ...resultAssets,
   });
 
-  const attempt = await db.transaction(async (tx) => {
+  const completion = await db.transaction(async (tx) => {
     const [claimed] = await tx.update(quizAttempts).set({
       answerMap: params.answers,
       scoreMap,
@@ -609,7 +635,7 @@ export async function completeQuizAttempt(params: {
         eq(quizAttempts.landingPageId, bundle.landingPage.id),
       ));
       if (!existing) throw new QuizStorageError(404, "Quiz attempt not found");
-      return existing;
+      return { attempt: existing, completedNow: false };
     }
 
     let leadId: number | null = null;
@@ -649,10 +675,37 @@ export async function completeQuizAttempt(params: {
       ...params.metadata,
     });
 
-    return { ...claimed, leadId };
+    return { attempt: { ...claimed, leadId }, completedNow: true };
   });
 
-  return buildPublicResult(attempt, definition, bundle);
+  const publicResult = await buildPublicResult(completion.attempt, definition, bundle);
+  if (completion.completedNow && params.email) {
+    const appBaseUrl = publicAppBaseUrl();
+    if (appBaseUrl) {
+      try {
+        const appearance = toPublicBrandAppearance(
+          await resolveAppearanceForScope(bundle.guide.userId, bundle.guide.brandId),
+        );
+        await emailService.sendQuizResultEmail({
+          to: params.email,
+          firstName: params.firstName,
+          quizTitle: bundle.guide.title,
+          outcomeTitle: publicResult.outcome.title,
+          outcomeSummary: publicResult.outcome.summary,
+          quickWin: publicResult.outcome.prescription?.quickWin,
+          resultUrl: `${appBaseUrl}/quiz/${encodeURIComponent(params.customUrl)}?attemptId=${encodeURIComponent(completion.attempt.id)}`,
+          brandName: appearance.displayName,
+          primaryColor: appearance.primaryColor,
+          onPrimaryColor: appearance.onPrimaryColor,
+        });
+      } catch (error) {
+        // Result delivery is valuable but must never erase a completed attempt.
+        console.error("Quiz result email failed:", error);
+      }
+    }
+  }
+
+  return publicResult;
 }
 
 async function getPublishedAttempt(attemptId: string): Promise<{

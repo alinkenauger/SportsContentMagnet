@@ -6,8 +6,8 @@ Current release: **v1.1.0.0 (2026-08-14)**. This opening section is the operatin
 
 VidMagnet turns content a creator already trusts into one of two branded lead magnets:
 
-- A **Guide** that helps a lead implement the source through concrete steps, checklists, worksheets, scorecards, templates, troubleshooting, and an action plan.
-- An **Interactive Quiz** that scores answers, captures the lead when configured, reveals a personalized result, and connects that result to a reusable free gift or call to action.
+- A **Guide** that helps a lead implement the source through concrete steps, checklists, worksheets, scorecards, templates, troubleshooting, and an action plan. Generated drafts must pass the format-specific quality gate before they are saved.
+- An **Interactive Quiz** that scores answers, captures the lead when configured, and delivers an answer-aware diagnostic report with visible evidence, response dimensions, a quick win, an ordered plan, a ready-to-use tool, and matched free gift or call to action.
 
 Creators can save appearance in Brand Studio and offers in the Benefit Library, then reuse both inside a personal or team workspace. Public recipient pages receive only safe projections; pasted source material and private creator fields are not returned by public APIs.
 
@@ -48,8 +48,8 @@ public/       Static uploads and generated public assets
 
 1. Choose the personal or brand workspace that should own the asset.
 2. Paste source content or use the verified YouTube-to-Guide path.
-3. Choose a format and creation brief. Generation produces the V2 implementation blocks while retaining legacy content compatibility.
-4. Review the landing page, recipient experience, brand appearance, and next action.
+3. Choose a format and creation brief. Generation produces the V2 implementation blocks, audits their quality, and permits one targeted repair before rejecting a below-bar draft.
+4. Review the landing page, recipient experience, brand appearance, saved workbook interactions, print-ready export, and next action.
 5. Publish or share an unlisted direct link. Unlisted Guides remain directly accessible but do not appear in public discovery.
 
 ### Create and publish an Interactive Quiz
@@ -57,7 +57,7 @@ public/       Static uploads and generated public assets
 1. Choose the owning workspace and paste at least 50 characters of source content.
 2. Generate, edit, and validate questions, outcomes, lead-capture settings, theme, and reachable answer mappings.
 3. Attach active Benefit Library items to outcomes when useful.
-4. Publish the Quiz. A public attempt is scored once and stores an immutable snapshot of its result and attached offers.
+4. Publish the Quiz. A public attempt is scored once and stores an immutable snapshot of its result, answer evidence, diagnostic dimensions, prescription, takeaway tool, and attached offers.
 
 ### Brand Studio and Benefit Library
 
@@ -100,8 +100,8 @@ The one-time build produces the bundled migration runner; run it against the con
 
 - `OPENAI_API_KEY`: required for Guide and Quiz generation.
 - `YOUTUBE_API_KEY`: used for YouTube metadata and the YouTube-to-Guide path.
-- `SENDGRID_API_KEY`: required to send password reset and cross-browser account-completion email.
-- `PUBLIC_APP_URL`: canonical absolute app origin. Production auth email requires HTTPS; if absent, the first `REPLIT_DOMAINS` host is used.
+- `SENDGRID_API_KEY`: required to send password reset, cross-browser account-completion, and captured Interactive Quiz result email.
+- `PUBLIC_APP_URL`: canonical absolute app origin used in auth and Quiz-result links. Production email requires HTTPS; if absent, the first `REPLIT_DOMAINS` host is used.
 - `SENDGRID_WELCOME_TEMPLATE_ID` and `SENDGRID_PASSWORD_RESET_TEMPLATE_ID`: optional dynamic-template overrides for those two messages; built-in HTML remains the fallback. Other current email paths use inline HTML.
 - `HIGHLEVEL_API_KEY`: optional signup CRM sync; the request is time-bounded and cannot fail account creation.
 - `VITE_STRIPE_PUBLIC_KEY`: required when building or opening the subscription page.

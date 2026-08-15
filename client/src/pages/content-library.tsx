@@ -162,8 +162,8 @@ export default function ContentLibrary() {
   const handleDownloadPDF = async (guide: Guide) => {
     try {
       toast({
-        title: "Generating PDF",
-        description: "Creating your branded guide PDF...",
+        title: "Preparing workbook",
+        description: "Creating a branded, print-ready version of your guide...",
       });
 
       const response = await fetch(`/api/guides/${guide.id}/download-pdf`, {
@@ -186,14 +186,14 @@ export default function ContentLibrary() {
         throw new Error(`Failed to download PDF: ${response.statusText}`);
       }
 
-      // Get the PDF blob
+      const isPrintHtml = response.headers.get("content-type")?.includes("text/html") ?? false;
       const blob = await response.blob();
       
       // Create download link
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `${guide.title.replace(/[^a-z0-9]/gi, '-').toLowerCase()}-guide.pdf`;
+      a.download = `${guide.title.replace(/[^a-z0-9]/gi, '-').toLowerCase()}-guide.${isPrintHtml ? "html" : "pdf"}`;
       document.body.appendChild(a);
       a.click();
       
@@ -202,8 +202,10 @@ export default function ContentLibrary() {
       document.body.removeChild(a);
 
       toast({
-        title: "PDF Downloaded",
-        description: `Your branded guide "${guide.title}" has been downloaded successfully.`,
+        title: "Workbook downloaded",
+        description: isPrintHtml
+          ? "Open it in your browser to print it or save it as a PDF."
+          : `Your branded guide "${guide.title}" has been downloaded successfully.`,
       });
     } catch (error) {
       console.error('Error downloading PDF:', error);
@@ -515,7 +517,7 @@ export default function ContentLibrary() {
                                   size="sm"
                                   onClick={() => handleDownloadPDF(guide)}
                                   className="text-orange-600 hover:text-orange-700 hover:bg-orange-50"
-                                  title="Download PDF"
+                                  title="Download printable workbook"
                                 >
                                   <Download className="w-4 h-4" />
                                 </Button>

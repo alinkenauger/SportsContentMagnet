@@ -16,6 +16,18 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Sparkles, Youtube, FileText, Settings, Zap, Info, Mic, Upload, X, Link, Radio, File } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 
+function guideCreationErrorMessage(error: unknown) {
+  if (!(error instanceof Error)) return "Failed to create the guide. Please try again.";
+  const payload = error.message.replace(/^\d+:\s*/, "");
+  try {
+    const parsed = JSON.parse(payload) as { message?: string; issues?: Array<{ message?: string }> };
+    const issue = parsed.issues?.find((candidate) => candidate.message)?.message;
+    return [parsed.message, issue].filter(Boolean).join(" ") || error.message;
+  } catch {
+    return error.message || "Failed to create the guide. Please try again.";
+  }
+}
+
 export default function CreateGuide() {
   const { toast } = useToast();
   const { user } = useAuth();
@@ -41,6 +53,9 @@ export default function CreateGuide() {
   });
   const [customSettings, setCustomSettings] = useState({
     category: "",
+    focus: "",
+    desiredOutcome: "",
+    availableTime: "",
     customInstructions: "",
     targetAudience: "",
     difficulty: "",
@@ -141,36 +156,30 @@ export default function CreateGuide() {
     setProgress(0);
     setCurrentStep("metadata");
 
-    // Simulate processing steps with realistic timing
-    const stepTimings = [
-      { step: "metadata", duration: 1500, progress: 20 },
-      { step: "transcript", duration: 3000, progress: 40 },
-      { step: "analysis", duration: 4000, progress: 70 },
-      { step: "guide", duration: 2500, progress: 90 },
-      { step: "landing", duration: 1000, progress: 100 },
-    ];
-
     try {
-      for (const { step, duration, progress: stepProgress } of stepTimings) {
-        setCurrentStep(step);
-        setProcessingSteps(prev => 
-          prev.map(s => 
-            s.id === step ? { ...s, status: "processing" } : s
-          )
-        );
-        
-        await new Promise(resolve => setTimeout(resolve, duration));
-        
-        setProgress(stepProgress);
-        setProcessingSteps(prev => 
-          prev.map(s => 
-            s.id === step ? { ...s, status: "completed" } : s
-          )
-        );
-      }
-
       // Actually create the guide - handle different input methods
+      setCurrentStep(inputMethod === "youtube" ? "transcript" : "analysis");
+      setProgress(20);
+      setProcessingSteps(prev => prev.map((step) => ({
+        ...step,
+        status: step.id === (inputMethod === "youtube" ? "transcript" : "analysis")
+          ? "processing"
+          : "pending",
+      })));
       let response;
+      const authoredTemplateInstructions = selectedTemplate === "custom"
+        ? [
+            customTemplate.name ? `Custom output: ${customTemplate.name}` : "",
+            customTemplate.description,
+            customTemplate.analysisPrompt ? `Analyze for: ${customTemplate.analysisPrompt}` : "",
+            customTemplate.guidePrompt ? `Build the output this way: ${customTemplate.guidePrompt}` : "",
+            customTemplate.personalizationPrompt ? `Adapt it this way: ${customTemplate.personalizationPrompt}` : "",
+          ].filter(Boolean).join("\n")
+        : "";
+      const effectiveCustomInstructions = [customSettings.customInstructions, authoredTemplateInstructions]
+        .filter(Boolean)
+        .join("\n\n")
+        .slice(0, 2000);
       
       if (inputMethod === "pdf" || inputMethod === "audio") {
         // Use FormData for file uploads
@@ -185,7 +194,7 @@ export default function CreateGuide() {
         }
         
         // Add custom settings to FormData
-        Object.entries(customSettings).forEach(([key, value]) => {
+        Object.entries({ ...customSettings, customInstructions: effectiveCustomInstructions }).forEach(([key, value]) => {
           formData.append(key, value.toString());
         });
         
@@ -195,14 +204,16 @@ export default function CreateGuide() {
         });
         
         if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
+          const payload = (await response.text()) || response.statusText;
+          throw new Error(`${response.status}: ${payload}`);
         }
       } else {
         // Use JSON for YouTube, manual, link, and stream methods
         const requestData: any = {
           inputMethod,
           selectedTemplate,
-          ...customSettings
+          ...customSettings,
+          customInstructions: effectiveCustomInstructions,
         };
         
         if (inputMethod === "youtube") {
@@ -224,6 +235,9 @@ export default function CreateGuide() {
       }
       
       const result = await response.json();
+      setProgress(100);
+      setCurrentStep("landing");
+      setProcessingSteps(prev => prev.map((step) => ({ ...step, status: "completed" })));
       
       toast({
         title: "Success!",
@@ -239,6 +253,9 @@ export default function CreateGuide() {
       setContentTitle("");
       setCustomSettings({
         category: "",
+        focus: "",
+        desiredOutcome: "",
+        availableTime: "",
         customInstructions: "",
         targetAudience: "",
         difficulty: "",
@@ -262,8 +279,8 @@ export default function CreateGuide() {
       }
       
       toast({
-        title: "Error",
-        description: "Failed to create guide. Please try again.",
+        title: "The guide needs another pass",
+        description: guideCreationErrorMessage(error),
         variant: "destructive",
       });
     } finally {
@@ -284,7 +301,7 @@ export default function CreateGuide() {
             <div>
               <h2 className="text-2xl font-bold text-foreground">Create New Guide</h2>
               <p className="text-muted-foreground mt-1">
-                Transform your YouTube video into a high-converting lead magnet
+                Turn one source into an implementation-ready lead magnet.
               </p>
             </div>
           </div>
@@ -614,11 +631,46 @@ export default function CreateGuide() {
                   />
                 </div>
 
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  <div>
+                    <Label htmlFor="desired-outcome">What Should They Be Able to Do?</Label>
+                    <Input
+                      id="desired-outcome"
+                      value={customSettings.desiredOutcome}
+                      onChange={(e) => setCustomSettings(prev => ({ ...prev, desiredOutcome: e.target.value }))}
+                      placeholder="e.g., Build a repeatable weekly content plan"
+                      className="mt-1"
+                    />
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      A concrete finish line produces a stronger quick win, toolkit, and action plan.
+                    </p>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="available-time">Time They Have Available</Label>
+                    <Select
+                      value={customSettings.availableTime}
+                      onValueChange={(value) => setCustomSettings(prev => ({ ...prev, availableTime: value }))}
+                    >
+                      <SelectTrigger id="available-time" className="mt-1">
+                        <SelectValue placeholder="Choose a realistic time budget" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="5 minutes">5 minutes</SelectItem>
+                        <SelectItem value="15 minutes">15 minutes</SelectItem>
+                        <SelectItem value="30 minutes">30 minutes</SelectItem>
+                        <SelectItem value="60 minutes">60 minutes</SelectItem>
+                        <SelectItem value="One week">One week</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
                 <div>
                   <Label htmlFor="focus-area">What Should the Guide Focus On? (Optional)</Label>
                   <Select 
-                    value={customSettings.customInstructions} 
-                    onValueChange={(value) => setCustomSettings(prev => ({ ...prev, customInstructions: value }))}
+                    value={customSettings.focus}
+                    onValueChange={(value) => setCustomSettings(prev => ({ ...prev, focus: value }))}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Choose what to emphasize (or leave blank for balanced guide)" />
@@ -637,6 +689,22 @@ export default function CreateGuide() {
                   </Select>
                   <p className="text-xs text-muted-foreground mt-1">
                     This helps the AI decide what to turn into steps, checklists, worksheets, scorecards, and examples. If unsure, leave it blank for a balanced approach.
+                  </p>
+                </div>
+
+                <div>
+                  <Label htmlFor="custom-instructions">What Would Make This Especially Valuable? (Optional)</Label>
+                  <Textarea
+                    id="custom-instructions"
+                    value={customSettings.customInstructions}
+                    onChange={(e) => setCustomSettings(prev => ({ ...prev, customInstructions: e.target.value }))}
+                    placeholder="e.g., Include our three-step framework, a client-facing script, a scorecard, and examples for small agencies. Avoid jargon."
+                    className="mt-1"
+                    rows={3}
+                    maxLength={2000}
+                  />
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Ask for the concrete tools, examples, vocabulary, and boundaries that make this feel like your expertise.
                   </p>
                 </div>
 

@@ -4,7 +4,6 @@ import {
   guideContentV2Schema,
   guideCreationBriefSchema,
   inferGuideFormatFromTemplate,
-  parseGeneratedGuideContent,
   type GuideContentV1,
   type GuideContentV2,
   type GuideCreationBrief,
@@ -14,6 +13,13 @@ import {
   guideV2JsonShape,
   sourceGroundingRules,
 } from "./guideContentPrompt";
+import {
+  buildGuideQualityRepairPrompt,
+  ensurePublishableGuide,
+  GuideQualityError,
+  guideQualityGenerationRequirements,
+  guideQualityRepairSystemPrompt,
+} from "./guideQuality";
 
 // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
 const openai = new OpenAI({ 
@@ -201,10 +207,16 @@ Make it actionable, detailed, and professional.`;
 
     ${formatCreationBrief(brief)}
 
+    ${guideQualityGenerationRequirements(brief.format)}
+
     ${sourceGroundingRules}
     
-    Brand Name: ${brandingSettings?.companyName || 'Your Coach'}
-    Brand Tagline: ${brandingSettings?.tagline || 'Elevate Your Game'}
+    BRAND CONTEXT
+    - Name: ${brandingSettings?.displayName || brandingSettings?.companyName || 'Your Coach'}
+    - Tagline: ${brandingSettings?.tagline || 'Not provided'}
+    - Voice: ${brandingSettings?.brandVoice || 'Clear, direct, encouraging, and practical'}
+    - Intended audience: ${brandingSettings?.targetAudience || brief.audience || 'Infer from the source'}
+    Use this context for vocabulary, tone, and examples. It must never override source grounding or introduce unsupported claims.
 
     <source_content>
     SOURCE TITLE:
@@ -230,7 +242,7 @@ Make it actionable, detailed, and professional.`;
     - Include multiple concrete block types appropriate to the requested format
     - Include specific steps and measurements only where supported by the source
     - Make it valuable enough to be worth exchanging an email for
-    - Include ${brandingSettings?.companyName || 'your coach'} branding naturally
+    - Sound recognizably like ${brandingSettings?.displayName || brandingSettings?.companyName || 'the creator'} without promotional repetition
     - Attribute the source in sourceRefs when an accurate reference exists
     - Never estimate or fabricate timestamps; omit timestamp fields when unsupported
     `;
@@ -252,9 +264,42 @@ Make it actionable, detailed, and professional.`;
     });
 
     const guide = JSON.parse(response.choices[0].message.content || '{}');
-    return parseGeneratedGuideContent(guide, brief.format);
+
+    return await ensurePublishableGuide(guide, async (draft, audit) => {
+      const repairPrompt = buildGuideQualityRepairPrompt({
+        brief,
+        draft,
+        audit,
+        sourceContext: {
+          title: videoTitle,
+          creator: channelTitle || "Not provided",
+          contentInventory: analysis,
+          body: sourceContent || "The original source is unavailable; use only the content inventory included here.",
+        },
+      });
+
+      const repairResponse = await openai.chat.completions.create({
+        model: "gpt-4o",
+        messages: [
+          {
+            role: "system",
+            content: guideQualityRepairSystemPrompt,
+          },
+          {
+            role: "user",
+            content: repairPrompt,
+          },
+        ],
+        response_format: { type: "json_object" },
+        max_tokens: 7000,
+        temperature: 0.2,
+      });
+
+      return JSON.parse(repairResponse.choices[0].message.content || "{}");
+    }, { expectedFormat: brief.format });
   } catch (error) {
     console.error("Error generating practice guide:", error);
+    if (error instanceof GuideQualityError) throw error;
     throw new Error("Failed to generate practice guide: " + (error as Error).message);
   }
 }

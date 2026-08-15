@@ -16,7 +16,8 @@ import {
   type RequestWithUser,
 } from "./requestUser";
 import { QuizGenerationError, generateQuizDefinition } from "./services/quizGenerator";
-import { BrandAccessError } from "./brandAccess";
+import { BrandAccessError, resolveBrandIdForUser } from "./brandAccess";
+import { resolveAppearanceForScope } from "./brandAppearance";
 import { createRateLimit } from "./rateLimit";
 import {
   QuizStorageError,
@@ -145,10 +146,22 @@ export function registerQuizRoutes(app: Express): void {
     quizGenerationRateLimit,
     quizRoute(async (req, res) => {
       const input = generateQuizRequestSchema.parse(req.body);
-      const definition = await generateQuizDefinition(input);
+      const userId = authenticatedUserId(req);
+      const brandId = await resolveBrandIdForUser(userId, input.brandId, "write_content");
+      const appearance = await resolveAppearanceForScope(userId, brandId);
+      const brandVoice = [appearance.brandVoice, input.brandVoice]
+        .filter((value): value is string => typeof value === "string" && value.trim().length > 0)
+        .join("\n\n")
+        .slice(0, 4000) || undefined;
+      const definition = await generateQuizDefinition({
+        ...input,
+        brandId,
+        brandVoice,
+        audience: input.audience || appearance.targetAudience || undefined,
+      });
       const bundle = await createQuizFunnel({
-        userId: authenticatedUserId(req),
-        brandId: input.brandId,
+        userId,
+        brandId,
         sourceContent: input.sourceContent,
         definition,
         themeMode: input.themeMode,

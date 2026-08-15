@@ -27,9 +27,17 @@ export const quizOptionSchema = z.object({
   id: stableIdSchema,
   label: z.string().trim().min(1).max(240),
   outcomeWeights: z.record(stableIdSchema, z.number().finite().min(-100).max(100)),
+  answerInsight: z.string().trim().min(1).max(600).optional(),
+  evidence: z.string().trim().min(1).max(600).optional(),
+  dimensionWeights: z
+    .record(stableIdSchema, z.number().finite().min(-100).max(100))
+    .optional(),
 }).strict().refine((option) => Object.keys(option.outcomeWeights).length === 1, {
   path: ["outcomeWeights"],
   message: "Each option must map to exactly one primary outcome",
+}).refine((option) => !option.dimensionWeights || Object.keys(option.dimensionWeights).length > 0, {
+  path: ["dimensionWeights"],
+  message: "Dimension weights cannot be empty when provided",
 });
 
 export const quizQuestionSchema = z.object({
@@ -38,6 +46,46 @@ export const quizQuestionSchema = z.object({
   helpText: z.string().trim().max(500).optional(),
   required: z.boolean().default(true),
   options: z.array(quizOptionSchema).min(2).max(8),
+}).strict();
+
+export const quizDiagnosticDimensionSchema = z.object({
+  id: stableIdSchema,
+  title: z.string().trim().min(1).max(160),
+  description: z.string().trim().min(1).max(600),
+  lowLabel: z.string().trim().min(1).max(120),
+  highLabel: z.string().trim().min(1).max(120),
+}).strict();
+
+export const quizPrescriptionStepSchema = z.object({
+  title: z.string().trim().min(1).max(180),
+  action: z.string().trim().min(1).max(700),
+  why: z.string().trim().min(1).max(600),
+  timeframe: z.string().trim().min(1).max(120),
+  successCriteria: z.string().trim().min(1).max(500),
+}).strict();
+
+export const quizMistakeCorrectionSchema = z.object({
+  mistake: z.string().trim().min(1).max(500),
+  correction: z.string().trim().min(1).max(500),
+}).strict();
+
+export const quizImplementationAssetSchema = z.object({
+  type: z.enum(["script", "template", "checklist", "worksheet"]),
+  title: z.string().trim().min(1).max(180),
+  description: z.string().trim().min(1).max(600),
+  instructions: z.string().trim().min(1).max(1000),
+  content: z.string().trim().min(20).max(8000),
+}).strict();
+
+export const quizOutcomePrescriptionSchema = z.object({
+  strengths: z.array(z.string().trim().min(1).max(500)).min(1).max(6),
+  bottleneck: z.string().trim().min(1).max(900),
+  opportunity: z.string().trim().min(1).max(900),
+  watchout: z.string().trim().min(1).max(700),
+  quickWin: quizPrescriptionStepSchema,
+  nextSteps: z.array(quizPrescriptionStepSchema).min(2).max(6),
+  mistakes: z.array(quizMistakeCorrectionSchema).min(1).max(6),
+  implementationAsset: quizImplementationAssetSchema.optional(),
 }).strict();
 
 export const quizOutcomeSchema = z.object({
@@ -49,6 +97,7 @@ export const quizOutcomeSchema = z.object({
   giftAssetId: z.number().int().positive().nullable().default(null),
   ctaAssetId: z.number().int().positive().nullable().default(null),
   color: z.string().regex(/^#[0-9a-fA-F]{6}$/).optional(),
+  prescription: quizOutcomePrescriptionSchema.optional(),
 }).strict();
 
 export const supportedQuizLeadCaptureFields = ["firstName", "email"] as const;
@@ -93,20 +142,31 @@ export const quizThemeModeSchema = z.enum(["brand", "custom"]);
 export const quizDefinitionSchema = z.object({
   title: z.string().trim().min(1).max(200),
   description: z.string().trim().min(1).max(2000),
+  dimensions: z.array(quizDiagnosticDimensionSchema).min(1).max(8).optional(),
   questions: z.array(quizQuestionSchema).min(2).max(20),
   outcomes: z.array(quizOutcomeSchema).min(2).max(8),
   leadCapture: quizLeadCaptureSchema,
   theme: quizThemeSchema,
 }).strict().superRefine((value, context) => {
   const outcomeIds = new Set(value.outcomes.map((outcome) => outcome.id));
+  const dimensionIds = new Set((value.dimensions || []).map((dimension) => dimension.id));
   const questionIds = new Set<string>();
   const referencedOutcomes = new Set<string>();
+  const referencedDimensions = new Set<string>();
 
   if (outcomeIds.size !== value.outcomes.length) {
     context.addIssue({
       code: z.ZodIssueCode.custom,
       path: ["outcomes"],
       message: "Outcome IDs must be unique",
+    });
+  }
+
+  if (dimensionIds.size !== (value.dimensions || []).length) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["dimensions"],
+      message: "Diagnostic dimension IDs must be unique",
     });
   }
 
@@ -151,6 +211,18 @@ export const quizDefinitionSchema = z.object({
           referencedOutcomes.add(outcomeId);
         }
       });
+
+      Object.entries(option.dimensionWeights || {}).forEach(([dimensionId, weight]) => {
+        if (!dimensionIds.has(dimensionId)) {
+          context.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ["questions", questionIndex, "options", optionIndex, "dimensionWeights", dimensionId],
+            message: `Unknown diagnostic dimension ID: ${dimensionId}`,
+          });
+        } else if (weight !== 0) {
+          referencedDimensions.add(dimensionId);
+        }
+      });
     });
   });
 
@@ -163,6 +235,16 @@ export const quizDefinitionSchema = z.object({
       });
     }
   });
+
+  (value.dimensions || []).forEach((dimension, dimensionIndex) => {
+    if (!referencedDimensions.has(dimension.id)) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["dimensions", dimensionIndex, "id"],
+        message: "Every diagnostic dimension must have at least one non-zero option weight",
+      });
+    }
+  });
 });
 
 export const generateQuizRequestSchema = z.object({
@@ -170,6 +252,7 @@ export const generateQuizRequestSchema = z.object({
   sourceContent: z.string().trim().min(50).max(100_000),
   audience: optionalTrimmedText(500),
   objective: optionalTrimmedText(500),
+  brandVoice: optionalTrimmedText(4000),
   questionCount: z.number().int().min(2).max(12).default(6),
   outcomeCount: z.number().int().min(2).max(6).default(3),
   leadCapture: quizLeadCaptureSchema.optional(),
@@ -181,6 +264,7 @@ export const generateQuizRequestSchema = z.object({
 export const updateQuizRequestSchema = z.object({
   title: z.string().trim().min(1).max(200).optional(),
   description: z.string().trim().min(1).max(2000).optional(),
+  dimensions: z.array(quizDiagnosticDimensionSchema).min(1).max(8).optional(),
   questions: z.array(quizQuestionSchema).min(2).max(20).optional(),
   outcomes: z.array(quizOutcomeSchema).min(2).max(8).optional(),
   leadCapture: quizLeadCaptureSchema.optional(),
@@ -226,6 +310,10 @@ export const benefitAssetUpdateSchema = benefitAssetCreateSchema
 
 export type QuizOption = z.infer<typeof quizOptionSchema>;
 export type QuizQuestion = z.infer<typeof quizQuestionSchema>;
+export type QuizDiagnosticDimension = z.infer<typeof quizDiagnosticDimensionSchema>;
+export type QuizPrescriptionStep = z.infer<typeof quizPrescriptionStepSchema>;
+export type QuizImplementationAsset = z.infer<typeof quizImplementationAssetSchema>;
+export type QuizOutcomePrescription = z.infer<typeof quizOutcomePrescriptionSchema>;
 export type QuizOutcome = z.infer<typeof quizOutcomeSchema>;
 export type QuizLeadCapture = z.infer<typeof quizLeadCaptureSchema>;
 export type QuizTheme = z.infer<typeof quizThemeSchema>;
@@ -297,6 +385,7 @@ export type PublicQuizOutcome = {
   summary: string;
   description: string;
   recommendations: string[];
+  prescription?: QuizOutcomePrescription;
 };
 
 const storedBenefitAssetSnapshotSchema = z.object({
@@ -314,17 +403,89 @@ const publicQuizOutcomeSnapshotSchema = z.object({
   summary: z.string().min(1).max(600),
   description: z.string().min(1).max(5000),
   recommendations: z.array(z.string().min(1).max(500)).min(1).max(12),
+  prescription: quizOutcomePrescriptionSchema.optional(),
 }).strict();
 
-/** Immutable public-facing result data captured when an attempt completes. */
-export const quizResultSnapshotSchema = z.object({
+/** Original immutable public-facing result data captured by released quizzes. */
+export const quizResultSnapshotV1Schema = z.object({
   version: z.literal(1),
   outcome: publicQuizOutcomeSnapshotSchema,
   gift: storedBenefitAssetSnapshotSchema.nullable(),
   cta: storedBenefitAssetSnapshotSchema.nullable(),
 }).strict();
 
+const quizAnswerEvidenceSnapshotSchema = z.object({
+  questionId: stableIdSchema,
+  optionId: stableIdSchema,
+  question: z.string().min(1).max(500),
+  answer: z.string().min(1).max(240),
+  answerInsight: z.string().min(1).max(600).optional(),
+  evidence: z.string().min(1).max(600).optional(),
+}).strict();
+
+const quizDimensionScoreSnapshotSchema = z.object({
+  dimensionId: stableIdSchema,
+  title: z.string().min(1).max(160),
+  description: z.string().min(1).max(600),
+  lowLabel: z.string().min(1).max(120),
+  highLabel: z.string().min(1).max(120),
+  rawScore: z.number().finite(),
+  minPossible: z.number().finite(),
+  maxPossible: z.number().finite(),
+  normalizedScore: z.number().int().min(0).max(100),
+  direction: z.enum(["low", "balanced", "high"]),
+  signalLabel: z.string().min(1).max(300),
+}).strict();
+
+/**
+ * V2 keeps the exact selected answers and score inputs needed to explain a
+ * result after its quiz definition changes. IDs stay inside the stored
+ * snapshot; public projection deliberately strips them.
+ */
+export const quizResultSnapshotV2Schema = z.object({
+  version: z.literal(2),
+  outcome: publicQuizOutcomeSnapshotSchema,
+  diagnostic: z.object({
+    responsePattern: z.string().min(1).max(2400),
+    answerEvidence: z.array(quizAnswerEvidenceSnapshotSchema).max(20),
+    dimensionScores: z.array(quizDimensionScoreSnapshotSchema).max(8),
+    strongestSignalDimensionId: stableIdSchema.nullable(),
+    outcomeScoreMap: z.record(stableIdSchema, z.number().finite()),
+  }).strict(),
+  gift: storedBenefitAssetSnapshotSchema.nullable(),
+  cta: storedBenefitAssetSnapshotSchema.nullable(),
+}).strict().superRefine((snapshot, context) => {
+  const dimensionIds = new Set(
+    snapshot.diagnostic.dimensionScores.map((dimension) => dimension.dimensionId),
+  );
+  if (
+    snapshot.diagnostic.strongestSignalDimensionId !== null
+    && !dimensionIds.has(snapshot.diagnostic.strongestSignalDimensionId)
+  ) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["diagnostic", "strongestSignalDimensionId"],
+      message: "Strongest signal must reference a stored diagnostic dimension",
+    });
+  }
+  if (!(snapshot.outcome.id in snapshot.diagnostic.outcomeScoreMap)) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["diagnostic", "outcomeScoreMap"],
+      message: "Outcome score map must include the selected outcome",
+    });
+  }
+});
+
+/** Immutable result data captured when an attempt completes. */
+export const quizResultSnapshotSchema = z.union([
+  quizResultSnapshotV1Schema,
+  quizResultSnapshotV2Schema,
+]);
+
 export type QuizResultSnapshot = z.infer<typeof quizResultSnapshotSchema>;
+export type QuizResultSnapshotV1 = z.infer<typeof quizResultSnapshotV1Schema>;
+export type QuizResultSnapshotV2 = z.infer<typeof quizResultSnapshotV2Schema>;
 
 export type PublicQuizProjection = {
   guide: {
@@ -357,6 +518,29 @@ export type PublicQuizProjection = {
 export type PublicQuizResult = {
   attemptId: string;
   outcome: PublicQuizOutcome;
+  diagnostic?: {
+    responsePattern: string;
+    strongestSignal: {
+      title: string;
+      description: string;
+      normalizedScore: number;
+      direction: "low" | "balanced" | "high";
+      label: string;
+    } | null;
+    dimensions: Array<{
+      title: string;
+      description: string;
+      normalizedScore: number;
+      direction: "low" | "balanced" | "high";
+      label: string;
+    }>;
+    answerEvidence: Array<{
+      question: string;
+      answer: string;
+      answerInsight?: string;
+      evidence?: string;
+    }>;
+  };
   gift: PublicBenefitAsset | null;
   cta: PublicBenefitAsset | null;
 };
@@ -372,11 +556,43 @@ export function publicQuizResultFromSnapshot(
     return publicAsset;
   };
 
-  return {
+  const publicResult: PublicQuizResult = {
     attemptId,
     outcome: snapshot.outcome,
     gift: snapshot.gift ? projectAsset(snapshot.gift) : null,
     cta: snapshot.cta ? projectAsset(snapshot.cta) : null,
+  };
+
+  if (snapshot.version === 1) return publicResult;
+
+  const projectDimension = (
+    dimension: QuizResultSnapshotV2["diagnostic"]["dimensionScores"][number],
+  ) => ({
+    title: dimension.title,
+    description: dimension.description,
+    normalizedScore: dimension.normalizedScore,
+    direction: dimension.direction,
+    label: dimension.signalLabel,
+  });
+  const strongestSignal = snapshot.diagnostic.strongestSignalDimensionId
+    ? snapshot.diagnostic.dimensionScores.find(
+      (dimension) => dimension.dimensionId === snapshot.diagnostic.strongestSignalDimensionId,
+    )
+    : undefined;
+
+  return {
+    ...publicResult,
+    diagnostic: {
+      responsePattern: snapshot.diagnostic.responsePattern,
+      strongestSignal: strongestSignal ? projectDimension(strongestSignal) : null,
+      dimensions: snapshot.diagnostic.dimensionScores.map(projectDimension),
+      answerEvidence: snapshot.diagnostic.answerEvidence.map((answer) => ({
+        question: answer.question,
+        answer: answer.answer,
+        ...(answer.answerInsight ? { answerInsight: answer.answerInsight } : {}),
+        ...(answer.evidence ? { evidence: answer.evidence } : {}),
+      })),
+    },
   };
 }
 
@@ -448,4 +664,156 @@ export function scoreQuizOutcome(
   }
 
   return { outcome, scoreMap };
+}
+
+type StoredQuizResultAsset = z.infer<typeof storedBenefitAssetSnapshotSchema>;
+
+function publicOutcomeSnapshot(outcome: QuizOutcome): PublicQuizOutcome {
+  return {
+    id: outcome.id,
+    title: outcome.title,
+    summary: outcome.summary,
+    description: outcome.description,
+    recommendations: [...outcome.recommendations],
+    ...(outcome.prescription
+      ? { prescription: quizOutcomePrescriptionSchema.parse(outcome.prescription) }
+      : {}),
+  };
+}
+
+/**
+ * Deterministically composes the permanent V2 result. This intentionally does
+ * not call a model: the participant's exact selections, diagnostic scales,
+ * and authored outcome prescription are enough to explain and reproduce it.
+ */
+export function composeQuizResultSnapshotV2(params: {
+  definition: QuizDefinition;
+  answers: Record<string, string>;
+  expectedOutcomeId?: string;
+  gift: StoredQuizResultAsset | null;
+  cta: StoredQuizResultAsset | null;
+}): QuizResultSnapshotV2 {
+  const definition = quizDefinitionSchema.parse(params.definition);
+  const { outcome, scoreMap } = scoreQuizOutcome(
+    definition.questions,
+    definition.outcomes,
+    params.answers,
+  );
+
+  if (params.expectedOutcomeId && params.expectedOutcomeId !== outcome.id) {
+    throw new QuizScoringError(
+      "INVALID_QUIZ",
+      "Selected outcome does not match the deterministic quiz score",
+    );
+  }
+
+  const answerEvidence = definition.questions.flatMap((question) => {
+    const optionId = params.answers[question.id];
+    if (!optionId) return [];
+    const option = question.options.find((candidate) => candidate.id === optionId);
+    if (!option) {
+      // scoreQuizOutcome already guards this branch; keep the invariant local
+      // so future scoring changes cannot create a partial result snapshot.
+      throw new QuizScoringError(
+        "INVALID_ANSWER",
+        `Invalid option ${optionId} for question: ${question.id}`,
+      );
+    }
+    return [{
+      questionId: question.id,
+      optionId: option.id,
+      question: question.prompt,
+      answer: option.label,
+      ...(option.answerInsight ? { answerInsight: option.answerInsight } : {}),
+      ...(option.evidence ? { evidence: option.evidence } : {}),
+    }];
+  });
+
+  const dimensionScores = (definition.dimensions || []).map((dimension) => {
+    let rawScore = 0;
+    let minPossible = 0;
+    let maxPossible = 0;
+
+    definition.questions.forEach((question) => {
+      const selectedOptionId = params.answers[question.id];
+      if (!selectedOptionId) return;
+      const selectedOption = question.options.find((option) => option.id === selectedOptionId);
+      if (!selectedOption) return;
+
+      const possibleWeights = question.options.map(
+        (option) => option.dimensionWeights?.[dimension.id] ?? 0,
+      );
+      rawScore += selectedOption.dimensionWeights?.[dimension.id] ?? 0;
+      minPossible += Math.min(...possibleWeights);
+      maxPossible += Math.max(...possibleWeights);
+    });
+
+    const scoreRange = maxPossible - minPossible;
+    const unboundedScore = scoreRange === 0
+      ? 50
+      : Math.round(((rawScore - minPossible) / scoreRange) * 100);
+    const normalizedScore = Math.max(0, Math.min(100, unboundedScore));
+    const direction = normalizedScore < 40
+      ? "low" as const
+      : normalizedScore > 60
+        ? "high" as const
+        : "balanced" as const;
+    const signalLabel = direction === "low"
+      ? dimension.lowLabel
+      : direction === "high"
+        ? dimension.highLabel
+        : `${dimension.lowLabel} / ${dimension.highLabel}`;
+
+    return {
+      dimensionId: dimension.id,
+      title: dimension.title,
+      description: dimension.description,
+      lowLabel: dimension.lowLabel,
+      highLabel: dimension.highLabel,
+      rawScore,
+      minPossible,
+      maxPossible,
+      normalizedScore,
+      direction,
+      signalLabel,
+    };
+  });
+
+  let strongestSignal: (typeof dimensionScores)[number] | undefined = dimensionScores[0];
+  let strongestDistance = strongestSignal
+    ? Math.abs(strongestSignal.normalizedScore - 50)
+    : 0;
+  for (let index = 1; index < dimensionScores.length; index += 1) {
+    const candidate = dimensionScores[index];
+    const candidateDistance = Math.abs(candidate.normalizedScore - 50);
+    if (candidateDistance > strongestDistance) {
+      strongestSignal = candidate;
+      strongestDistance = candidateDistance;
+    }
+  }
+  if (strongestDistance === 0) strongestSignal = undefined;
+
+  const responseInsights = Array.from(new Set(answerEvidence
+    .map((answer) => answer.answerInsight || answer.evidence)
+    .filter((insight): insight is string => Boolean(insight))))
+    .slice(0, 3);
+  const responsePattern = responseInsights.length > 0
+    ? responseInsights.join(" ")
+    : strongestSignal
+      ? `Your clearest response pattern is ${strongestSignal.title}: ${strongestSignal.signalLabel}.`
+      : `Your answers most strongly align with ${outcome.title}.`;
+
+  return quizResultSnapshotV2Schema.parse({
+    version: 2,
+    outcome: publicOutcomeSnapshot(outcome),
+    diagnostic: {
+      responsePattern,
+      answerEvidence,
+      dimensionScores,
+      strongestSignalDimensionId: strongestSignal?.dimensionId ?? null,
+      outcomeScoreMap: scoreMap,
+    },
+    gift: params.gift,
+    cta: params.cta,
+  });
 }
