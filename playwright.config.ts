@@ -16,7 +16,9 @@ export default defineConfig({
     baseURL: testBaseUrl,
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
-    video: "retain-on-failure",
+    // Hosted runners already provide Chrome; keeping CI video off avoids a
+    // separate Playwright ffmpeg download while traces/screenshots retain evidence.
+    video: process.env.CI ? "off" : "retain-on-failure",
   },
   projects: [
     {
