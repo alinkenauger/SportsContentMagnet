@@ -1,8 +1,13 @@
 import { createHash } from "node:crypto";
 import { Pool, neonConfig } from "@neondatabase/serverless";
 import ws from "ws";
+import coreBaselineSql from "../migrations/0000_core_baseline.sql";
 import quizLeadMagnetsSql from "../migrations/0001_quiz_lead_magnets.sql";
 import brandScopedAppearanceSql from "../migrations/0002_brand_scoped_appearance.sql";
+import magnetPresentationSql from "../migrations/0003_magnet_presentation.sql";
+import brandMagnetLibrarySql from "../migrations/0004_brand_magnet_library.sql";
+import durableBrandAssetsSql from "../migrations/0005_durable_brand_assets.sql";
+import guideRevisionSql from "../migrations/0006_guide_revision.sql";
 
 neonConfig.webSocketConstructor = ws;
 
@@ -12,8 +17,13 @@ if (!connectionString) {
 }
 
 const migrations = [
+  { id: "0000_core_baseline", sql: coreBaselineSql },
   { id: "0001_quiz_lead_magnets", sql: quizLeadMagnetsSql },
   { id: "0002_brand_scoped_appearance", sql: brandScopedAppearanceSql },
+  { id: "0003_magnet_presentation", sql: magnetPresentationSql },
+  { id: "0004_brand_magnet_library", sql: brandMagnetLibrarySql },
+  { id: "0005_durable_brand_assets", sql: durableBrandAssetsSql },
+  { id: "0006_guide_revision", sql: guideRevisionSql },
 ] as const;
 
 const MIGRATION_LOCK_ID = 860_792_957;
@@ -28,6 +38,8 @@ async function runMigrations(): Promise<void> {
   let lockAcquired = false;
 
   try {
+    await client.query("SELECT pg_advisory_lock($1)", [MIGRATION_LOCK_ID]);
+    lockAcquired = true;
     await client.query(`
       CREATE TABLE IF NOT EXISTS vidmagnet_schema_migrations (
         id varchar(160) PRIMARY KEY,
@@ -35,8 +47,6 @@ async function runMigrations(): Promise<void> {
         applied_at timestamptz NOT NULL DEFAULT now()
       )
     `);
-    await client.query("SELECT pg_advisory_lock($1)", [MIGRATION_LOCK_ID]);
-    lockAcquired = true;
 
     for (const migration of migrations) {
       const migrationChecksum = checksum(migration.sql);

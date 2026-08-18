@@ -48,7 +48,11 @@ export default function Login() {
         description: "You've successfully signed in to VidMagnet.",
       });
       await queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
-      window.location.replace(response.redirect || "/dashboard");
+      const requestedReturnTo = new URLSearchParams(window.location.search).get("returnTo");
+      const safeReturnTo = requestedReturnTo?.startsWith("/") && !requestedReturnTo.startsWith("//")
+        ? requestedReturnTo
+        : null;
+      window.location.replace(safeReturnTo || response.redirect || "/dashboard");
     },
     onError: (error: Error) => {
       setFormError(error.message || "Invalid email or password. Please try again.");

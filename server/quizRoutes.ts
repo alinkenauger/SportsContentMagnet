@@ -16,9 +16,15 @@ import {
   type RequestWithUser,
 } from "./requestUser";
 import { QuizGenerationError, generateQuizDefinition } from "./services/quizGenerator";
+import {
+  QuizSourceResolutionError,
+  resolveQuizSource,
+} from "./services/quizSource";
 import { BrandAccessError, resolveBrandIdForUser } from "./brandAccess";
 import { resolveAppearanceForScope } from "./brandAppearance";
 import { createRateLimit } from "./rateLimit";
+import { createPresentationProfile } from "@shared/presentation";
+import { prepareBrandLibraryKnowledge } from "./magnetLibrary";
 import {
   QuizStorageError,
   completeQuizAttempt,
@@ -107,6 +113,11 @@ function sendQuizError(res: Parameters<RequestHandler>[1], error: unknown): void
     return;
   }
 
+  if (error instanceof QuizSourceResolutionError) {
+    res.status(422).json({ message: error.message });
+    return;
+  }
+
   console.error("Quiz API error:", error);
   res.status(500).json({ message: "Quiz request failed" });
 }
@@ -153,18 +164,42 @@ export function registerQuizRoutes(app: Express): void {
         .filter((value): value is string => typeof value === "string" && value.trim().length > 0)
         .join("\n\n")
         .slice(0, 4000) || undefined;
+      const resolvedSource = await resolveQuizSource(input);
+      const youtubeUrl = resolvedSource.sourceVideo?.canonicalUrl;
+      const libraryKnowledge = await prepareBrandLibraryKnowledge({
+        userId,
+        brandId,
+        query: {
+          title: input.title,
+          sourceContent: resolvedSource.sourceContent.slice(0, 12_000),
+          audience: input.audience,
+          objective: input.objective,
+        },
+      });
       const definition = await generateQuizDefinition({
         ...input,
+        sourceContent: resolvedSource.sourceContent,
+        sourceSegments: resolvedSource.sourceSegments,
+        sourceVideoTitle: resolvedSource.videoTitle,
+        youtubeUrl,
         brandId,
         brandVoice,
         audience: input.audience || appearance.targetAudience || undefined,
+      }, libraryKnowledge);
+      const presentationProfile = createPresentationProfile(input.presentationSelection, {
+        title: input.title,
+        audience: input.audience || appearance.targetAudience || undefined,
+        sourceExcerpt: resolvedSource.sourceContent,
       });
       const bundle = await createQuizFunnel({
         userId,
         brandId,
-        sourceContent: input.sourceContent,
+        sourceContent: resolvedSource.sourceContent,
         definition,
         themeMode: input.themeMode,
+        presentationProfile,
+        sourceVideo: resolvedSource.sourceVideo,
+        includeInLibrary: input.includeInLibrary,
       });
       res.status(201).json(bundle);
     }),

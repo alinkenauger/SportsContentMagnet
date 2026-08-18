@@ -102,6 +102,7 @@ const stepSchema = z.object({
   successCriteria: optionalText(1000),
   commonMistake: optionalText(1000),
   fix: optionalText(1000),
+  sourceRefs: z.array(sourceRefSchema).max(5).optional(),
 }).strict();
 
 const checklistItemSchema = z.object({
@@ -110,6 +111,7 @@ const checklistItemSchema = z.object({
   why: optionalText(1000),
   evidence: optionalText(1000),
   required: z.boolean().default(false),
+  sourceRefs: z.array(sourceRefSchema).max(5).optional(),
 }).strict();
 
 const worksheetPromptSchema = z.object({

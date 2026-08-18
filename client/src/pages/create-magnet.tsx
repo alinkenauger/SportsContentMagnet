@@ -9,37 +9,52 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { parseYouTubeSource } from "@shared/presentation";
 import {
   ArrowRight,
   BookOpen,
   Check,
   FileText,
   Lightbulb,
+  LibraryBig,
   ListChecks,
   Loader2,
   Sparkles,
   Target,
   Trophy,
   Users,
+  Youtube,
 } from "lucide-react";
 
 interface GenerateQuizRequest {
   title: string;
-  sourceContent: string;
+  sourceContent?: string;
+  youtubeUrl?: string;
   audience: string;
   objective: string;
   questionCount: number;
   outcomeCount: number;
+  includeInLibrary: boolean;
   leadCapture: {
     enabled: boolean;
     required: boolean;
     headline: string;
   };
+  presentationSelection:
+    | { mode: "auto" }
+    | { mode: "manual"; preset: "editorial" | "basketball" | "golf" | "performance" };
 }
+
+type QuizSourceMode = "youtube" | "paste";
+type QuizFormValues = Omit<GenerateQuizRequest, "sourceContent" | "youtubeUrl"> & {
+  sourceContent: string;
+  youtubeUrl: string;
+};
 
 interface GenerateQuizResponse {
   guide: { id: number; title?: string };
@@ -48,24 +63,45 @@ interface GenerateQuizResponse {
 }
 
 const DEFAULT_LEAD_HEADLINE = "Enter your details to reveal your personalized result";
+const MIN_QUIZ_QUESTIONS = 5;
+
+function quizGenerationErrorMessage(error: Error): string {
+  const rawMessage = error.message || "";
+  const jsonStart = rawMessage.indexOf("{");
+  if (jsonStart >= 0) {
+    try {
+      const payload = JSON.parse(rawMessage.slice(jsonStart)) as { message?: unknown };
+      if (typeof payload.message === "string" && payload.message.trim()) {
+        return payload.message.trim();
+      }
+    } catch {
+      // Fall back to the original request error below.
+    }
+  }
+  return rawMessage || "We could not generate this quiz. Please try again.";
+}
 
 export default function CreateMagnet() {
   const [, navigate] = useLocation();
   const { toast } = useToast();
   const [selectedType, setSelectedType] = useState<"quiz" | null>(null);
+  const [sourceMode, setSourceMode] = useState<QuizSourceMode>("youtube");
   const [formError, setFormError] = useState<string | null>(null);
-  const [form, setForm] = useState<GenerateQuizRequest>({
+  const [form, setForm] = useState<QuizFormValues>({
     title: "",
     sourceContent: "",
+    youtubeUrl: "",
     audience: "",
     objective: "",
     questionCount: 6,
     outcomeCount: 3,
+    includeInLibrary: true,
     leadCapture: {
       enabled: true,
       required: true,
       headline: DEFAULT_LEAD_HEADLINE,
     },
+    presentationSelection: { mode: "auto" },
   });
 
   const generateQuizMutation = useMutation<GenerateQuizResponse, Error, GenerateQuizRequest>({
@@ -86,7 +122,7 @@ export default function CreateMagnet() {
       navigate(`/quiz-editor/${data.guide.id}`);
     },
     onError: (error) => {
-      const message = error.message || "We could not generate this quiz. Please try again.";
+      const message = quizGenerationErrorMessage(error);
       setFormError(message);
       toast({
         title: "Quiz generation failed",
@@ -96,9 +132,9 @@ export default function CreateMagnet() {
     },
   });
 
-  const updateLeadCapture = <K extends keyof GenerateQuizRequest["leadCapture"]>(
+  const updateLeadCapture = <K extends keyof QuizFormValues["leadCapture"]>(
     key: K,
-    value: GenerateQuizRequest["leadCapture"][K],
+    value: QuizFormValues["leadCapture"][K],
   ) => {
     setForm((current) => ({
       ...current,
@@ -115,7 +151,12 @@ export default function CreateMagnet() {
       return;
     }
 
-    if (form.sourceContent.trim().length < 50) {
+    if (sourceMode === "youtube" && !parseYouTubeSource(form.youtubeUrl)) {
+      setFormError("Enter a valid public YouTube video URL.");
+      return;
+    }
+
+    if (sourceMode === "paste" && form.sourceContent.trim().length < 50) {
       setFormError("Paste at least 50 characters so VidMagnet has enough content to build the quiz.");
       return;
     }
@@ -130,10 +171,18 @@ export default function CreateMagnet() {
       return;
     }
 
+    if (form.questionCount < MIN_QUIZ_QUESTIONS) {
+      setFormError(`Interactive Quizzes need at least ${MIN_QUIZ_QUESTIONS} questions.`);
+      return;
+    }
+
+    const { sourceContent, youtubeUrl, ...quizSettings } = form;
     generateQuizMutation.mutate({
-      ...form,
+      ...quizSettings,
       title: form.title.trim(),
-      sourceContent: form.sourceContent.trim(),
+      ...(sourceMode === "youtube"
+        ? { youtubeUrl: youtubeUrl.trim() }
+        : { sourceContent: sourceContent.trim() }),
       audience: form.audience.trim(),
       objective: form.objective.trim(),
       leadCapture: {
@@ -146,7 +195,9 @@ export default function CreateMagnet() {
 
   return (
     <div className="flex h-screen bg-background">
-      <Sidebar />
+      <div className="hidden md:block">
+        <Sidebar />
+      </div>
 
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="border-b border-border bg-card px-6 py-4">
@@ -235,7 +286,7 @@ export default function CreateMagnet() {
                     </CardHeader>
                     <CardContent>
                       <p className="text-sm leading-relaxed text-muted-foreground">
-                        Ask a few focused questions, reveal a personalized result, and match every lead to the right next step.
+                        Ask at least five focused questions, reveal a personalized result, and match every lead to the right next step.
                       </p>
                       <div className="mt-4 flex flex-wrap gap-2 text-xs text-muted-foreground">
                         <span className="rounded-full bg-muted px-2.5 py-1">Segmentation</span>
@@ -254,12 +305,12 @@ export default function CreateMagnet() {
                   <CardHeader className="border-b bg-muted/30">
                     <div className="flex items-start gap-3">
                       <div className="rounded-lg bg-primary/10 p-2 text-primary">
-                        <FileText className="h-5 w-5" aria-hidden="true" />
+                        <Youtube className="h-5 w-5" aria-hidden="true" />
                       </div>
                       <div>
-                        <CardTitle id="quiz-brief-heading">Paste your source content</CardTitle>
+                        <CardTitle id="quiz-brief-heading">Choose one source</CardTitle>
                         <p className="mt-1 text-sm text-muted-foreground">
-                          VidMagnet will find the most useful distinctions, questions, and personalized outcomes.
+                          Start with a YouTube lesson, or switch to pasted source content when you already have the text.
                         </p>
                       </div>
                     </div>
@@ -277,25 +328,127 @@ export default function CreateMagnet() {
                       />
                     </div>
 
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between gap-4">
-                        <Label htmlFor="source-content">Content</Label>
-                        <span className="text-xs text-muted-foreground">
-                          {form.sourceContent.length.toLocaleString()} characters
+                    <div className="grid gap-3 sm:grid-cols-2" aria-label="Quiz source type">
+                      <button
+                        type="button"
+                        aria-pressed={sourceMode === "youtube"}
+                        onClick={() => {
+                          setSourceMode("youtube");
+                          setFormError(null);
+                        }}
+                        className={`rounded-xl border p-4 text-left transition-colors ${
+                          sourceMode === "youtube"
+                            ? "border-red-500/50 bg-red-500/5 ring-2 ring-red-500/10"
+                            : "hover:border-primary/40 hover:bg-muted/30"
+                        }`}
+                      >
+                        <span className="flex items-center justify-between gap-3">
+                          <span className="flex items-center gap-2 font-semibold">
+                            <Youtube className="h-5 w-5 text-red-500" aria-hidden="true" />
+                            YouTube video
+                          </span>
+                          <Badge variant="secondary">Recommended</Badge>
                         </span>
+                        <span className="mt-2 block text-xs leading-5 text-muted-foreground">
+                          VidMagnet reads the video details and transcript for you.
+                        </span>
+                      </button>
+
+                      <button
+                        type="button"
+                        aria-pressed={sourceMode === "paste"}
+                        onClick={() => {
+                          setSourceMode("paste");
+                          setFormError(null);
+                        }}
+                        className={`rounded-xl border p-4 text-left transition-colors ${
+                          sourceMode === "paste"
+                            ? "border-primary/50 bg-primary/5 ring-2 ring-primary/10"
+                            : "hover:border-primary/40 hover:bg-muted/30"
+                        }`}
+                      >
+                        <span className="flex items-center gap-2 font-semibold">
+                          <FileText className="h-5 w-5 text-primary" aria-hidden="true" />
+                          Paste source content
+                        </span>
+                        <span className="mt-2 block text-xs leading-5 text-muted-foreground">
+                          Use an existing transcript, article, lesson, or framework.
+                        </span>
+                      </button>
+                    </div>
+
+                    {sourceMode === "youtube" ? (
+                      <div className="space-y-2 rounded-xl border bg-muted/20 p-4">
+                        <Label htmlFor="quiz-youtube-url" className="flex items-center gap-2">
+                          <Youtube className="h-4 w-4 text-red-500" aria-hidden="true" />
+                          YouTube video URL
+                        </Label>
+                        <Input
+                          id="quiz-youtube-url"
+                          type="url"
+                          value={form.youtubeUrl}
+                          onChange={(event) => setForm((current) => ({ ...current, youtubeUrl: event.target.value }))}
+                          placeholder="https://youtube.com/watch?v=..."
+                          required
+                        />
+                        <p className="text-xs leading-5 text-muted-foreground">
+                          We will transcribe the video before building the quiz. If reliable caption timing is available,
+                          supported recommendations can reference those exact moments inside the embedded video.
+                        </p>
                       </div>
-                      <Textarea
-                        id="source-content"
-                        value={form.sourceContent}
-                        onChange={(event) => setForm((current) => ({ ...current, sourceContent: event.target.value }))}
-                        placeholder="Paste an article, transcript, coaching framework, lesson, or other source material here..."
-                        className="min-h-64 resize-y leading-relaxed"
-                        minLength={50}
-                        required
-                      />
-                      <p className="text-xs text-muted-foreground">
-                        Minimum 50 characters. Strong source material includes clear viewpoints, common mistakes,
-                        stages, or recommendations.
+                    ) : (
+                      <div className="space-y-2 rounded-xl border bg-muted/20 p-4">
+                        <div className="flex items-center justify-between gap-4">
+                          <Label htmlFor="source-content">Content</Label>
+                          <span className="text-xs text-muted-foreground">
+                            {form.sourceContent.length.toLocaleString()} characters
+                          </span>
+                        </div>
+                        <Textarea
+                          id="source-content"
+                          value={form.sourceContent}
+                          onChange={(event) => setForm((current) => ({ ...current, sourceContent: event.target.value }))}
+                          placeholder="Paste an article, transcript, coaching framework, lesson, or other source material here..."
+                          className="min-h-64 resize-y leading-relaxed"
+                          minLength={50}
+                          required
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          Minimum 50 characters. Strong source material includes clear viewpoints, common mistakes,
+                          stages, or recommendations.
+                        </p>
+                      </div>
+                    )}
+
+                    <div className="space-y-2 rounded-xl border bg-muted/20 p-4">
+                      <Label htmlFor="quiz-presentation">Recipient experience</Label>
+                      <Select
+                        value={form.presentationSelection.mode === "auto"
+                          ? "auto"
+                          : form.presentationSelection.preset}
+                        onValueChange={(value) => setForm((current) => ({
+                          ...current,
+                          presentationSelection: value === "auto"
+                            ? { mode: "auto" }
+                            : {
+                                mode: "manual",
+                                preset: value as "editorial" | "basketball" | "golf" | "performance",
+                              },
+                        }))}
+                      >
+                        <SelectTrigger id="quiz-presentation">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="auto">Auto-detect from the content</SelectItem>
+                          <SelectItem value="basketball">Basketball · Arena energy</SelectItem>
+                          <SelectItem value="golf">Golf · Course precision</SelectItem>
+                          <SelectItem value="performance">Performance · Training lab</SelectItem>
+                          <SelectItem value="editorial">Editorial · Clean report</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs leading-5 text-muted-foreground">
+                        Keeps your brand colors and logo while adapting the composition to the subject.
                       </p>
                     </div>
 
@@ -351,7 +504,7 @@ export default function CreateMagnet() {
                         <Input
                           id="question-count"
                           type="range"
-                          min={3}
+                          min={MIN_QUIZ_QUESTIONS}
                           max={12}
                           value={form.questionCount}
                           onChange={(event) =>
@@ -359,7 +512,9 @@ export default function CreateMagnet() {
                           }
                           className="h-2 cursor-pointer border-0 p-0"
                         />
-                        <p className="text-xs text-muted-foreground">Six questions is a strong default for a quick result.</p>
+                        <p className="text-xs text-muted-foreground">
+                          Every quiz includes at least five questions and four answer choices per question.
+                        </p>
                       </div>
 
                       <Separator />
@@ -433,10 +588,40 @@ export default function CreateMagnet() {
                   </Card>
                 </div>
 
+                <Card className="border-primary/20">
+                  <CardContent className="flex items-start justify-between gap-4 p-5">
+                    <div className="flex items-start gap-3">
+                      <div className="rounded-xl bg-primary/10 p-2.5 text-primary">
+                        <LibraryBig className="h-5 w-5" aria-hidden="true" />
+                      </div>
+                      <div>
+                        <Label htmlFor="quiz-include-in-library" className="font-semibold">
+                          Add this Interactive Quiz to your public Library
+                        </Label>
+                        <p className="mt-1 max-w-2xl text-sm leading-6 text-muted-foreground">
+                          This is on by default. Once published, leads can find it alongside your other guides and quizzes. Turn it off for a one-off or direct-link-only quiz.
+                        </p>
+                      </div>
+                    </div>
+                    <Switch
+                      id="quiz-include-in-library"
+                      checked={form.includeInLibrary}
+                      onCheckedChange={(checked) => setForm((current) => ({
+                        ...current,
+                        includeInLibrary: checked,
+                      }))}
+                      aria-label="Add this Interactive Quiz to your public Library"
+                    />
+                  </CardContent>
+                </Card>
+
                 {formError && (
                   <Alert variant="destructive">
                     <AlertTitle>Could not generate quiz</AlertTitle>
-                    <AlertDescription>{formError}</AlertDescription>
+                    <AlertDescription>
+                      <p>{formError}</p>
+                      <p className="mt-1">Your source and settings are still here so you can correct the issue and try again.</p>
+                    </AlertDescription>
                   </Alert>
                 )}
 
@@ -454,7 +639,11 @@ export default function CreateMagnet() {
                       ) : (
                         <Sparkles className="mr-2 h-5 w-5" aria-hidden="true" />
                       )}
-                      {generateQuizMutation.isPending ? "Generating quiz..." : "Generate interactive quiz"}
+                      {generateQuizMutation.isPending
+                        ? sourceMode === "youtube"
+                          ? "Transcribing and generating..."
+                          : "Generating quiz..."
+                        : "Generate interactive quiz"}
                     </Button>
                   </CardContent>
                 </Card>

@@ -11,6 +11,7 @@ import {
   knowledgebaseEntries,
   knowledgebaseCollections,
   notifications,
+  contentVariants,
   knowledgebaseUsageSettings,
   googleConnections,
   promptTemplates,
@@ -75,7 +76,7 @@ import {
   type InsertNotification,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, and, or, gt, lte, sql, count, avg, isNull, isNotNull } from "drizzle-orm";
+import { eq, desc, and, or, gt, lte, sql, count, avg, isNull, isNotNull, inArray } from "drizzle-orm";
 import { normalizeBrandAppearance } from "@shared/branding";
 
 export interface IStorage {
@@ -116,7 +117,12 @@ export interface IStorage {
   getGuidesByUser(userId: string): Promise<Guide[]>;
   getGuidesByUserAndBrand(userId: string, brandId: number | null, query?: string, category?: string): Promise<Guide[]>;
   updateGuide(id: number, guide: Partial<InsertGuide>): Promise<Guide>;
-  deleteGuide(id: number): Promise<void>;
+  updateGuideIfUnchanged(
+    id: number,
+    expectedRevision: number,
+    guide: Partial<InsertGuide>,
+  ): Promise<Guide | undefined>;
+  deleteGuide(id: number, expectedRevision: number): Promise<boolean>;
   searchGuides(userId: string, query?: string, category?: string): Promise<Guide[]>;
   getPublicGuides(): Promise<Array<{
     id: number;
@@ -143,6 +149,7 @@ export interface IStorage {
 
   // Lead operations
   createLead(lead: InsertLead): Promise<Lead>;
+  getLead(id: number): Promise<Lead | undefined>;
   getLeadsByUser(userId: string): Promise<Lead[]>;
   getLeadsByUserAndBrand(userId: string, brandId: number | null): Promise<Lead[]>;
   getLeadsByGuide(guideId: number): Promise<Lead[]>;
@@ -749,14 +756,55 @@ export class DatabaseStorage implements IStorage {
   async updateGuide(id: number, guide: Partial<InsertGuide>): Promise<Guide> {
     const [updatedGuide] = await db
       .update(guides)
-      .set({ ...guide, updatedAt: new Date() })
+      .set({ ...guide, revision: sql`${guides.revision} + 1`, updatedAt: new Date() })
       .where(eq(guides.id, id))
       .returning();
     return updatedGuide;
   }
 
-  async deleteGuide(id: number): Promise<void> {
-    await db.delete(guides).where(eq(guides.id, id));
+  async updateGuideIfUnchanged(
+    id: number,
+    expectedRevision: number,
+    guide: Partial<InsertGuide>,
+  ): Promise<Guide | undefined> {
+    const [updatedGuide] = await db
+      .update(guides)
+      .set({ ...guide, revision: sql`${guides.revision} + 1`, updatedAt: new Date() })
+      .where(and(eq(guides.id, id), eq(guides.revision, expectedRevision)))
+      .returning();
+    return updatedGuide;
+  }
+
+  async deleteGuide(id: number, expectedRevision: number): Promise<boolean> {
+    return await db.transaction(async (tx) => {
+      const [claimed] = await tx
+        .update(guides)
+        .set({ revision: sql`${guides.revision} + 1`, updatedAt: new Date() })
+        .where(and(eq(guides.id, id), eq(guides.revision, expectedRevision)))
+        .returning({ id: guides.id });
+      if (!claimed) return false;
+
+      const pages = await tx
+        .select({ id: landingPages.id })
+        .from(landingPages)
+        .where(eq(landingPages.guideId, id));
+      const landingPageIds = pages.map((page) => page.id);
+
+      await tx.delete(analyticsEvents).where(
+        landingPageIds.length > 0
+          ? or(
+              eq(analyticsEvents.guideId, id),
+              inArray(analyticsEvents.landingPageId, landingPageIds),
+            )
+          : eq(analyticsEvents.guideId, id),
+      );
+      await tx.delete(contentVariants).where(eq(contentVariants.guideId, id));
+      await tx.delete(qrCodes).where(eq(qrCodes.guideId, id));
+      await tx.delete(leads).where(eq(leads.guideId, id));
+      await tx.delete(landingPages).where(eq(landingPages.guideId, id));
+      await tx.delete(guides).where(eq(guides.id, id));
+      return true;
+    });
   }
 
   async searchGuides(userId: string, query?: string, category?: string): Promise<Guide[]> {
@@ -796,6 +844,8 @@ export class DatabaseStorage implements IStorage {
         logoUrl: brandingSettings.logoUrl,
       })
       .from(guides)
+      .innerJoin(brands, eq(guides.brandId, brands.id))
+      .innerJoin(landingPages, eq(landingPages.guideId, guides.id))
       .leftJoin(brandingSettings, or(
         and(
           isNull(guides.brandId),
@@ -810,6 +860,10 @@ export class DatabaseStorage implements IStorage {
       .where(and(
         eq(guides.status, 'published'),
         eq(guides.magnetType, 'guide'),
+        eq(guides.includeInLibrary, true),
+        eq(landingPages.isActive, true),
+        isNotNull(landingPages.customUrl),
+        isNotNull(brands.librarySlug),
       ))
       .orderBy(desc(guides.createdAt));
 
@@ -894,6 +948,11 @@ export class DatabaseStorage implements IStorage {
     return newLead;
   }
 
+  async getLead(id: number): Promise<Lead | undefined> {
+    const [lead] = await db.select().from(leads).where(eq(leads.id, id));
+    return lead;
+  }
+
   async getLeadsByUser(userId: string): Promise<Lead[]> {
     return await db
       .select()
@@ -903,7 +962,12 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getLeadsByUserAndBrand(userId: string, brandId: number | null): Promise<Lead[]> {
-    const whereConditions = [eq(leads.userId, userId)];
+    // Personal workspaces are owner-scoped. Shared brand workspaces are scoped
+    // by the brand after route-level membership authorization so collaborator
+    // leads are included in the same command center.
+    const whereConditions = brandId === null
+      ? [eq(leads.userId, userId), isNull(guides.brandId)]
+      : [eq(guides.brandId, brandId)];
     
     let query = db
       .select({
@@ -925,12 +989,6 @@ export class DatabaseStorage implements IStorage {
       })
       .from(leads)
       .innerJoin(guides, eq(leads.guideId, guides.id));
-    
-    if (brandId === null) {
-      whereConditions.push(isNull(guides.brandId));
-    } else if (brandId !== undefined) {
-      whereConditions.push(eq(guides.brandId, brandId));
-    }
     
     return await query
       .where(and(...whereConditions))
@@ -979,15 +1037,13 @@ export class DatabaseStorage implements IStorage {
     totalDownloads: number;
     avgConversionRate: number;
   }> {
-    // Build where conditions for brand filtering
-    const whereConditions = [eq(guides.userId, userId)];
-    if (brandId !== undefined) {
-      if (brandId === null) {
-        whereConditions.push(isNull(guides.brandId));
-      } else {
-        whereConditions.push(eq(guides.brandId, brandId));
-      }
-    }
+    // A selected shared brand includes every authorized collaborator's
+    // magnets. Personal and unscoped views remain owner-specific.
+    const whereConditions = brandId === undefined
+      ? [eq(guides.userId, userId)]
+      : brandId === null
+        ? [eq(guides.userId, userId), isNull(guides.brandId)]
+        : [eq(guides.brandId, brandId)];
 
     const [stats] = await db
       .select({
@@ -999,7 +1055,11 @@ export class DatabaseStorage implements IStorage {
       .where(and(...whereConditions));
 
     // Get actual leads count and calculate real conversion rate
-    const leadsWhereConditions = [eq(leads.userId, userId)];
+    const leadsWhereConditions = brandId === undefined
+      ? [eq(leads.userId, userId)]
+      : brandId === null
+        ? [eq(leads.userId, userId), isNull(guides.brandId)]
+        : [eq(guides.brandId, brandId)];
     
     let leadsQuery;
     if (brandId !== undefined) {
@@ -1008,11 +1068,6 @@ export class DatabaseStorage implements IStorage {
         .from(leads)
         .innerJoin(guides, eq(leads.guideId, guides.id));
       
-      if (brandId === null) {
-        leadsWhereConditions.push(isNull(guides.brandId));
-      } else {
-        leadsWhereConditions.push(eq(guides.brandId, brandId));
-      }
     } else {
       leadsQuery = db
         .select({ totalLeads: count(leads.id) })

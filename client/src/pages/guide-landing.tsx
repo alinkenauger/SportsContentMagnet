@@ -63,6 +63,16 @@ interface LandingPageData {
   branding?: LandingPageData["brandingSettings"] | { appearance?: LandingPageData["brandingSettings"] };
 }
 
+type LeadSubmissionPayload = {
+  email: string;
+  firstName?: string;
+  phone?: string;
+  smsConsent: boolean;
+  customFieldData: Record<string, string>;
+};
+
+const CONTACT_FIELD_NAMES = new Set(["email", "firstName", "phone", "smsConsent"]);
+
 function resolveBranding(data?: LandingPageData) {
   if (!data) return undefined;
   if (data.branding && "appearance" in data.branding) return data.branding.appearance;
@@ -96,7 +106,7 @@ export default function GuideLanding() {
   }, [landingData]);
 
   const submitLeadMutation = useMutation({
-    mutationFn: async (data: Record<string, string>) => {
+    mutationFn: async (data: LeadSubmissionPayload) => {
       const response = await apiRequest(`/api/landing/${customUrl}/submit`, "POST", data);
       return await response.json();
     },
@@ -116,11 +126,10 @@ export default function GuideLanding() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Ensure at least one contact method (email or phone)
-    if (!formData.email && !formData.phone) {
+    if (!formData.email) {
       toast({
-        title: "Contact Method Required",
-        description: "Please provide either an email address or phone number.",
+        title: "Email Required",
+        description: "Please enter your email address.",
         variant: "destructive",
       });
       return;
@@ -147,12 +156,20 @@ export default function GuideLanding() {
       return;
     }
 
-    // Prepare submission data with SMS fields
-    const submissionData = {
-      ...formData,
-      phone: (landingData?.landingPage as any)?.collectSms ? (formData.phone || "") : "",
-      smsConsent: ((landingData?.landingPage as any)?.collectSms && formData.phone) ? 
-        (formData.smsConsent === "true" ? "true" : "false") : "false"
+    const customFieldData = Object.fromEntries(
+      (landingData?.landingPage.customFields || [])
+        .filter((field) => !CONTACT_FIELD_NAMES.has(field.name))
+        .map((field) => [field.name, formData[field.name] || ""]),
+    );
+    const phone = landingData?.landingPage.collectSms
+      ? formData.phone?.trim() || undefined
+      : undefined;
+    const submissionData: LeadSubmissionPayload = {
+      email: formData.email.trim(),
+      firstName: formData.firstName?.trim() || undefined,
+      phone,
+      smsConsent: Boolean(phone && formData.smsConsent === "true"),
+      customFieldData,
     };
 
     submitLeadMutation.mutate(submissionData);

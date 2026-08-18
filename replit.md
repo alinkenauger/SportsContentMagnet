@@ -30,6 +30,7 @@ Verified public source wording is intentionally narrow: pasted content is suppor
 - Password/session authentication and Replit OpenID Connect converge on one canonical request identity.
 - Global roles protect platform administration; accepted brand memberships and permissions protect team content and assets.
 - Ordered SQL migrations are checksummed, serialized with a PostgreSQL advisory lock, and applied before every production start.
+- Processed brand images use PostgreSQL in production so Replit Autoscale replicas share durable bytes; local development falls back to `public/uploads/branding`.
 
 ### Project structure
 
@@ -106,6 +107,8 @@ The one-time build produces the bundled migration runner; run it against the con
 - `HIGHLEVEL_API_KEY`: optional signup CRM sync; the request is time-bounded and cannot fail account creation.
 - `VITE_STRIPE_PUBLIC_KEY`: required when building or opening the subscription page.
 - `STRIPE_WEBHOOK_SECRET`: required when processing Stripe webhooks.
+- `BRAND_ASSET_STORAGE`: optional `database` or `filesystem`. It defaults to `database` in production and `filesystem` outside production. The database mode uses the required `DATABASE_URL` and needs no additional vendor or credential.
+- `BRAND_ASSET_FILESYSTEM_DIR` and `BRAND_ASSET_FILESYSTEM_IS_DURABLE=true`: only for a deployment that supplies an absolute, shared persistent mount. Production refuses filesystem mode without both. Replit Autoscale should keep the default database mode.
 
 Never put credentials, source content, lead PII, or account-completion tokens in committed documentation, client storage, query strings, or analytics events.
 
@@ -130,7 +133,7 @@ npm run build
 npm run start
 ```
 
-`npm run start` runs `dist/migrate.js` before `dist/index.js`. It applies `0001_quiz_lead_magnets.sql` and `0002_brand_scoped_appearance.sql` in order, records SHA-256 checksums in `vidmagnet_schema_migrations`, and refuses to start if an applied migration was edited. The production Dockerfiles use the same start command. Do not replace this release path with `db:push`.
+`npm run start` runs `dist/migrate.js` before `dist/index.js`. It applies the ordered `0000_core_baseline.sql` through `0006_guide_revision.sql` chain, records SHA-256 checksums in `vidmagnet_schema_migrations`, and refuses to start if an applied migration was edited. The baseline creates the complete pre-quiz schema on an empty database, is safe to replay against a complete legacy schema, and fails closed instead of guessing when only part of that legacy schema exists. Migration `0005` adds the PostgreSQL-backed public brand-image store used by production; migration `0006` adds the Guide revision used to prevent stale edit, publish, transfer, and delete races. The production Dockerfiles use the same start command. Do not replace this release path with `db:push`.
 
 Before enabling generation, provide `OPENAI_API_KEY`. Before testing cross-browser signup recovery, provide a valid HTTPS `PUBLIC_APP_URL` (or `REPLIT_DOMAINS`) and working SendGrid configuration.
 

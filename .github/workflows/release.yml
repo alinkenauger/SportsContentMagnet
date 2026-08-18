@@ -1,0 +1,48 @@
+name: Release checks
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - "feat/**"
+
+concurrency:
+  group: release-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Use Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run release contracts
+        run: npm run test:release
+
+      - name: Check the public marketing surface
+        run: npm run check:marketing
+
+      - name: Install the browser used by release journeys
+        run: npx playwright install --with-deps chromium
+
+      - name: Run desktop and mobile release journeys
+        run: npm run test:e2e:marketing
+
+      - name: Build production bundles
+        run: npm run build

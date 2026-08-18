@@ -8,6 +8,7 @@ export interface Brand {
   name: string;
   description?: string;
   logoUrl?: string;
+  librarySlug?: string | null;
   isDefault: boolean;
   createdAt: string;
   updatedAt: string;

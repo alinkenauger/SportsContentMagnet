@@ -11,15 +11,22 @@ import {
 import {
   formatCreationBrief,
   guideV2JsonShape,
+  isTrainingGuide,
   sourceGroundingRules,
+  trainingGuideRecipeRules,
 } from "./guideContentPrompt";
 import {
+  buildGuideTrainingDepthProfile,
   buildGuideQualityRepairPrompt,
   ensurePublishableGuide,
   GuideQualityError,
   guideQualityGenerationRequirements,
   guideQualityRepairSystemPrompt,
 } from "./guideQuality";
+import {
+  formatLibraryKnowledgeForPrompt,
+  type PreparedLibraryKnowledge,
+} from "./libraryKnowledge";
 
 // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
 const openai = new OpenAI({ 
@@ -32,8 +39,8 @@ export interface VideoAnalysis {
     name: string;
     description: string;
     steps: string[];
-    duration: string;
-    difficulty: string;
+    duration?: string;
+    difficulty?: string;
   }>;
   techniques: Array<{
     name: string;
@@ -46,18 +53,23 @@ export interface VideoAnalysis {
   category: string;
   summary: string;
   keyMoments: Array<{
-    timestamp: string;
+    timestamp?: string;
     description: string;
     importance: string;
   }>;
   contentInventory?: {
     principles: string[];
     procedures: string[];
+    bestPractices: string[];
+    keyTakeaways: string[];
     checklistCandidates: string[];
     worksheetPrompts: string[];
     templateCandidates: string[];
     metrics: string[];
-    troubleshooting: Array<{ problem: string; fix: string }>;
+    troubleshooting: Array<{ problem: string; cause?: string; fix: string }>;
+    progressions: string[];
+    regressions: string[];
+    workoutPlanIngredients: string[];
     unsupportedGaps: string[];
   };
 }
@@ -70,10 +82,17 @@ export async function analyzeVideoContent(
   videoDescription?: string,
   creationBrief?: GuideCreationBrief,
   selectedTemplate?: string,
+  libraryKnowledge?: PreparedLibraryKnowledge,
 ): Promise<VideoAnalysis> {
   try {
     const brief = guideCreationBriefSchema.parse(creationBrief ?? {
       format: inferGuideFormatFromTemplate(selectedTemplate),
+    });
+    const requireTrainingRecipe = isTrainingGuide({
+      selectedTemplate,
+      brief,
+      title: videoTitle,
+      sourceText: `${videoDescription || ""}\n${transcript}`,
     });
     const { getTemplate } = await import("./promptTemplates");
     const template = getTemplate(selectedTemplate || "full_report");
@@ -86,7 +105,10 @@ export async function analyzeVideoContent(
     ${template?.analysisPrompt || "Extract every source-supported idea that can help the recipient understand, decide, or act."}
 
     ${sourceGroundingRules}
-    
+
+    ${requireTrainingRecipe ? trainingGuideRecipeRules : ""}
+
+    ${formatLibraryKnowledgeForPrompt(libraryKnowledge)}
     <source_content>
     SOURCE TITLE:
     ${videoTitle}
@@ -105,9 +127,7 @@ export async function analyzeVideoContent(
         {
           "name": "drill name",
           "description": "detailed description",
-          "steps": ["step1", "step2", ...],
-          "duration": "estimated time",
-          "difficulty": "beginner/intermediate/advanced"
+          "steps": ["step1", "step2", ...]
         }
       ],
       "techniques": [
@@ -124,7 +144,6 @@ export async function analyzeVideoContent(
       "summary": "brief summary of the video content",
       "keyMoments": [
         {
-          "timestamp": "MM:SS format",
           "description": "what happens at this moment",
           "importance": "why this moment is important"
         }
@@ -132,17 +151,24 @@ export async function analyzeVideoContent(
       "contentInventory": {
         "principles": ["source-supported principle"],
         "procedures": ["source-supported sequence or procedure"],
+        "bestPractices": ["source-supported best practice or coaching cue"],
+        "keyTakeaways": ["concise source-supported takeaway"],
         "checklistCandidates": ["observable check"],
         "worksheetPrompts": ["question that helps the recipient decide or apply"],
-        "templateCandidates": ["reusable script, tracker, worksheet, or template supported by the source"],
+        "templateCandidates": ["reusable sheet, plan, worksheet, or other audience-native tool supported by the source"],
         "metrics": ["measurement explicitly supported by the source"],
-        "troubleshooting": [{ "problem": "supported problem", "fix": "supported fix" }],
+        "troubleshooting": [{ "problem": "supported problem", "cause": "supported cause when available", "fix": "supported fix" }],
+        "progressions": ["source-supported way to advance a drill or technique"],
+        "regressions": ["source-supported way to simplify a drill or technique"],
+        "workoutPlanIngredients": ["source-supported drill, cue, sequence, prescription, or blank field for the recipient to choose"],
         "unsupportedGaps": ["requested detail the source does not support"]
       }
     }
     
     Preserve nuance and implementation details. Do not reduce the source to a short review.
     Use drills and techniques only when those concepts genuinely apply; otherwise return empty arrays.
+    Inventory every distinct source-supported drill, principle, coaching cue, takeaway, mistake/fix, progression, and regression rather than collapsing several ideas into one generic item. Return an empty array when the source does not support a category; never infer a mistake, progression, or regression merely to fill the schema.
+    Omit drill duration, difficulty, key-moment timestamps, prescriptions, and metrics unless the source explicitly supports them. When an exact source timestamp is present, add it to that key moment in M:SS format.
     `;
 
     const response = await openai.chat.completions.create({
@@ -177,6 +203,7 @@ export async function generatePracticeGuide(
   selectedTemplate?: string,
   creationBrief?: GuideCreationBrief,
   sourceContent?: string,
+  libraryKnowledge?: PreparedLibraryKnowledge,
 ): Promise<GuideContentV2> {
   try {
     // Import template service and get template prompts
@@ -185,6 +212,17 @@ export async function generatePracticeGuide(
     const brief = guideCreationBriefSchema.parse(creationBrief ?? {
       format: inferGuideFormatFromTemplate(selectedTemplate),
     });
+    const requireTrainingRecipe = isTrainingGuide({
+      selectedTemplate,
+      brief,
+      title: videoTitle,
+      category: `${analysis.category || ""} ${brandingSettings?.targetAudience || ""}`,
+      sourceText: sourceContent,
+      drillCount: analysis.drills?.length ?? 0,
+    });
+    const trainingDepthProfile = requireTrainingRecipe
+      ? buildGuideTrainingDepthProfile(analysis)
+      : undefined;
     
     // Use template prompts if available, fallback to default
     const templatePrompt = template ? template.guidePrompt : `Create a comprehensive practice guide with these sections:
@@ -207,7 +245,10 @@ Make it actionable, detailed, and professional.`;
 
     ${formatCreationBrief(brief)}
 
-    ${guideQualityGenerationRequirements(brief.format)}
+    ${guideQualityGenerationRequirements(brief.format, {
+      requireTrainingRecipe,
+      trainingDepthProfile,
+    })}
 
     ${sourceGroundingRules}
     
@@ -218,6 +259,7 @@ Make it actionable, detailed, and professional.`;
     - Intended audience: ${brandingSettings?.targetAudience || brief.audience || 'Infer from the source'}
     Use this context for vocabulary, tone, and examples. It must never override source grounding or introduce unsupported claims.
 
+    ${formatLibraryKnowledgeForPrompt(libraryKnowledge)}
     <source_content>
     SOURCE TITLE:
     ${videoTitle}
@@ -266,17 +308,19 @@ Make it actionable, detailed, and professional.`;
     const guide = JSON.parse(response.choices[0].message.content || '{}');
 
     return await ensurePublishableGuide(guide, async (draft, audit) => {
-      const repairPrompt = buildGuideQualityRepairPrompt({
+      const repairPrompt = `${buildGuideQualityRepairPrompt({
         brief,
         draft,
         audit,
+        requireTrainingRecipe,
+        trainingDepthProfile,
         sourceContext: {
           title: videoTitle,
           creator: channelTitle || "Not provided",
           contentInventory: analysis,
           body: sourceContent || "The original source is unavailable; use only the content inventory included here.",
         },
-      });
+      })}${formatLibraryKnowledgeForPrompt(libraryKnowledge)}`;
 
       const repairResponse = await openai.chat.completions.create({
         model: "gpt-4o",
@@ -296,7 +340,11 @@ Make it actionable, detailed, and professional.`;
       });
 
       return JSON.parse(repairResponse.choices[0].message.content || "{}");
-    }, { expectedFormat: brief.format });
+    }, {
+      expectedFormat: brief.format,
+      requireTrainingRecipe,
+      trainingDepthProfile,
+    });
   } catch (error) {
     console.error("Error generating practice guide:", error);
     if (error instanceof GuideQualityError) throw error;

@@ -55,6 +55,21 @@ test("accepts the grouped update contract and rejects scope injection", () => {
   assert.throws(() => brandAppearanceUpdateSchema.parse({ brandId: 123 }));
 });
 
+test("accepts and normalizes the ILB display font", () => {
+  const parsed = brandAppearanceUpdateSchema.parse({
+    typography: {
+      headingFontFamily: "Barlow Condensed",
+      bodyFontFamily: "Inter",
+    },
+  });
+  const flattened = flattenBrandAppearanceUpdate(parsed);
+  const appearance = normalizeBrandAppearance(flattened);
+
+  assert.equal(flattened.headingFontFamily, "Barlow Condensed");
+  assert.equal(appearance.headingFontFamily, "Barlow Condensed");
+  assert.equal(appearance.bodyFontFamily, "Inter");
+});
+
 test("public projection strips prompting context and chooses readable text", () => {
   const privateAppearance = normalizeBrandAppearance({
     displayName: "Contrast Co",

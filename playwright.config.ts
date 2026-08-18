@@ -1,5 +1,8 @@
 import { defineConfig, devices } from "@playwright/test";
 
+const testBaseUrl = process.env.VIDMAGNET_TEST_URL?.replace(/\/$/, "") || "http://127.0.0.1:4176";
+const testPort = new URL(testBaseUrl).port || "4176";
+
 export default defineConfig({
   testDir: "./tests",
   fullyParallel: true,
@@ -10,7 +13,7 @@ export default defineConfig({
   outputDir: "test-results/artifacts",
   preserveOutput: "always",
   use: {
-    baseURL: "http://127.0.0.1:4173",
+    baseURL: testBaseUrl,
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
     video: "retain-on-failure",
@@ -33,9 +36,10 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: "VITE_STRIPE_PUBLIC_KEY=pk_test_vidmagnet npm run dev:marketing",
-    url: "http://127.0.0.1:4173",
-    reuseExistingServer: !process.env.CI,
+    command: `VITE_STRIPE_PUBLIC_KEY=pk_test_vidmagnet npm exec vite -- --host 127.0.0.1 --port ${testPort}`,
+    url: testBaseUrl,
+    // Never attach release tests to an arbitrary process that happens to own the port.
+    reuseExistingServer: false,
     timeout: 120_000,
   },
 });

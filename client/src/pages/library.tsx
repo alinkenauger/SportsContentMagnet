@@ -21,7 +21,7 @@ interface PublicGuide {
 }
 
 export default function Library() {
-  const { data: guides = [], isLoading } = useQuery({
+  const { data: guides = [], isLoading } = useQuery<PublicGuide[]>({
     queryKey: ['/api/library/public-guides'],
   });
 

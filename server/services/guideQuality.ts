@@ -10,11 +10,13 @@ import {
   formatCreationBrief,
   guideV2JsonShape,
   sourceGroundingRules,
+  trainingGuideRecipeRules,
 } from "./guideContentPrompt";
 
 export type GuideQualityIssueCode =
   | "schema_validation"
   | "format_recipe"
+  | "content_recipe"
   | "value_density"
   | "source_refs"
   | "repetition"
@@ -57,6 +59,35 @@ export interface GuideSourceTimingRange {
 export interface GuideQualityAuditOptions {
   expectedFormat?: GuideFormat;
   sourceTimingRanges?: GuideSourceTimingRange[];
+  requireTrainingRecipe?: boolean;
+  trainingDepthProfile?: GuideTrainingDepthProfile;
+}
+
+export interface GuideTrainingDepthProfile {
+  deepDiveConceptCount: number;
+  drillCount: number;
+  drillStepCount: number;
+  bestPracticeCount: number;
+  takeawayCount: number;
+  mistakeCount: number;
+  progressionCount: number;
+  regressionCount: number;
+  workoutIngredientCount: number;
+}
+
+export interface GuideTrainingAnalysisInput {
+  keyTips?: string[];
+  drills?: Array<{ name?: string; description?: string; steps?: string[] }>;
+  techniques?: Array<{ name?: string; description?: string; keyPoints?: string[] }>;
+  contentInventory?: {
+    principles?: string[];
+    bestPractices?: string[];
+    keyTakeaways?: string[];
+    troubleshooting?: Array<{ problem?: string; cause?: string; fix?: string }>;
+    progressions?: string[];
+    regressions?: string[];
+    workoutPlanIngredients?: string[];
+  };
 }
 
 const IMPLEMENTATION_BLOCK_TYPES = new Set<GuideBlock["type"]>([
@@ -76,6 +107,13 @@ const formatQualityRequirements: Record<GuideFormat, string> = {
   template_pack: `Include at least two reusable templates. Every template needs at least one clearly named placeholder.`,
   report: `Use at least two distinct implementation block types, including steps, a checklist, a worksheet, a scorecard, troubleshooting, or a table.`,
 };
+
+const deepDiveHeading = /\b(?:deep dive|why it works|principles?|mechanics?|technique analysis|technical breakdown)\b/i;
+const bestPracticesHeading = /\b(?:best practices?|coaching cues?|execution cues?|practice cues?|keys? to success)\b/i;
+const takeawaysHeading = /\b(?:key takeaways?|takeaways?|remember this|key points?|recap)\b/i;
+const progressionHeading = /\b(?:progressions?|advance|advanced variation|make it harder|next level)\b/i;
+const regressionHeading = /\b(?:regressions?|simplif(?:y|ied)|easier variation|foundation version|scale down)\b/i;
+const audienceNativeTrainingArtifact = /\b(?:workout|practice|training|session)\b/i;
 
 function addIssue(
   issues: GuideQualityIssue[],
@@ -108,6 +146,86 @@ function normalizeComparableText(value: string): string {
     .replace(/[^a-z0-9\s]/g, " ")
     .replace(/\s+/g, " ")
     .trim();
+}
+
+function meaningfulUniqueCount(values: Array<string | undefined>): number {
+  return new Set(
+    values
+      .filter((value): value is string => typeof value === "string")
+      .map(normalizeComparableText)
+      .filter(Boolean),
+  ).size;
+}
+
+export function buildGuideTrainingDepthProfile(
+  analysis: GuideTrainingAnalysisInput | undefined,
+): GuideTrainingDepthProfile | undefined {
+  if (!analysis) return undefined;
+
+  const drills = Array.isArray(analysis.drills) ? analysis.drills : [];
+  const techniques = Array.isArray(analysis.techniques) ? analysis.techniques : [];
+  const keyTips = Array.isArray(analysis.keyTips) ? analysis.keyTips : [];
+  const inventory = analysis.contentInventory;
+  const principles = Array.isArray(inventory?.principles) ? inventory.principles : [];
+  const bestPractices = Array.isArray(inventory?.bestPractices)
+    ? inventory.bestPractices
+    : [];
+  const keyTakeaways = Array.isArray(inventory?.keyTakeaways)
+    ? inventory.keyTakeaways
+    : [];
+  const troubleshooting = Array.isArray(inventory?.troubleshooting)
+    ? inventory.troubleshooting
+    : [];
+  const progressions = Array.isArray(inventory?.progressions)
+    ? inventory.progressions
+    : [];
+  const regressions = Array.isArray(inventory?.regressions)
+    ? inventory.regressions
+    : [];
+  const workoutIngredients = Array.isArray(inventory?.workoutPlanIngredients)
+    ? inventory.workoutPlanIngredients
+    : [];
+
+  const drillCount = meaningfulUniqueCount(
+    drills.map((drill) => drill.name || drill.description),
+  );
+  const techniqueConcepts = techniques.map((technique) => [
+    technique.name,
+    technique.description,
+    ...(Array.isArray(technique.keyPoints) ? technique.keyPoints : []),
+  ].filter(Boolean).join(" "));
+  const deepDiveConceptCount = meaningfulUniqueCount([
+    ...principles,
+    ...techniqueConcepts,
+  ]);
+  const drillStepCount = drills.reduce(
+    (total, drill) => total + meaningfulUniqueCount(
+      Array.isArray(drill.steps) ? drill.steps : [],
+    ),
+    0,
+  );
+
+  return {
+    deepDiveConceptCount,
+    drillCount,
+    drillStepCount,
+    bestPracticeCount: meaningfulUniqueCount(
+      bestPractices.length > 0 ? bestPractices : keyTips,
+    ),
+    takeawayCount: meaningfulUniqueCount(
+      keyTakeaways.length > 0 ? keyTakeaways : keyTips,
+    ),
+    mistakeCount: meaningfulUniqueCount(
+      troubleshooting.map((item) => `${item.problem || ""} ${item.fix || ""}`),
+    ),
+    progressionCount: meaningfulUniqueCount(progressions),
+    regressionCount: meaningfulUniqueCount(regressions),
+    workoutIngredientCount: meaningfulUniqueCount(
+      workoutIngredients.length > 0
+        ? workoutIngredients
+        : drills.map((drill) => drill.name || drill.description),
+    ),
+  };
 }
 
 function excerpt(value: string): string {
@@ -391,6 +509,338 @@ function auditFormatRecipe(
   }
 }
 
+function blockTitle(block: GuideBlock): string | undefined {
+  return "title" in block && typeof block.title === "string"
+    ? block.title
+    : undefined;
+}
+
+function blockTextFragments(block: GuideBlock): string[] {
+  switch (block.type) {
+    case "rich_text":
+      return [block.text];
+    case "steps":
+      return block.items.flatMap((item) => [
+        item.title,
+        item.instruction,
+        item.why,
+        item.successCriteria,
+        item.commonMistake,
+        item.fix,
+      ].filter((value): value is string => Boolean(value)));
+    case "checklist":
+      return block.items.flatMap((item) => [
+        item.text,
+        item.why,
+        item.evidence,
+      ].filter((value): value is string => Boolean(value)));
+    case "worksheet":
+      return [
+        block.instructions,
+        ...block.prompts.map((prompt) => prompt.prompt),
+      ].filter((value): value is string => Boolean(value));
+    case "scorecard":
+      return block.metrics.flatMap((metric) => [
+        metric.label,
+        metric.target,
+        metric.measurement,
+      ].filter((value): value is string => Boolean(value)));
+    case "example":
+      return [block.scenario, block.good, block.avoid]
+        .filter((value): value is string => Boolean(value));
+    case "troubleshooting":
+      return block.items.flatMap((item) => [item.problem, item.cause, item.fix]
+        .filter((value): value is string => Boolean(value)));
+    case "table":
+      return [...block.columns, ...block.rows.flat()];
+    case "callout":
+      return [block.text];
+  }
+}
+
+function textUnitCount(value: string): number {
+  return value
+    .split(/\n+|[.!?]+(?:\s+|$)/)
+    .map((unit) => normalizeComparableText(unit))
+    .filter((unit) => unit.split(" ").filter(Boolean).length >= 4)
+    .length;
+}
+
+function blockSemanticUnitCount(block: GuideBlock): number {
+  if (IMPLEMENTATION_BLOCK_TYPES.has(block.type)) {
+    return implementationUnitCount(block);
+  }
+  if (block.type === "rich_text") return Math.max(1, textUnitCount(block.text));
+  if (block.type === "example") return 1;
+  if (block.type === "callout") return 1;
+  return 0;
+}
+
+function headingRegionStats(
+  guide: GuideContentV2,
+  heading: RegExp,
+): { present: boolean; units: number; words: number } {
+  let present = false;
+  let units = 0;
+  const fragments: string[] = [];
+
+  guide.sections.forEach((section) => {
+    if (heading.test(section.title)) {
+      present = true;
+      fragments.push(section.content);
+      section.blocks.forEach((block) => {
+        units += blockSemanticUnitCount(block);
+        fragments.push(...blockTextFragments(block));
+      });
+      return;
+    }
+
+    section.blocks.forEach((block) => {
+      const title = blockTitle(block);
+      if (!title || !heading.test(title)) return;
+      present = true;
+      units += blockSemanticUnitCount(block);
+      fragments.push(...blockTextFragments(block));
+    });
+  });
+
+  const uniqueFragments = new Map<string, string>();
+  fragments.forEach((fragment) => {
+    const normalized = normalizeComparableText(fragment);
+    if (normalized && !uniqueFragments.has(normalized)) {
+      uniqueFragments.set(normalized, fragment);
+    }
+  });
+  const words = Array.from(uniqueFragments.values())
+    .reduce((total, fragment) =>
+      total + normalizeComparableText(fragment).split(" ").filter(Boolean).length,
+    0);
+
+  return { present, units, words };
+}
+
+function artifactUnitCount(body: string): number {
+  const lineCount = body.split(/\n+/).filter((line) => line.trim().length > 0).length;
+  return Math.max(lineCount, textUnitCount(body));
+}
+
+function auditTrainingContentRecipe(
+  guide: GuideContentV2,
+  issues: GuideQualityIssue[],
+  profile?: GuideTrainingDepthProfile,
+): void {
+  const titledContent = guide.sections.flatMap((section) => [
+    section.title,
+    ...section.blocks.flatMap((block) => {
+      if ("title" in block && typeof block.title === "string") return [block.title];
+      return [];
+    }),
+  ]);
+  const drillSections = guide.sections.filter((section) =>
+    section.type === "drill" && section.blocks.some((block) => block.type === "steps"),
+  );
+  const mistakeFixPairs = guide.sections.reduce((total, section) =>
+    total + section.blocks.reduce((blockTotal, block) => {
+      if (block.type === "troubleshooting") return blockTotal + block.items.length;
+      if (block.type === "steps") {
+        return blockTotal + block.items.filter((item) =>
+          Boolean(item.commonMistake) && Boolean(item.fix),
+        ).length;
+      }
+      return blockTotal;
+    }, 0),
+  0);
+  const practiceArtifacts = (guide.templates ?? []).filter((artifact) =>
+    audienceNativeTrainingArtifact.test(`${artifact.title} ${artifact.purpose}`),
+  );
+  const evidence: GuideQualityEvidence[] = [];
+
+  const expectedDeepDiveConcepts = profile
+    ? Math.min(2, profile.deepDiveConceptCount)
+    : 1;
+  const expectedDrills = profile ? Math.min(4, profile.drillCount) : 1;
+  const expectedBestPractices = profile
+    ? Math.min(4, profile.bestPracticeCount)
+    : 1;
+  const expectedTakeaways = profile ? Math.min(4, profile.takeawayCount) : 1;
+  const expectedMistakes = profile ? Math.min(4, profile.mistakeCount) : 1;
+  const deepDive = headingRegionStats(guide, deepDiveHeading);
+  const bestPractices = headingRegionStats(guide, bestPracticesHeading);
+  const takeaways = headingRegionStats(guide, takeawaysHeading);
+
+  if (expectedDeepDiveConcepts > 0 && !deepDive.present) {
+    evidence.push({
+      path: "sections[].title|sections[].blocks[].title",
+      observed: "no clearly named deep-dive explanation",
+      expected: "a substantive Deep dive, Why it works, Principles, Mechanics, or Technical breakdown section",
+    });
+  } else if (
+    profile &&
+    expectedDeepDiveConcepts > 0 &&
+    deepDive.words < Math.max(45, expectedDeepDiveConcepts * 40)
+  ) {
+    evidence.push({
+      path: "sections[deep-dive].content|blocks",
+      observed: `${deepDive.words} non-repeated explanatory words`,
+      expected: `enough source-grounded explanation to develop ${expectedDeepDiveConcepts} distinct concept${expectedDeepDiveConcepts === 1 ? "" : "s"} (at least ${Math.max(45, expectedDeepDiveConcepts * 40)} words across the region)`,
+    });
+  }
+  if (expectedDrills > 0 && drillSections.length < expectedDrills) {
+    evidence.push({
+      path: "sections[type=drill].blocks[type=steps]",
+      observed: `${drillSections.length} drill section${drillSections.length === 1 ? "" : "s"} with an ordered breakdown`,
+      expected: `${expectedDrills} distinct source-supported drill breakdown${expectedDrills === 1 ? "" : "s"}`,
+    });
+  }
+  if (profile && expectedDrills > 0) {
+    const drillSectionDetails = drillSections.map((section) => {
+      const steps = section.blocks.flatMap((block) =>
+        block.type === "steps" ? block.items : [],
+      );
+      return {
+        section,
+        steps,
+        cueCount: steps.filter((step) => Boolean(step.why)).length,
+        successCheckCount: steps.filter((step) => Boolean(step.successCriteria)).length,
+      };
+    });
+    const drillSteps = drillSectionDetails.flatMap(({ steps }) => steps);
+    const expectedDrillSteps = Math.min(
+      12,
+      Math.max(expectedDrills * 2, Math.min(profile.drillStepCount, 12)),
+    );
+    const incompleteDrills = drillSectionDetails.filter(({ steps, cueCount, successCheckCount }) =>
+      steps.length < 2 || cueCount === 0 || successCheckCount === 0,
+    );
+    if (drillSteps.length < expectedDrillSteps || incompleteDrills.length > 0) {
+      evidence.push({
+        path: "sections[type=drill].blocks[type=steps].items",
+        observed: `${drillSteps.length} ordered steps across ${drillSectionDetails.length} drills; ${incompleteDrills.length} drill${incompleteDrills.length === 1 ? "" : "s"} lack two setup/execution steps, a cue/reason, or a success check`,
+        expected: `${expectedDrillSteps} source-supported setup/execution steps overall, with at least two ordered steps, one useful cue or reason, and one observable success check in every drill`,
+        excerpt: incompleteDrills.slice(0, 4).map(({ section, steps, cueCount, successCheckCount }) =>
+          `${section.title}: ${steps.length} step(s), ${cueCount} cue/reason(s), ${successCheckCount} success check(s)`,
+        ).join("; ") || undefined,
+      });
+    }
+  }
+  if (expectedBestPractices > 0 && !bestPractices.present) {
+    evidence.push({
+      path: "sections[].title|sections[].blocks[].title",
+      observed: "no clearly named best-practices or coaching-cues section",
+      expected: "a skimmable Best practices or Coaching cues section",
+    });
+  } else if (
+    profile &&
+    expectedBestPractices > 0 &&
+    bestPractices.units < expectedBestPractices
+  ) {
+    evidence.push({
+      path: "sections[best-practices].blocks",
+      observed: `${bestPractices.units} distinct coaching cue${bestPractices.units === 1 ? "" : "s"}`,
+      expected: `${expectedBestPractices} source-supported best practice${expectedBestPractices === 1 ? "" : "s"}, each expressed as a usable cue or check`,
+    });
+  }
+  if (expectedTakeaways > 0 && !takeaways.present) {
+    evidence.push({
+      path: "sections[].title|sections[].blocks[].title",
+      observed: "no clearly named takeaways section",
+      expected: "a concise Key takeaways, Key points, or Recap section",
+    });
+  } else if (profile && expectedTakeaways > 0 && takeaways.units < expectedTakeaways) {
+    evidence.push({
+      path: "sections[takeaways].blocks",
+      observed: `${takeaways.units} distinct takeaway${takeaways.units === 1 ? "" : "s"}`,
+      expected: `${expectedTakeaways} source-grounded takeaways that synthesize rather than copy earlier material`,
+    });
+  }
+  if (expectedMistakes > 0 && mistakeFixPairs < expectedMistakes) {
+    evidence.push({
+      path: "sections[].blocks[type=troubleshooting]|sections[].blocks[type=steps].items",
+      observed: `${mistakeFixPairs} paired mistake/fix item${mistakeFixPairs === 1 ? "" : "s"}`,
+      expected: `${expectedMistakes} source-grounded mistake/fix pair${expectedMistakes === 1 ? "" : "s"}`,
+    });
+  }
+  if (
+    profile?.progressionCount &&
+    !titledContent.some((title) => progressionHeading.test(title))
+  ) {
+    evidence.push({
+      path: "sections[].title|sections[].blocks[].title",
+      observed: "the source-supported progression is not surfaced",
+      expected: "a clearly labeled progression beside the relevant drill",
+    });
+  }
+  if (
+    profile?.regressionCount &&
+    !titledContent.some((title) => regressionHeading.test(title))
+  ) {
+    evidence.push({
+      path: "sections[].title|sections[].blocks[].title",
+      observed: "the source-supported regression is not surfaced",
+      expected: "a clearly labeled regression or easier variation beside the relevant drill",
+    });
+  }
+  const requiresPracticeArtifact = !profile ||
+    profile.drillCount > 0 ||
+    profile.workoutIngredientCount > 0;
+  if (requiresPracticeArtifact && practiceArtifacts.length === 0) {
+    evidence.push({
+      path: "templates",
+      observed: "no downloadable audience-native training artifact",
+      expected: "a workout sheet, practice plan, training sheet, or session plan in templates",
+    });
+  } else if (requiresPracticeArtifact && profile && practiceArtifacts.length > 0) {
+    const expectedWorkoutUnits = Math.min(
+      6,
+      Math.max(3, profile.drillCount, profile.workoutIngredientCount),
+    );
+    const strongestArtifact = practiceArtifacts.reduce((strongest, artifact) =>
+      artifactUnitCount(artifact.body) > artifactUnitCount(strongest.body)
+        ? artifact
+        : strongest,
+    );
+    const artifactText = `${strongestArtifact.title} ${strongestArtifact.purpose} ${strongestArtifact.body}`;
+    if (
+      artifactUnitCount(strongestArtifact.body) < expectedWorkoutUnits ||
+      !/\bdate\b/i.test(artifactText) ||
+      !/\b(?:results?|notes?|reflection|next focus)\b/i.test(artifactText)
+    ) {
+      evidence.push({
+        path: "templates[training-artifact].body",
+        observed: `${artifactUnitCount(strongestArtifact.body)} usable rows or instructions${/\bdate\b/i.test(artifactText) ? "" : ", no date field"}${/\b(?:results?|notes?|reflection|next focus)\b/i.test(artifactText) ? "" : ", no results or notes field"}`,
+        expected: `at least ${expectedWorkoutUnits} drill/order/cue or reflection rows plus date and results/notes fields`,
+      });
+    }
+  }
+
+  if (profile) {
+    const supportedLanes = [
+      expectedDeepDiveConcepts,
+      expectedDrills,
+      expectedBestPractices,
+      expectedTakeaways,
+      expectedMistakes,
+    ].filter((count) => count > 0).length;
+    const minimumSections = Math.min(5, Math.max(2, supportedLanes));
+    if (guide.sections.length < minimumSections) {
+      evidence.push({
+        path: "sections",
+        observed: `${guide.sections.length} section${guide.sections.length === 1 ? "" : "s"}`,
+        expected: `at least ${minimumSections} substantive sections for the distinct kinds of useful material found in this source`,
+      });
+    }
+  }
+
+  if (evidence.length > 0) {
+    addIssue(issues, {
+      code: "content_recipe",
+      message: "The training Guide is missing part of the useful video-companion recipe.",
+      evidence,
+      repairInstruction: "Develop every supported content lane instead of satisfying the audit with headings alone. Explain the source's mechanics, give each source-supported drill a setup and ordered execution with cues and observable checks, surface distinct best practices and takeaways, include every supported mistake/fix and progression/regression, and add a complete audience-native workout or practice sheet. Do not add a live tracker or invent sets, reps, makes, rest, durations, targets, thresholds, or results; use recipient-defined blank fields when the source supplies no number.",
+    });
+  }
+}
+
 function auditValueDensity(
   guide: GuideContentV2,
   issues: GuideQualityIssue[],
@@ -514,6 +964,27 @@ function auditSourceRefs(
   };
 
   if (validTimingRanges.length > 0) {
+    const timestampedSections = guide.sections.filter((section) => {
+      if (section.timestampSeconds !== undefined) return true;
+      if (section.timestamp && parseTimestamp(section.timestamp) !== undefined) return true;
+      if (section.sourceRefs?.some((sourceRef) => sourceRef.startSeconds !== undefined)) return true;
+
+      return section.blocks.some((block) =>
+        (block.type === "steps" || block.type === "checklist") &&
+        block.items.some((item) =>
+          item.sourceRefs?.some((sourceRef) => sourceRef.startSeconds !== undefined),
+        ),
+      );
+    });
+    const minimumTimestampedSections = Math.max(1, Math.ceil(guide.sections.length * 0.6));
+    if (timestampedSections.length < minimumTimestampedSections) {
+      timingEvidence.push({
+        path: "sections[].timestampSeconds|sections[].sourceRefs[].startSeconds|sections[].blocks[].items[].sourceRefs[].startSeconds",
+        observed: `${timestampedSections.length} of ${guide.sections.length} sections include a numeric video jump`,
+        expected: `accurate numeric timestamp references on at least ${minimumTimestampedSections} sections when timestamped source segments are supplied`,
+      });
+    }
+
     guide.sections.forEach((section, sectionIndex) => {
       const timestampFromLabel = section.timestamp
         ? parseTimestamp(section.timestamp)
@@ -774,6 +1245,9 @@ export function auditGuideQuality(
   }
 
   auditFormatRecipe(guide, issues, expectedFormat);
+  if (options.requireTrainingRecipe) {
+    auditTrainingContentRecipe(guide, issues, options.trainingDepthProfile);
+  }
   auditValueDensity(guide, issues, expectedFormat);
   auditSourceRefs(guide, issues, options.sourceTimingRanges);
   auditRepetition(guide, issues);
@@ -785,7 +1259,10 @@ export function auditGuideQuality(
   };
 }
 
-export function guideQualityGenerationRequirements(format: GuideFormat): string {
+export function guideQualityGenerationRequirements(
+  format: GuideFormat,
+  options: Pick<GuideQualityAuditOptions, "requireTrainingRecipe" | "sourceTimingRanges" | "trainingDepthProfile"> = {},
+): string {
   const densityRequirement = format === "template_pack"
     ? "Include at least two focused sections and two reusable templates."
     : format === "action_plan"
@@ -793,13 +1270,43 @@ export function guideQualityGenerationRequirements(format: GuideFormat): string 
       : format === "checklist"
         ? "Include at least two focused sections and five observable checklist items."
         : "Include at least two focused sections, two distinct implementation block types, and four usable action units.";
+  const trainingRecipe = options.requireTrainingRecipe
+    ? `\n\n${trainingGuideRecipeRules}`
+    : "";
+  const profile = options.trainingDepthProfile;
+  let sourceAdaptiveDepth = "";
+  if (options.requireTrainingRecipe && profile) {
+    const depthRules = [
+      profile.deepDiveConceptCount > 0
+        ? `Develop up to ${Math.min(2, profile.deepDiveConceptCount)} distinct source-supported concepts in a substantive but skimmable deep dive. Explain what changes, why it matters, and where the recipient should notice it; do not stop at a one-sentence summary.`
+        : "",
+      profile.drillCount > 0
+        ? `Break down ${Math.min(4, profile.drillCount)} distinct source-supported drill(s). Across them include at least ${Math.min(12, Math.max(Math.min(4, profile.drillCount) * 2, Math.min(profile.drillStepCount, 12)))} setup/execution steps, and give every drill at least one useful cue and observable success check.`
+        : "",
+      profile.bestPracticeCount > 0 || profile.takeawayCount > 0 || profile.mistakeCount > 0
+        ? `Surface up to ${Math.min(4, profile.bestPracticeCount)} distinct best-practice cue(s), up to ${Math.min(4, profile.takeawayCount)} synthesized takeaway(s), and up to ${Math.min(4, profile.mistakeCount)} supported mistake/fix pair(s). Do not repeat the same point under different labels, and omit a category when its source count is zero.`
+        : "",
+      profile.progressionCount > 0 || profile.regressionCount > 0
+        ? "Place each source-supported progression or regression beside its drill and label it clearly. Do not add a variation that is absent from the inventory."
+        : "",
+      profile.drillCount > 0 || profile.workoutIngredientCount > 0
+        ? "Build the workout/practice sheet from the source-supported drills and workout ingredients. When the source omits a prescription, provide a blank recipient-defined field rather than inventing a number."
+        : "Do not create a workout or practice sheet when the source inventory contains no drills or workout ingredients.",
+    ].filter(Boolean).map((rule) => `- ${rule}`).join("\n");
+    sourceAdaptiveDepth = `\n\nSOURCE-ADAPTIVE TRAINING DEPTH
+- The source inventory contains ${profile.deepDiveConceptCount} principle/technique concept(s), ${profile.drillCount} drill(s), ${profile.drillStepCount} drill step(s), ${profile.bestPracticeCount} best-practice cue(s), ${profile.takeawayCount} takeaway(s), ${profile.mistakeCount} supported mistake/fix pair(s), ${profile.progressionCount} progression(s), ${profile.regressionCount} regression(s), and ${profile.workoutIngredientCount} workout-plan ingredient(s).
+${depthRules}`;
+  }
+  const timestampRequirement = options.sourceTimingRanges?.length
+    ? "\n- Because exact timestamped segments are available, include accurate numeric video jumps on at least 60% of sections. Prefer item-level sourceRefs for drills, cues, and mistake/fix moments."
+    : "";
   return `PUBLISH-QUALITY REQUIREMENTS
 - ${densityRequirement}
 - Include a quick start with a concrete first action and an observable objective for every section.
 - Put an implementation tool in most sections; do not pad the guide with repeated prose.
 - Add a specific topical sourceRef label to every substantive section. Add timestamps only when the source provides exact timestamps.
 - ${formatQualityRequirements[format]}
-- Never meet these requirements by inventing facts, metrics, thresholds, results, examples presented as facts, or time estimates.`;
+- Never meet these requirements by inventing facts, metrics, thresholds, results, examples presented as facts, or time estimates.${timestampRequirement}${trainingRecipe}${sourceAdaptiveDepth}`;
 }
 
 export const guideQualityRepairSystemPrompt =
@@ -810,6 +1317,9 @@ export function buildGuideQualityRepairPrompt(input: {
   draft: unknown;
   audit: GuideQualityAudit;
   sourceContext: unknown;
+  requireTrainingRecipe?: boolean;
+  sourceTimingRanges?: GuideSourceTimingRange[];
+  trainingDepthProfile?: GuideTrainingDepthProfile;
 }): string {
   return `
 Repair this Guide V2 JSON so it meets the deterministic publish-quality audit.
@@ -818,7 +1328,11 @@ useful, source-supported detail already present.
 
 ${formatCreationBrief(input.brief)}
 
-${guideQualityGenerationRequirements(input.brief.format)}
+${guideQualityGenerationRequirements(input.brief.format, {
+    requireTrainingRecipe: input.requireTrainingRecipe,
+    sourceTimingRanges: input.sourceTimingRanges,
+    trainingDepthProfile: input.trainingDepthProfile,
+  })}
 
 QUALITY AUDIT ISSUES
 ${formatGuideQualityIssues(input.audit)}

@@ -1,4 +1,4 @@
-import { Suspense, lazy, type ComponentType } from "react";
+import { Suspense, lazy, useEffect, type ComponentType } from "react";
 import { Switch, Route } from "wouter";
 import { QueryClientProvider } from "@tanstack/react-query";
 
@@ -57,6 +57,15 @@ function RouteLoading() {
   );
 }
 
+function ProtectedRouteRedirect() {
+  useEffect(() => {
+    const returnTo = `${window.location.pathname}${window.location.search}`;
+    window.location.replace(`/login?returnTo=${encodeURIComponent(returnTo)}`);
+  }, []);
+
+  return <RouteLoading />;
+}
+
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
 
@@ -69,7 +78,7 @@ function Router() {
         <Route path="/guide/:guideId" component={GuideView} />
         <Route path="/quiz/:customUrl" component={QuizRunner} />
         <Route path="/public/library" component={Library} />
-        <Route path="/library/public" component={PublicLibrary} />
+        <Route path="/library/:slug" component={PublicLibrary} />
 
         {/* These routes own their authentication or setup lifecycle. */}
         <Route path="/admin" component={AdminDashboard} />
@@ -103,7 +112,10 @@ function Router() {
             <Route path="/test-transcription" component={TranscriptionTest} />
           </>
         ) : (
-          <Route path="/" component={SalesPage} />
+          <>
+            <Route path="/" component={SalesPage} />
+            <Route component={ProtectedRouteRedirect} />
+          </>
         )}
 
         <Route component={NotFound} />

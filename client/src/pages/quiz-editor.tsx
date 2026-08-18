@@ -32,6 +32,7 @@ import {
   ExternalLink,
   Eye,
   Gift,
+  LibraryBig,
   ListChecks,
   Loader2,
   LockKeyhole,
@@ -91,6 +92,12 @@ interface QuizEditorResponse {
     description?: string | null;
     status?: string | null;
     slug?: string | null;
+    includeInLibrary?: boolean | null;
+    presentationProfile?: {
+      version: 1;
+      mode: "auto" | "manual";
+      preset: "editorial" | "basketball" | "golf" | "performance";
+    };
   };
   quiz: {
     questions?: QuizQuestion[] | null;
@@ -110,9 +117,14 @@ interface QuizSavePayload {
   outcomes: QuizOutcome[];
   leadCapture: LeadCaptureConfig;
   theme: QuizTheme;
+  presentationSelection:
+    | { mode: "auto" }
+    | { mode: "manual"; preset: "editorial" | "basketball" | "golf" | "performance" };
 }
 
 const DEFAULT_OUTCOME_COLORS = ["#2563EB", "#7C3AED", "#059669", "#D97706", "#DC2626", "#0891B2"];
+const MIN_QUIZ_QUESTIONS = 5;
+const QUIZ_ANSWER_COUNT = 4;
 
 function createLocalId(prefix: string) {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
@@ -153,6 +165,7 @@ export default function QuizEditor() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [status, setStatus] = useState("draft");
+  const [includeInLibrary, setIncludeInLibrary] = useState(false);
   const [questions, setQuestions] = useState<QuizQuestion[]>([]);
   const [outcomes, setOutcomes] = useState<QuizOutcome[]>([]);
   const [leadCapture, setLeadCapture] = useState<LeadCaptureConfig>({
@@ -166,6 +179,12 @@ export default function QuizEditor() {
     backgroundColor: "#F8FAFC",
     fontFamily: "Inter",
   });
+  const [presentationStyle, setPresentationStyle] = useState<
+    "auto" | "editorial" | "basketball" | "golf" | "performance"
+  >("auto");
+  const [resolvedPresentationStyle, setResolvedPresentationStyle] = useState<
+    "editorial" | "basketball" | "golf" | "performance"
+  >("editorial");
 
   const quizQuery = useQuery<QuizEditorResponse>({
     queryKey: [`/api/quizzes/${guideId}`],
@@ -208,6 +227,13 @@ export default function QuizEditor() {
     setTitle(guide.title || "Untitled interactive quiz");
     setDescription(guide.description || "");
     setStatus(guide.status || "draft");
+    setIncludeInLibrary(guide.includeInLibrary === true);
+    setResolvedPresentationStyle(guide.presentationProfile?.preset || "editorial");
+    setPresentationStyle(
+      guide.presentationProfile?.mode === "manual"
+        ? guide.presentationProfile.preset
+        : "auto",
+    );
     setQuestions(Array.isArray(quiz.questions) ? quiz.questions : []);
     setOutcomes(Array.isArray(quiz.outcomes) ? quiz.outcomes : []);
     setLeadCapture({
@@ -236,8 +262,11 @@ export default function QuizEditor() {
         required: leadCapture.enabled ? leadCapture.required : false,
       },
       theme,
+      presentationSelection: presentationStyle === "auto"
+        ? { mode: "auto" }
+        : { mode: "manual", preset: presentationStyle },
     }),
-    [description, leadCapture, outcomes, questions, theme, title],
+    [description, leadCapture, outcomes, presentationStyle, questions, theme, title],
   );
 
   const validationIssues = useMemo(() => {
@@ -246,7 +275,9 @@ export default function QuizEditor() {
     const referencedOutcomeIds = new Set<string>();
     if (!title.trim()) issues.push("Add a quiz title.");
     if (!description.trim()) issues.push("Add a quiz description.");
-    if (questions.length < 2) issues.push("Add at least two questions.");
+    if (questions.length < MIN_QUIZ_QUESTIONS) {
+      issues.push(`Add at least ${MIN_QUIZ_QUESTIONS} questions.`);
+    }
     if (outcomes.length < 2) issues.push("Add at least two outcomes.");
     if (!leadCapture.headline.trim()) issues.push("Add a lead-capture headline.");
 
@@ -259,7 +290,9 @@ export default function QuizEditor() {
 
     questions.forEach((question, questionIndex) => {
       if (!question.prompt.trim()) issues.push(`Question ${questionIndex + 1} needs a prompt.`);
-      if (question.options.length < 2) issues.push(`Question ${questionIndex + 1} needs at least two answers.`);
+      if (question.options.length !== QUIZ_ANSWER_COUNT) {
+        issues.push(`Question ${questionIndex + 1} needs exactly ${QUIZ_ANSWER_COUNT} answers.`);
+      }
       question.options.forEach((option, optionIndex) => {
         if (!option.label.trim()) {
           issues.push(`Answer ${optionIndex + 1} in question ${questionIndex + 1} needs text.`);
@@ -355,6 +388,39 @@ export default function QuizEditor() {
     },
   });
 
+  const updateLibraryMutation = useMutation<unknown, Error, boolean, { previous: boolean }>({
+    mutationFn: async (nextValue) => {
+      const response = await apiRequest(`/api/guides/${guideId}/library`, "PATCH", {
+        includeInLibrary: nextValue,
+      });
+      const text = await response.text();
+      return text ? JSON.parse(text) : null;
+    },
+    onMutate: (nextValue) => {
+      const previous = includeInLibrary;
+      setIncludeInLibrary(nextValue);
+      return { previous };
+    },
+    onSuccess: (_, nextValue) => {
+      queryClient.invalidateQueries({ queryKey: [`/api/quizzes/${guideId}`] });
+      queryClient.invalidateQueries({ queryKey: ["/api/guides"] });
+      toast({
+        title: nextValue ? "Added to Library" : "Removed from Library",
+        description: nextValue
+          ? "Leads can discover this Interactive Quiz after it is published."
+          : "The quiz remains available from its direct link.",
+      });
+    },
+    onError: (error, _nextValue, context) => {
+      if (context) setIncludeInLibrary(context.previous);
+      toast({
+        title: "Could not update Library",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   const markChanged = () => setIsDirty(true);
 
   const updateTitle = (nextTitle: string) => {
@@ -392,26 +458,19 @@ export default function QuizEditor() {
 
   const addQuestion = () => {
     const fallbackOutcomes = outcomes.map((outcome) => outcome.id);
+    const answerLabels = ["First answer", "Second answer", "Third answer", "Fourth answer"];
     const newQuestion: QuizQuestion = {
       id: createLocalId("question"),
       prompt: "New question",
       helpText: "",
-      options: [
-        {
+      options: answerLabels.map((label, answerIndex) => {
+        const fallbackOutcomeId = fallbackOutcomes[answerIndex % Math.max(fallbackOutcomes.length, 1)];
+        return {
           id: createLocalId("option"),
-          label: "First answer",
-          outcomeWeights: fallbackOutcomes[0] ? { [fallbackOutcomes[0]]: 1 } : {},
-        },
-        {
-          id: createLocalId("option"),
-          label: "Second answer",
-          outcomeWeights: fallbackOutcomes[1]
-            ? { [fallbackOutcomes[1]]: 1 }
-            : fallbackOutcomes[0]
-              ? { [fallbackOutcomes[0]]: 1 }
-              : {},
-        },
-      ],
+          label,
+          outcomeWeights: fallbackOutcomeId ? { [fallbackOutcomeId]: 1 } : {},
+        };
+      }),
     };
     setQuestions((current) => [...current, newQuestion]);
     markChanged();
@@ -684,7 +743,7 @@ export default function QuizEditor() {
                     <div>
                       <h2 className="font-semibold text-blue-950">Build a short, decisive conversation</h2>
                       <p className="mt-1 text-sm text-blue-800/80">
-                        Every answer maps to one primary outcome. Keep choices distinct and easy to scan.
+                        Use at least five questions with four distinct answers each. Every answer maps to one primary outcome.
                       </p>
                     </div>
                     <Button onClick={addQuestion} disabled={questions.length >= 20}>
@@ -743,7 +802,7 @@ export default function QuizEditor() {
                               variant="ghost"
                               size="sm"
                               onClick={() => removeQuestion(question.id)}
-                              disabled={questions.length <= 2}
+                              disabled={questions.length <= MIN_QUIZ_QUESTIONS}
                               className="text-destructive hover:bg-destructive/10 hover:text-destructive"
                               aria-label={`Delete question ${questionIndex + 1}`}
                             >
@@ -779,7 +838,9 @@ export default function QuizEditor() {
                         <div className="space-y-3">
                           <div className="flex items-center justify-between gap-3">
                             <Label>Answer choices</Label>
-                            <span className="text-xs text-muted-foreground">Map each answer to one primary outcome</span>
+                            <span className="text-xs text-muted-foreground">
+                              Exactly {QUIZ_ANSWER_COUNT} answers · map each to one primary outcome
+                            </span>
                           </div>
 
                           {question.options.map((option, optionIndex) => {
@@ -820,7 +881,7 @@ export default function QuizEditor() {
                                   variant="ghost"
                                   size="sm"
                                   onClick={() => removeOption(question.id, option.id)}
-                                  disabled={question.options.length <= 2}
+                                  disabled={question.options.length <= QUIZ_ANSWER_COUNT}
                                   className="text-destructive hover:bg-destructive/10 hover:text-destructive"
                                   aria-label={`Delete answer ${optionIndex + 1}`}
                                 >
@@ -834,7 +895,7 @@ export default function QuizEditor() {
                             variant="outline"
                             size="sm"
                             onClick={() => addOption(question.id)}
-                            disabled={question.options.length >= 8}
+                            disabled={question.options.length >= QUIZ_ANSWER_COUNT}
                           >
                             <Plus className="mr-2 h-4 w-4" aria-hidden="true" />
                             Add answer
@@ -1034,6 +1095,31 @@ export default function QuizEditor() {
               </TabsContent>
 
               <TabsContent value="publish" className="mt-6 space-y-6">
+                <Card className="border-primary/20">
+                  <CardContent className="flex items-start justify-between gap-4 p-5">
+                    <div className="flex items-start gap-3">
+                      <div className="rounded-xl bg-primary/10 p-2.5 text-primary">
+                        <LibraryBig className="h-5 w-5" aria-hidden="true" />
+                      </div>
+                      <div>
+                        <Label htmlFor="quiz-editor-library" className="font-semibold">
+                          Add this Interactive Quiz to your public Library
+                        </Label>
+                        <p className="mt-1 max-w-2xl text-sm leading-6 text-muted-foreground">
+                          Included quizzes give leads another reason to return as you publish new resources. Turn this off to keep the quiz direct-link only.
+                        </p>
+                      </div>
+                    </div>
+                    <Switch
+                      id="quiz-editor-library"
+                      checked={includeInLibrary}
+                      onCheckedChange={(checked) => updateLibraryMutation.mutate(checked)}
+                      disabled={updateLibraryMutation.isPending}
+                      aria-label="Add this Interactive Quiz to your public Library"
+                    />
+                  </CardContent>
+                </Card>
+
                 <div className="grid gap-6 lg:grid-cols-5">
                   <Card className="lg:col-span-3">
                     <CardHeader>
@@ -1125,6 +1211,32 @@ export default function QuizEditor() {
                           placeholder="Inter"
                         />
                       </div>
+                      <div className="space-y-2 border-t pt-4">
+                        <Label htmlFor="presentation-style">Recipient experience</Label>
+                        <Select
+                          value={presentationStyle}
+                          onValueChange={(value: typeof presentationStyle) => {
+                            setPresentationStyle(value);
+                            markChanged();
+                          }}
+                        >
+                          <SelectTrigger id="presentation-style">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="auto">Auto-detect from source</SelectItem>
+                            <SelectItem value="basketball">Basketball · Arena energy</SelectItem>
+                            <SelectItem value="golf">Golf · Course precision</SelectItem>
+                            <SelectItem value="performance">Performance · Training lab</SelectItem>
+                            <SelectItem value="editorial">Editorial · Clean report</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <p className="text-xs leading-5 text-muted-foreground">
+                          {presentationStyle === "auto"
+                            ? `Currently detected: ${resolvedPresentationStyle}. Saving rechecks the stored source.`
+                            : "This changes composition and sport cues while preserving the brand theme above."}
+                        </p>
+                      </div>
                     </CardContent>
                   </Card>
                 </div>
@@ -1141,7 +1253,7 @@ export default function QuizEditor() {
                       <div className="rounded-lg border p-4">
                         <ListChecks className="h-5 w-5 text-blue-600" aria-hidden="true" />
                         <p className="mt-3 text-2xl font-bold">{questions.length}</p>
-                        <p className="text-xs text-muted-foreground">Questions</p>
+                        <p className="text-xs text-muted-foreground">Questions · 5 minimum</p>
                       </div>
                       <div className="rounded-lg border p-4">
                         <Trophy className="h-5 w-5 text-purple-600" aria-hidden="true" />

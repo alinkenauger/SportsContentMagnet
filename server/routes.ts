@@ -22,8 +22,8 @@ import {
   quizzes,
   subscriptionPlans,
 } from "@shared/schema";
-import { db } from "./db";
-import { eq } from "drizzle-orm";
+import { db, pool } from "./db";
+import { and, eq, sql } from "drizzle-orm";
 import { z } from "zod";
 import QRCode from 'qrcode';
 import multer from 'multer';
@@ -62,6 +62,45 @@ import {
   type GuideCreationBrief,
 } from "@shared/guideContent";
 import { GuideQualityError } from "./services/guideQuality";
+import { validateStoredGuideForPublish } from "./guidePublishValidation";
+import { buildGuideRegenerationContext } from "./services/guideRegeneration";
+import { createRateLimit } from "./rateLimit";
+import { createDeliveryAccessToken, verifyDeliveryAccessToken } from "./deliveryAccess";
+import {
+  createIpResourceRateKey,
+  landingSubmissionIssues,
+  publicGuideIdSchema,
+  publicLandingSlugSchema,
+  publicLeadSubmissionSchema,
+  recordPublicGuideView,
+  recordPublicLandingView,
+} from "./publicGuideSafety";
+import {
+  createPresentationProfile,
+  normalizePresentationProfile,
+  parseYouTubeSource,
+  presentationSelectionSchema,
+  youtubeSourceFromStoredFields,
+  type YouTubeSource,
+} from "@shared/presentation";
+import {
+  includeInLibraryInputSchema,
+  libraryInclusionUpdateSchema,
+  librarySlugSchema,
+  publicLibraryQuerySchema,
+} from "@shared/library";
+import {
+  ensureBrandLibraryForWriter,
+  getPublicMagnetLibrary,
+  prepareBrandLibraryKnowledge,
+  provisionBrandLibrary,
+  resolvePublicLibraryContextForGuide,
+} from "./magnetLibrary";
+import {
+  BRAND_ASSET_URL_PREFIX,
+  BrandAssetQuotaError,
+  createBrandAssetStore,
+} from "./brandAssetStorage";
 import Stripe from "stripe";
 // import pdf from 'pdf-parse'; // Temporarily disabled due to module issues
 
@@ -83,12 +122,26 @@ function requestText(value: unknown): string | undefined {
 }
 
 const adminRoleSchema = z.enum(["user", "brand_admin", "account_admin", "super_admin"]);
+const positiveRouteIdSchema = z.string()
+  .regex(/^[1-9]\d*$/, "ID must be a positive integer")
+  .transform(Number)
+  .refine(Number.isSafeInteger, "ID is too large");
 const adminCreateUserSchema = z.object({
   email: z.string().trim().email().max(320).transform((email) => email.toLowerCase()),
   firstName: z.string().trim().min(1).max(100),
   lastName: z.string().trim().min(1).max(100),
   role: adminRoleSchema.default("user"),
 });
+const guideRegenerationRequestSchema = z.object({
+  instructions: z.preprocess(
+    (value) => typeof value === "string" && value.trim().length === 0 ? undefined : value,
+    z.string()
+      .trim()
+      .min(10, "Tell the AI what you want improved")
+      .max(1_200, "Improvement instructions must be 1,200 characters or fewer")
+      .optional(),
+  ),
+}).strict();
 
 function guideBriefFromRequest(body: Record<string, unknown>, selectedTemplate?: string): unknown {
   const nestedBrief = typeof body.creationBrief === "object" &&
@@ -110,6 +163,23 @@ function guideBriefFromRequest(body: Record<string, unknown>, selectedTemplate?:
     customInstructions: requestText(nestedBrief.customInstructions) ||
       requestText(body.additionalInstructions) || requestText(body.customInstructions),
   };
+}
+
+function presentationSelectionFromRequest(body: Record<string, unknown>): unknown {
+  let raw = body.presentationSelection;
+  if (typeof raw === "string" && raw.trim().startsWith("{")) {
+    try {
+      raw = JSON.parse(raw);
+    } catch {
+      raw = undefined;
+    }
+  }
+  if (!raw && typeof body.presentationPreset === "string") {
+    raw = body.presentationPreset === "auto"
+      ? { mode: "auto" }
+      : { mode: "manual", preset: body.presentationPreset };
+  }
+  return raw ?? { mode: "auto" };
 }
 
 function sendBrandRouteError(res: Response, error: unknown, fallback: string): void {
@@ -168,6 +238,70 @@ function brandingUpdateFromBody(body: unknown) {
 export async function registerRoutes(app: Express): Promise<Server> {
   // Get deployment configuration
   const serviceConfig = getServiceConfiguration();
+  const brandAssetStore = createBrandAssetStore({
+    database: {
+      query: async (text, values) => {
+        const result = await pool.query(text, values as any[] | undefined);
+        return {
+          rows: result.rows as Array<Record<string, unknown>>,
+          rowCount: result.rowCount,
+        };
+      },
+      transaction: async (work) => {
+        const client = await pool.connect();
+        try {
+          await client.query("BEGIN");
+          const transactionClient = {
+            query: async (text: string, values?: unknown[]) => {
+              const result = await client.query(text, values as any[] | undefined);
+              return {
+                rows: result.rows as Array<Record<string, unknown>>,
+                rowCount: result.rowCount,
+              };
+            },
+          };
+          const result = await work(transactionClient);
+          await client.query("COMMIT");
+          return result;
+        } catch (error) {
+          await client.query("ROLLBACK");
+          throw error;
+        } finally {
+          client.release();
+        }
+      },
+    },
+  });
+  const publicLandingReadRateLimit = createRateLimit({
+    windowMs: 10 * 60 * 1_000,
+    max: 120,
+    keyPrefix: "public-landing-read",
+    key: createIpResourceRateKey("customUrl"),
+  });
+  const publicLandingSubmitRateLimit = createRateLimit({
+    windowMs: 60 * 60 * 1_000,
+    max: 8,
+    keyPrefix: "public-landing-submit",
+    key: createIpResourceRateKey("customUrl"),
+  });
+  const publicDeliveryReadRateLimit = createRateLimit({
+    windowMs: 10 * 60 * 1_000,
+    max: 60,
+    keyPrefix: "public-delivery-read",
+    key: createIpResourceRateKey("customUrl"),
+  });
+  const publicGuideViewRateLimit = createRateLimit({
+    windowMs: 10 * 60 * 1_000,
+    max: 60,
+    keyPrefix: "public-guide-view",
+    key: createIpResourceRateKey("id"),
+  });
+  const guideGenerationRateLimit = createRateLimit({
+    windowMs: 60 * 60 * 1_000,
+    max: 10,
+    keyPrefix: "guide-generation",
+    key: (req) => getRequestUserId(req) || req.ip || req.socket.remoteAddress || "unknown",
+  });
 
   // Conditional imports based on deployment mode
   let sharp: any = null;
@@ -196,6 +330,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Health check endpoint for Docker
   app.get('/health', (req, res) => {
     res.status(200).json({ status: 'healthy', timestamp: new Date().toISOString() });
+  });
+
+  // Filesystem assets are served by Express static middleware in development.
+  // Database-backed assets fall through to this immutable public route in
+  // production, keeping every autoscaled replica on the same source of truth.
+  app.get(`${BRAND_ASSET_URL_PREFIX}/:assetKey`, async (req, res) => {
+    try {
+      const asset = await brandAssetStore.get(req.params.assetKey);
+      if (!asset) return res.status(404).end();
+
+      const etag = `"${asset.sha256}"`;
+      res.set({
+        "Cache-Control": "public, max-age=31536000, immutable",
+        "Content-Length": String(asset.byteSize),
+        "Content-Security-Policy": "default-src 'none'",
+        "Content-Type": asset.contentType,
+        "Cross-Origin-Resource-Policy": "cross-origin",
+        ETag: etag,
+        "X-Content-Type-Options": "nosniff",
+      });
+      if (req.get("If-None-Match") === etag) return res.status(304).end();
+      return res.status(200).send(asset.content);
+    } catch (error) {
+      console.error("Failed to read brand asset:", error);
+      return res.status(500).end();
+    }
   });
 
   // Configure multer for file uploads
@@ -228,6 +388,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         cb(new Error('Only PNG, JPEG, or WebP images are allowed') as any, false);
       }
     }
+  });
+
+  const brandAssetUploadRateLimit = createRateLimit({
+    windowMs: 24 * 60 * 60 * 1_000,
+    max: 24,
+    keyPrefix: "brand-asset-upload",
+    key: (req) => getRequestUserId(req as any) || req.ip || "unknown",
   });
 
   // Use Replit Auth with admin bypass system
@@ -336,6 +503,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post('/api/brands/:id/library', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = getRequestUserId(req);
+      if (!userId) return res.status(401).json({ message: "Authentication required" });
+      const brandId = positiveRouteIdSchema.parse(req.params.id);
+      const result = await provisionBrandLibrary(userId, brandId);
+      res.status(result.created ? 201 : 200).json(result);
+    } catch (error) {
+      sendBrandRouteError(res, error, "Failed to provision Magnet Library");
+    }
+  });
+
   app.post('/api/brands/:id/set-current', isAuthenticated, async (req: any, res) => {
     try {
       const userId = getUserId(req);
@@ -433,19 +612,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = getRequestUserId(req);
       if (!userId) return res.status(401).json({ message: "Authentication required" });
-      // Get current brand from database
-      const user = await storage.getUser(userId);
-      const currentBrandId = user?.currentBrandId;
-      const stats = await storage.getAnalyticsByUser(userId, currentBrandId);
+      const scope = await resolveCurrentBrandScope(userId, "read");
+      const stats = await storage.getAnalyticsByUser(userId, scope.brandId);
       res.json(stats);
     } catch (error) {
-      console.error("Error fetching dashboard stats:", error);
-      res.status(500).json({ message: "Failed to fetch dashboard stats" });
+      sendBrandRouteError(res, error, "Failed to fetch dashboard stats");
     }
   });
 
   // Guide routes - handle multiple content types
-  app.post('/api/guides', upload.single('file'), isAuthenticated, async (req: any, res) => {
+  app.post('/api/guides', isAuthenticated, guideGenerationRateLimit, upload.single('file'), async (req: any, res) => {
     try {
       const userId = getRequestUserId(req);
       if (!userId) {
@@ -457,7 +633,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let inputMethod = req.body.inputMethod;
       
       // Extract common parameters
-      const { youtubeUrl, leadTags, collectSms, smsConsentText, selectedTemplate } = req.body;
+      let youtubeUrl = requestText(req.body.youtubeUrl);
+      let sourceVideo: YouTubeSource | null = null;
+      const { leadTags, collectSms, smsConsentText, selectedTemplate } = req.body;
       const briefResult = guideCreationBriefSchema.safeParse(
         guideBriefFromRequest(req.body, selectedTemplate),
       );
@@ -471,6 +649,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       const creationBrief: GuideCreationBrief = briefResult.data;
+      const presentationResult = presentationSelectionSchema.safeParse(
+        presentationSelectionFromRequest(req.body),
+      );
+      if (!presentationResult.success) {
+        return res.status(400).json({ message: "Invalid presentation selection" });
+      }
+      const libraryInclusionResult = includeInLibraryInputSchema.optional().default(true)
+        .safeParse(req.body.includeInLibrary);
+      if (!libraryInclusionResult.success) {
+        return res.status(400).json({ message: "Invalid library inclusion setting" });
+      }
       console.log(`Guide creation: inputMethod=${inputMethod}, youtubeUrl=${youtubeUrl}, template=${selectedTemplate}`);
       
       // Handle different input methods
@@ -478,6 +667,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (!youtubeUrl) {
           return res.status(400).json({ message: "YouTube URL is required" });
         }
+
+        sourceVideo = parseYouTubeSource(youtubeUrl);
+        if (!sourceVideo) {
+          return res.status(400).json({ message: "Enter a valid YouTube video URL" });
+        }
+        youtubeUrl = sourceVideo.canonicalUrl;
 
         // Extract video metadata and transcribe
         videoData = await getYouTubeVideoData(youtubeUrl);
@@ -585,6 +780,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const currentBrandId = await resolveBrandIdForUser(userId, undefined, "write_content");
       const trainingSettings = await storage.getTrainingSettings(userId);
       const brandingSettings = await resolveAppearanceForScope(userId, currentBrandId);
+      const libraryKnowledge = await prepareBrandLibraryKnowledge({
+        userId,
+        brandId: currentBrandId,
+        query: {
+          title: videoData.title,
+          sourceContent: transcript.slice(0, 12_000),
+          audience: creationBrief.audience,
+          objective: creationBrief.desiredOutcome || creationBrief.focus,
+        },
+      });
       
       // Step 4: Analyze content and generate practice guide
       let guideContent;
@@ -592,7 +797,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let screenshots = null;
       
       if (videoData.segments && videoData.segments.length > 0) {
-        // Use timestamped content generation for YouTube videos with timing data
+        // Build the source inventory first so timestamped Guides preserve the
+        // video's full instructional depth instead of generating from labels alone.
+        analysis = await analyzeVideoContent(
+          transcript,
+          videoData.title,
+          videoData.description,
+          creationBrief,
+          selectedTemplate,
+          libraryKnowledge,
+        );
+
+        // Use timestamped content generation for YouTube videos with timing data.
         const { generateTimestampedContent } = await import('./services/aiContentWithTimestamps');
         guideContent = await generateTimestampedContent(
           transcript,
@@ -602,15 +818,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           selectedTemplate,
           creationBrief,
           brandingSettings,
-        );
-        
-        // Still need analysis for guide metadata
-        analysis = await analyzeVideoContent(
-          transcript,
-          videoData.title,
-          videoData.description,
-          creationBrief,
-          selectedTemplate,
+          libraryKnowledge,
+          analysis,
         );
         
         // Step 4.5: Extract screenshots for YouTube videos if URL provided
@@ -657,6 +866,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           videoData.description,
           creationBrief,
           selectedTemplate,
+          libraryKnowledge,
         );
         guideContent = await generatePracticeGuide(
           analysis,
@@ -666,6 +876,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           selectedTemplate,
           creationBrief,
           transcript,
+          libraryKnowledge,
         );
       }
       
@@ -675,13 +886,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         [];
       
       // Step 6: Create guide in database
+      const presentationProfile = createPresentationProfile(presentationResult.data, {
+        category: analysis.category,
+        title: videoData.title || guideContent.title,
+        description: analysis.summary,
+        audience: creationBrief.audience || brandingSettings?.targetAudience,
+        tags: analysis.keyTips,
+        sourceExcerpt: transcript,
+      });
       const guide = await storage.createGuide({
         userId,
         brandId: currentBrandId,
         title: guideContent.title,
         description: analysis.summary,
         youtubeUrl: youtubeUrl || null,
-        youtubeVideoId: videoData.videoId,
+        youtubeVideoId: sourceVideo?.videoId ?? null,
         channelTitle: videoData.channelTitle,
         thumbnailUrl: videoData.thumbnailUrl,
         transcript,
@@ -692,7 +911,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         tags: analysis.keyTips,
         leadTags: processedLeadTags,
         slug: `guide-${Date.now()}`,
-        status: 'draft'
+        status: 'draft',
+        presentationProfile,
+        includeInLibrary: libraryInclusionResult.data,
       });
 
       // Step 7: Generate professional landing page copy
@@ -727,6 +948,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         smsConsentText: smsConsentText || "I consent to receive text messages from this business. Message and data rates may apply. Reply STOP to opt out.",
         isActive: true
       });
+
+      if (guide.includeInLibrary === true && guide.brandId !== null) {
+        await ensureBrandLibraryForWriter(userId, guide.brandId);
+      }
 
       // Add to knowledge base if enabled (brand-level only)
       if ((req.body.addToKnowledgeBase === true || req.body.addToKnowledgeBase === "true") && guide.brandId) {
@@ -799,7 +1024,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const guideId = parseInt(req.params.id);
       
       const guide = await storage.getGuide(guideId);
-      if (!guide) {
+      if (!guide || guide.magnetType !== "guide") {
         return res.status(404).json({ message: "Guide not found" });
       }
       await assertGuideAccess(userId, guide, "write_content");
@@ -824,10 +1049,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const screenshotResult = await videoScreenshotService.extractScreenshots(guide.youtubeUrl, timestampData);
       
       if (screenshotResult.success && screenshotResult.screenshots) {
-        // Update guide with new screenshots
-        await storage.updateGuide(guideId, {
+        const updatedGuide = await storage.updateGuideIfUnchanged(guideId, guide.revision, {
           screenshots: screenshotResult.screenshots
         });
+        if (!updatedGuide) {
+          screenshotResult.cleanup?.();
+          return res.status(409).json({
+            code: "guide_changed_during_screenshot_regeneration",
+            message: "This Guide changed while its screenshots were being generated. Reload it and try again.",
+          });
+        }
         
         console.log(`Successfully extracted ${screenshotResult.screenshots.length} screenshots for guide ${guideId}`);
         
@@ -872,6 +1103,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Authenticated recipient-experience preview for owners and brand collaborators.
+  // Drafts are intentionally allowed here, and previewing never records a public view.
+  app.get('/api/guides/:id/preview', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = getRequestUserId(req);
+      if (!userId) return res.status(401).json({ message: "Authentication required" });
+      const guideId = positiveRouteIdSchema.parse(req.params.id);
+      const guide = await storage.getGuide(guideId);
+
+      if (!guide || guide.magnetType !== "guide") {
+        return res.status(404).json({ message: "Guide not found" });
+      }
+      await assertGuideAccess(userId, guide, "read");
+
+      const branding = await resolvePublicAppearanceForGuide(guide);
+      const library = await resolvePublicLibraryContextForGuide(guide.id);
+      res.json({
+        guide: {
+          id: guide.id,
+          title: guide.title,
+          description: guide.description,
+          thumbnailUrl: guide.thumbnailUrl,
+          youtubeUrl: guide.youtubeUrl,
+          youtubeVideoId: guide.youtubeVideoId,
+          channelTitle: guide.channelTitle,
+          views: guide.views,
+          screenshots: guide.screenshots,
+          navigationLinks: guide.navigationLinks,
+          ctaLink: guide.ctaLink,
+          ctaText: guide.ctaText,
+          content: guide.content,
+          category: guide.category,
+          presentationProfile: normalizePresentationProfile(guide.presentationProfile),
+          sourceVideo: youtubeSourceFromStoredFields(
+            guide.youtubeUrl,
+            guide.youtubeVideoId,
+            guide.channelTitle,
+          ),
+        },
+        branding,
+        brandingSettings: branding,
+        library,
+      });
+    } catch (error) {
+      sendBrandRouteError(res, error, "Failed to preview guide");
+    }
+  });
+
   // Get landing page URL for guide editing
   app.get('/api/guides/:id/landing-page-url', isAuthenticated, async (req: any, res) => {
     try {
@@ -899,40 +1178,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Track guide view (public endpoint)
-  app.post('/api/guides/:id/view', async (req, res) => {
+  app.post('/api/guides/:id/view', publicGuideViewRateLimit, async (req, res) => {
     try {
-      const guideId = parseInt(req.params.id);
+      const guideIdResult = publicGuideIdSchema.safeParse(req.params.id);
+      if (!guideIdResult.success) {
+        return res.status(404).json({ message: "Guide not found" });
+      }
+      const guideId = guideIdResult.data;
       const guide = await storage.getGuide(guideId);
       
       if (!isDirectlyAccessibleGuide(guide)) {
         return res.status(404).json({ message: "Guide not found" });
       }
 
-      // Increment view count
-      await storage.updateGuide(guideId, {
-        views: (guide.views || 0) + 1
-      });
-
-      // Create analytics event
-      await storage.createAnalyticsEvent({
+      const view = await recordPublicGuideView({
         guideId,
         userId: guide.userId,
-        eventType: 'view',
-        eventData: {
-          timestamp: new Date().toISOString(),
-          referrer: req.headers.referer || null,
-          userAgent: req.headers['user-agent'] || null
-        }
+        metadata: {
+          ipAddress: req.ip || req.socket.remoteAddress,
+          userAgent: req.get("user-agent"),
+          referrer: req.get("referer"),
+        },
       });
 
-      res.json({ success: true, views: (guide.views || 0) + 1 });
+      res.json({ success: true, views: view.views, recorded: view.recorded });
     } catch (error) {
       console.error("Error tracking guide view:", error);
       res.status(500).json({ message: "Failed to track view" });
     }
   });
 
-  // Update guide status with smart tagging for Practice Library
+  // Update guide status and refresh searchable Library metadata on publish.
   app.patch('/api/guides/:id/status', isAuthenticated, async (req: any, res) => {
     try {
       const userId = getRequestUserId(req);
@@ -957,8 +1233,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       let updateData: any = { status };
+      const makesGuidePublic = status === "published" || status === "unlisted";
 
-      // If publishing to Practice Library, generate smart tags
+      if (makesGuidePublic) {
+        const validation = validateStoredGuideForPublish({
+          content: guide.content,
+          title: guide.title,
+          description: guide.description,
+          category: guide.category,
+          transcript: guide.transcript,
+          aiAnalysis: guide.aiAnalysis,
+        });
+
+        if (!validation.publishable) {
+          return res.status(422).json({
+            code: "guide_publish_validation_failed",
+            message: "This Guide is still a draft because it does not meet the publish-quality bar.",
+            issues: validation.audit.issues.map(({ code, message, evidence }) => ({
+              code,
+              message,
+              evidence,
+            })),
+          });
+        }
+
+        // Persist the strict normalized V2 shape that passed the deterministic
+        // gate so public renderers never receive a stale legacy projection.
+        updateData.content = validation.content;
+      }
+
+      // Published magnets receive searchable metadata whether or not the
+      // creator keeps Library inclusion enabled.
       if (status === "published" && guide.status !== "published") {
         try {
           const { generateSmartTags } = await import('./services/smartTagging');
@@ -979,7 +1284,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             ...(smartTags.equipment || [])
           ].filter((tag, index, self) => self.indexOf(tag) === index); // Remove duplicates
 
-          console.log(`Auto-tagged guide "${guide.title}" for Practice Library:`, {
+          console.log(`Auto-tagged guide "${guide.title}" for search:`, {
             category: smartTags.category,
             tags: updateData.tags
           });
@@ -989,11 +1294,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
-      const updatedGuide = await storage.updateGuide(guideId, updateData);
+      if (status === "published" && guide.includeInLibrary === true && guide.brandId !== null) {
+        await ensureBrandLibraryForWriter(userId, guide.brandId);
+      }
+
+      const updatedGuide = await storage.updateGuideIfUnchanged(
+        guideId,
+        guide.revision,
+        updateData,
+      );
+      if (!updatedGuide) {
+        return res.status(409).json({
+          code: "guide_changed_during_publish",
+          message: "This Guide changed while it was being published. Review the latest Draft and try again.",
+        });
+      }
       
       let message = "Guide status updated";
       if (status === "published") {
-        message = "Guide published and added to Practice Library with smart tags!";
+        message = "Guide published";
       } else if (status === "unlisted") {
         message = "Guide unlisted - accessible only via direct link";
       } else if (status === "draft") {
@@ -1041,12 +1360,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const updatedGuide = await db.transaction(async (tx) => {
-        let nextStatus = guide.status;
+        const nextStatus = "draft";
         const [updated] = await tx.update(guides).set({
           brandId: resolvedTargetBrandId,
-          ...(guide.magnetType === "quiz" ? { status: "draft" } : {}),
+          status: "draft",
+          revision: sql`${guides.revision} + 1`,
           updatedAt: new Date(),
-        }).where(eq(guides.id, guideId)).returning();
+        }).where(and(
+          eq(guides.id, guideId),
+          eq(guides.revision, guide.revision),
+        )).returning();
+        if (!updated) {
+          throw new BrandAccessError(409, "The Guide changed during transfer. Reload it and try again.");
+        }
         if (guide.magnetType === "quiz") {
           const [quiz] = await tx
             .select({ outcomes: quizzes.outcomes })
@@ -1062,7 +1388,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
             outcomes,
             updatedAt: new Date(),
           }).where(eq(quizzes.guideId, guideId));
-          nextStatus = "draft";
         }
         return { ...updated, status: nextStatus };
       });
@@ -1121,9 +1446,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const [updated] = await tx.update(guides).set({
           userId: targetUserId,
           brandId: targetBrandId,
-          ...(guide.magnetType === "quiz" ? { status: "draft" } : {}),
+          status: "draft",
+          revision: sql`${guides.revision} + 1`,
           updatedAt: new Date(),
-        }).where(eq(guides.id, guideId)).returning();
+        }).where(and(
+          eq(guides.id, guideId),
+          eq(guides.revision, guide.revision),
+        )).returning();
+        if (!updated) {
+          throw new BrandAccessError(409, "The Guide changed during transfer. Reload it and try again.");
+        }
 
         await tx.update(landingPages).set({
           userId: targetUserId,
@@ -1164,8 +1496,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         message
       });
     } catch (error) {
-      console.error("Error transferring guide (admin):", error);
-      res.status(500).json({ message: "Failed to transfer guide" });
+      sendBrandRouteError(res, error, "Failed to transfer guide");
     }
   });
 
@@ -1206,16 +1537,105 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await assertGuideAccess(userId, guide, "write_content");
 
       const parsedUpdate = insertGuideSchema.partial().parse(req.body);
+      if (parsedUpdate.status !== undefined) {
+        return res.status(400).json({
+          code: "guide_status_transition_required",
+          message: "Change Guide visibility through the dedicated status action.",
+        });
+      }
+      if (guide.magnetType === "quiz") {
+        return res.status(409).json({
+          message: "Edit Interactive Quizzes from the quiz editor so scoring and result assets can be validated.",
+        });
+      }
       const {
         userId: _userId,
         brandId: _brandId,
         magnetType: _magnetType,
+        includeInLibrary: _includeInLibrary,
+        status: _status,
         ...updateData
       } = parsedUpdate;
-      const updatedGuide = await storage.updateGuide(guideId, updateData);
+      // A generic content edit to a publicly reachable Guide always becomes a
+      // Draft atomically. Only the dedicated status route can make it public
+      // again after the stored quality gate passes.
+      const safeUpdateData = { ...updateData, status: "draft" };
+      const updatedGuide = await storage.updateGuideIfUnchanged(
+        guideId,
+        guide.revision,
+        safeUpdateData,
+      );
+      if (!updatedGuide) {
+        return res.status(409).json({
+          code: "guide_changed_during_edit",
+          message: "This Guide changed in another session. Reload the latest Draft before saving again.",
+        });
+      }
       res.json(updatedGuide);
     } catch (error) {
       sendBrandRouteError(res, error, "Failed to update guide");
+    }
+  });
+
+  app.delete('/api/guides/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = getRequestUserId(req);
+      if (!userId) return res.status(401).json({ message: "Authentication required" });
+      const guideId = positiveRouteIdSchema.parse(req.params.id);
+      const guide = await storage.getGuide(guideId);
+      if (!guide) return res.status(404).json({ message: "Guide not found" });
+      await assertGuideAccess(userId, guide, "write_content");
+      if (guide.magnetType === "quiz") {
+        return res.status(409).json({
+          message: "Delete Interactive Quizzes from the quiz editor.",
+        });
+      }
+
+      const deleted = await storage.deleteGuide(guideId, guide.revision);
+      if (!deleted) {
+        return res.status(409).json({
+          code: "guide_changed_during_delete",
+          message: "This Guide changed before it could be deleted. Reload it and try again.",
+        });
+      }
+      return res.status(204).end();
+    } catch (error) {
+      sendBrandRouteError(res, error, "Failed to delete Guide");
+    }
+  });
+
+  app.patch('/api/guides/:id/library', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = getRequestUserId(req);
+      if (!userId) return res.status(401).json({ message: "Authentication required" });
+      const guideId = positiveRouteIdSchema.parse(req.params.id);
+      const input = libraryInclusionUpdateSchema.parse(req.body);
+      const guide = await storage.getGuide(guideId);
+      if (!guide) return res.status(404).json({ message: "Guide not found" });
+      await assertGuideAccess(userId, guide, "write_content");
+
+      const updated = await storage.updateGuideIfUnchanged(guideId, guide.revision, {
+        includeInLibrary: input.includeInLibrary,
+      });
+      if (!updated) {
+        return res.status(409).json({
+          code: "guide_changed_during_library_update",
+          message: "This Guide changed before its Library setting could be saved. Reload it and try again.",
+        });
+      }
+      if (input.includeInLibrary && updated.brandId !== null) {
+        await ensureBrandLibraryForWriter(userId, updated.brandId);
+      }
+      const library = await resolvePublicLibraryContextForGuide(guideId);
+      res.json({
+        guide: {
+          id: updated.id,
+          includeInLibrary: updated.includeInLibrary === true,
+        },
+        library,
+      });
+    } catch (error) {
+      sendBrandRouteError(res, error, "Failed to update Magnet Library inclusion");
     }
   });
 
@@ -1289,10 +1709,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Landing page routes
-  app.get('/api/landing/:customUrl', async (req, res) => {
+  app.get('/api/public/libraries/:slug', async (req, res) => {
     try {
-      const { customUrl } = req.params;
+      const slugResult = librarySlugSchema.safeParse(req.params.slug);
+      if (!slugResult.success) {
+        return res.status(404).json({ message: "Magnet Library not found" });
+      }
+      const query = publicLibraryQuerySchema.parse(req.query);
+      const library = await getPublicMagnetLibrary(slugResult.data, query);
+      if (!library) {
+        return res.status(404).json({ message: "Magnet Library not found" });
+      }
+      res.json(library);
+    } catch (error) {
+      sendBrandRouteError(res, error, "Failed to fetch Magnet Library");
+    }
+  });
+
+  // Landing page routes
+  app.get('/api/landing/:customUrl', publicLandingReadRateLimit, async (req, res) => {
+    try {
+      const customUrlResult = publicLandingSlugSchema.safeParse(req.params.customUrl);
+      if (!customUrlResult.success) {
+        return res.status(404).json({ message: "Landing page not found" });
+      }
+      const customUrl = customUrlResult.data;
       const landingPage = await storage.getLandingPageByUrl(customUrl);
       
       if (!landingPage || !landingPage.isActive) {
@@ -1304,17 +1745,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Landing page not found" });
       }
       const branding = await resolvePublicAppearanceForGuide(guide);
+      const library = await resolvePublicLibraryContextForGuide(guide.id);
 
-      // Track page view
-      await storage.createAnalyticsEvent({
+      await recordPublicLandingView({
         userId: landingPage.userId,
         guideId: landingPage.guideId,
         landingPageId: landingPage.id,
-        eventType: 'view',
-        eventData: { page: 'landing' },
-        ipAddress: req.ip,
-        userAgent: req.get('User-Agent'),
-        referrer: req.get('Referer')
+        metadata: {
+          ipAddress: req.ip || req.socket.remoteAddress,
+          userAgent: req.get("user-agent"),
+          referrer: req.get("referer"),
+        },
       });
 
       res.json({
@@ -1337,6 +1778,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           description: guide.description,
           thumbnailUrl: guide.thumbnailUrl,
           category: guide.category,
+          presentationProfile: normalizePresentationProfile(guide.presentationProfile),
+          sourceVideo: youtubeSourceFromStoredFields(
+            guide.youtubeUrl,
+            guide.youtubeVideoId,
+            guide.channelTitle,
+          ),
           tags: guide.tags,
           youtubeVideoId: guide.youtubeVideoId,
           channelTitle: guide.channelTitle,
@@ -1345,6 +1792,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         },
         branding,
         brandingSettings: branding,
+        library,
       });
     } catch (error) {
       console.error("Error fetching landing page:", error);
@@ -1382,9 +1830,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/landing/:customUrl/submit', async (req, res) => {
+  app.post('/api/landing/:customUrl/submit', publicLandingSubmitRateLimit, async (req, res) => {
     try {
-      const { customUrl } = req.params;
+      const customUrlResult = publicLandingSlugSchema.safeParse(req.params.customUrl);
+      if (!customUrlResult.success) {
+        return res.status(404).json({ message: "Landing page not found" });
+      }
+      const submissionResult = publicLeadSubmissionSchema.safeParse(req.body);
+      if (!submissionResult.success) {
+        return res.status(400).json({
+          message: "Invalid lead submission",
+          issues: submissionResult.error.issues.map((issue) => ({
+            path: issue.path.join("."),
+            message: issue.message,
+          })),
+        });
+      }
+      const customUrl = customUrlResult.data;
       const landingPage = await storage.getLandingPageByUrl(customUrl);
       
       if (!landingPage || !landingPage.isActive) {
@@ -1396,11 +1858,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Landing page not found" });
       }
 
-      const { firstName, email, phone, smsConsent, customFieldData } = req.body;
-
-      if (!email) {
-        return res.status(400).json({ message: "Email is required" });
+      const submission = submissionResult.data;
+      const fieldIssues = landingSubmissionIssues(landingPage.customFields, submission);
+      if (fieldIssues.length > 0) {
+        return res.status(400).json({
+          message: "Invalid lead submission",
+          issues: fieldIssues.map((message) => ({ path: "customFieldData", message })),
+        });
       }
+      const { firstName, email, phone, smsConsent, customFieldData } = submission;
 
       // Create lead
       const lead = await storage.createLead({
@@ -1409,8 +1875,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         userId: landingPage.userId,
         email,
         firstName,
-        phone: phone && phone.trim() ? phone : undefined,
-        smsConsent: phone && phone.trim() ? (smsConsent === "true") : false,
+        phone,
+        smsConsent: Boolean(phone && smsConsent),
         tags: guide.leadTags || [], // Apply lead tags from guide
         customFieldData,
         ipAddress: req.ip,
@@ -1445,10 +1911,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         data: { leadId: lead.id, guideTitle: guide.title }
       });
 
+      const deliveryAccessToken = createDeliveryAccessToken({
+        customUrl,
+        guideId: guide.id,
+        leadId: lead.id,
+      });
+      const deliveryPath = `/delivery/${customUrl}/${lead.id}?access=${encodeURIComponent(deliveryAccessToken)}`;
+
       // Send guide delivery email
       try {
         const emailService = new EmailService();
-        const guideDeliveryUrl = `${req.protocol}://${req.get('host')}/delivery/${customUrl}/${lead.id}`;
+        const guideDeliveryUrl = `${req.protocol}://${req.get('host')}${deliveryPath}`;
         const landingPageUrl = `${req.protocol}://${req.get('host')}/landing/${customUrl}`;
         
         await emailService.sendGuideDeliveryEmail(
@@ -1468,7 +1941,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json({
         success: true,
-        deliveryUrl: `/delivery/${customUrl}/${lead.id}`,
+        deliveryUrl: deliveryPath,
         message: "Lead captured successfully"
       });
 
@@ -1479,9 +1952,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Delivery page routes
-  app.get('/api/delivery/:customUrl/:leadId', async (req, res) => {
+  app.get('/api/delivery/:customUrl/:leadId', publicDeliveryReadRateLimit, async (req, res) => {
     try {
-      const { customUrl, leadId } = req.params;
+      const customUrlResult = publicLandingSlugSchema.safeParse(req.params.customUrl);
+      const leadIdResult = positiveRouteIdSchema.safeParse(req.params.leadId);
+      if (!customUrlResult.success || !leadIdResult.success) {
+        return res.status(404).json({ message: "Page not found" });
+      }
+      const customUrl = customUrlResult.data;
+      const leadId = leadIdResult.data;
       const landingPage = await storage.getLandingPageByUrl(customUrl);
       
       if (!landingPage || !landingPage.isActive) {
@@ -1492,15 +1971,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!isDirectlyAccessibleGuide(guide)) {
         return res.status(404).json({ message: "Page not found" });
       }
-      const branding = await resolvePublicAppearanceForGuide(guide);
-      
-      // Get lead data for personalization
-      const leads = await storage.getLeadsByGuide(landingPage.guideId);
-      const lead = leads.find(l => l.id === parseInt(leadId));
 
-      if (!lead) {
-        return res.status(404).json({ message: "Access denied" });
+      const hasDeliveryAccess = verifyDeliveryAccessToken(req.query.access, {
+        customUrl,
+        guideId: guide.id,
+        leadId,
+      });
+      if (!hasDeliveryAccess) {
+        return res.status(404).json({ message: "Page not found" });
       }
+
+      const lead = await storage.getLead(leadId);
+      if (
+        !lead ||
+        lead.guideId !== guide.id ||
+        lead.landingPageId !== landingPage.id
+      ) {
+        return res.status(404).json({ message: "Page not found" });
+      }
+
+      const branding = await resolvePublicAppearanceForGuide(guide);
+      const library = await resolvePublicLibraryContextForGuide(guide.id);
 
       // Track delivery page view
       await storage.createAnalyticsEvent({
@@ -1527,11 +2018,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
           ctaLink: guide.ctaLink,
           ctaText: guide.ctaText,
           content: guide.content,
+          category: guide.category,
+          presentationProfile: normalizePresentationProfile(guide.presentationProfile),
+          sourceVideo: youtubeSourceFromStoredFields(
+            guide.youtubeUrl,
+            guide.youtubeVideoId,
+            guide.channelTitle,
+          ),
         },
         branding,
         brandingSettings: branding,
+        library,
         lead: {
-          id: lead.id,
           firstName: lead.firstName,
         },
       });
@@ -1553,6 +2051,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const branding = await resolvePublicAppearanceForGuide(guide);
+      const library = await resolvePublicLibraryContextForGuide(guide.id);
 
       res.json({
         guide: {
@@ -1569,9 +2068,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
           ctaLink: guide.ctaLink,
           ctaText: guide.ctaText,
           content: guide.content,
+          category: guide.category,
+          presentationProfile: normalizePresentationProfile(guide.presentationProfile),
+          sourceVideo: youtubeSourceFromStoredFields(
+            guide.youtubeUrl,
+            guide.youtubeVideoId,
+            guide.channelTitle,
+          ),
         },
         branding,
         brandingSettings: branding,
+        library,
       });
     } catch (error) {
       console.error("Error fetching public guide:", error);
@@ -1580,14 +2087,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Regenerate guide content from transcript
-  app.post('/api/guides/:id/regenerate', isAuthenticated, async (req: any, res) => {
+  app.post('/api/guides/:id/regenerate', isAuthenticated, guideGenerationRateLimit, async (req: any, res) => {
     try {
       const userId = getRequestUserId(req);
       if (!userId) return res.status(401).json({ message: "Authentication required" });
-      const guideId = parseInt(req.params.id);
+      const guideId = positiveRouteIdSchema.parse(req.params.id);
+      const request = guideRegenerationRequestSchema.parse(req.body || {});
       
       const guide = await storage.getGuide(guideId);
-      if (!guide) {
+      if (!guide || guide.magnetType !== "guide") {
         return res.status(404).json({ message: "Guide not found" });
       }
       await assertGuideAccess(userId, guide, "write_content");
@@ -1596,23 +2104,111 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "No transcript available for regeneration" });
       }
 
-      const brandingSettings = await resolveAppearanceForScope(guide.userId, guide.brandId);
-
-      // Re-analyze the actual transcript
-      const analysis = await analyzeVideoContent(guide.transcript || '', guide.title || '', guide.description || '');
-      
-      // Regenerate guide content based on real transcript
-      const newContent = await generatePracticeGuide(analysis, guide.title || '', guide.channelTitle || '', brandingSettings);
-
-      // Update the guide with real content
-      const updatedGuide = await storage.updateGuide(guideId, {
-        aiAnalysis: analysis,
-        content: newContent
+      const brandingSettings = await resolveAppearanceForScope(userId, guide.brandId);
+      const regeneration = buildGuideRegenerationContext({
+        guide: {
+          id: guide.id,
+          title: guide.title,
+          description: guide.description,
+          transcript: guide.transcript,
+          youtubeUrl: guide.youtubeUrl,
+          youtubeVideoId: guide.youtubeVideoId,
+          channelTitle: guide.channelTitle,
+          category: guide.category,
+          tags: guide.tags,
+          content: guide.content,
+          presentationProfile: guide.presentationProfile,
+        },
+        targetAudience: brandingSettings.targetAudience,
+        customInstructions: request.instructions,
+      });
+      const libraryKnowledge = await prepareBrandLibraryKnowledge({
+        userId,
+        brandId: guide.brandId,
+        currentMagnet: { type: "guide", id: guide.id },
+        query: regeneration.libraryQuery,
       });
 
+      // Re-analyze the complete stored source before composing the replacement.
+      const analysis = await analyzeVideoContent(
+        regeneration.sourceContent,
+        guide.title,
+        guide.description || "",
+        regeneration.creationBrief,
+        undefined,
+        libraryKnowledge,
+      );
+
+      let newContent;
+      let timedTranscript: Awaited<ReturnType<typeof transcribeVideo>> | null = null;
+      if (regeneration.sourceVideo) {
+        try {
+          const refreshedTranscript = await transcribeVideo(regeneration.sourceVideo.videoId);
+          if (
+            typeof refreshedTranscript === "object" &&
+            refreshedTranscript.segments.length > 0
+          ) {
+            timedTranscript = refreshedTranscript;
+          }
+        } catch (error) {
+          console.warn("Timestamp refresh unavailable during Guide regeneration; using stored source text", error);
+        }
+      }
+
+      if (timedTranscript && typeof timedTranscript === "object") {
+        const { generateTimestampedContent } = await import("./services/aiContentWithTimestamps");
+        const trainingSettings = await storage.getTrainingSettings(userId);
+        newContent = await generateTimestampedContent(
+          regeneration.sourceContent,
+          timedTranscript.segments,
+          {
+            videoId: regeneration.sourceVideo?.videoId,
+            title: guide.title,
+            description: guide.description || "",
+            thumbnailUrl: guide.thumbnailUrl || "",
+            duration: "Unknown",
+            channelTitle: guide.channelTitle || "",
+            category: guide.category || "",
+            viewCount: guide.views || 0,
+          },
+          trainingSettings,
+          undefined,
+          regeneration.creationBrief,
+          brandingSettings,
+          libraryKnowledge,
+          analysis,
+        );
+      } else {
+        newContent = await generatePracticeGuide(
+          analysis,
+          guide.title,
+          guide.channelTitle || "",
+          brandingSettings,
+          undefined,
+          regeneration.creationBrief,
+          regeneration.sourceContent,
+          libraryKnowledge,
+        );
+      }
+
+      // Update the guide with real content
+      const updatedGuide = await storage.updateGuideIfUnchanged(guideId, guide.revision, {
+        aiAnalysis: analysis,
+        content: newContent,
+        presentationProfile: regeneration.presentationProfile,
+        status: "draft",
+      });
+      if (!updatedGuide) {
+        return res.status(409).json({
+          code: "guide_changed_during_regeneration",
+          message: "This Guide changed while the improved Draft was being generated. Reload it before trying again.",
+        });
+      }
+
       res.json({ 
-        message: "Guide regenerated successfully",
-        guide: updatedGuide
+        message: "Your improved draft is ready to review",
+        needsRepublish: true,
+        guide: updatedGuide,
       });
     } catch (error) {
       sendBrandRouteError(res, error, "Failed to regenerate guide");
@@ -1723,9 +2319,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const extension = serviceConfig.useLightweightImage ? sourceExtension : "png";
       // Public asset names must not disclose internal user or brand identifiers.
       const fileName = `${config.prefix}-${Date.now()}-${randomUUID().slice(0, 12)}.${extension}`;
-      const uploadDir = path.join(process.cwd(), 'public', 'uploads', 'branding');
-      fs.mkdirSync(uploadDir, { recursive: true });
-
       const resizeOptions = {
         width: config.width,
         height: config.height,
@@ -1738,27 +2331,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
             fit: config.fit,
             background: resizeOptions.background,
           }).png().toBuffer();
+      const processedContentType = serviceConfig.useLightweightImage
+        ? req.file.mimetype
+        : "image/png";
 
-      fs.writeFileSync(path.join(uploadDir, fileName), processedBuffer);
-      res.json({ [config.responseField]: `/uploads/branding/${fileName}` });
+      const assetUrl = await brandAssetStore.put({
+        key: fileName,
+        ownerUserId: scope.ownerUserId,
+        brandId: scope.brandId,
+        contentType: processedContentType,
+        content: processedBuffer,
+      });
+      res.json({ [config.responseField]: assetUrl });
     } catch (error) {
+      if (error instanceof BrandAssetQuotaError) {
+        return res.status(409).json({
+          code: "brand_asset_quota_reached",
+          message: "This workspace has reached its brand image storage limit. Reuse an existing image or contact support.",
+        });
+      }
       sendBrandRouteError(res, error, `Failed to upload ${config.prefix}`);
     }
   };
 
-  app.post('/api/branding/logo', isAuthenticated, logoUpload.single('logo'), (req, res) =>
+  app.post('/api/branding/logo', isAuthenticated, brandAssetUploadRateLimit, logoUpload.single('logo'), (req, res) =>
     uploadCurrentBrandAsset(req, res, {
       prefix: "wordmark", responseField: "logoUrl", width: 800, height: 300, fit: "contain",
     }));
-  app.post('/api/branding/logo-mark', isAuthenticated, logoUpload.single('logoMark'), (req, res) =>
+  app.post('/api/branding/logo-mark', isAuthenticated, brandAssetUploadRateLimit, logoUpload.single('logoMark'), (req, res) =>
     uploadCurrentBrandAsset(req, res, {
       prefix: "mark", responseField: "logoMarkUrl", width: 512, height: 512, fit: "contain",
     }));
-  app.post('/api/branding/favicon', isAuthenticated, logoUpload.single('favicon'), (req, res) =>
+  app.post('/api/branding/favicon', isAuthenticated, brandAssetUploadRateLimit, logoUpload.single('favicon'), (req, res) =>
     uploadCurrentBrandAsset(req, res, {
       prefix: "favicon", responseField: "faviconUrl", width: 64, height: 64, fit: "cover",
     }));
-  app.post('/api/branding/social-image', isAuthenticated, logoUpload.single('socialImage'), (req, res) =>
+  app.post('/api/branding/social-image', isAuthenticated, brandAssetUploadRateLimit, logoUpload.single('socialImage'), (req, res) =>
     uploadCurrentBrandAsset(req, res, {
       prefix: "social", responseField: "socialImageUrl", width: 1200, height: 630, fit: "contain",
     }));
@@ -1801,30 +2409,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Analytics routes
   app.get('/api/analytics', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
-      // Get current brand from database
-      const user = await storage.getUser(userId);
-      const currentBrandId = user?.currentBrandId;
-      const analytics = await storage.getAnalyticsByUser(userId, currentBrandId);
+      const userId = getRequestUserId(req);
+      if (!userId) return res.status(401).json({ message: "Authentication required" });
+      const scope = await resolveCurrentBrandScope(userId, "read");
+      const analytics = await storage.getAnalyticsByUser(userId, scope.brandId);
       res.json(analytics);
     } catch (error) {
-      console.error("Error fetching analytics:", error);
-      res.status(500).json({ message: "Failed to fetch analytics" });
+      sendBrandRouteError(res, error, "Failed to fetch analytics");
     }
   });
 
   // Leads routes
   app.get('/api/leads', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
-      // Get current brand from database
-      const user = await storage.getUser(userId);
-      const currentBrandId = user?.currentBrandId || null;
-      const leads = await storage.getLeadsByUserAndBrand(userId, currentBrandId);
+      const userId = getRequestUserId(req);
+      if (!userId) return res.status(401).json({ message: "Authentication required" });
+      const scope = await resolveCurrentBrandScope(userId, "read");
+      const leads = await storage.getLeadsByUserAndBrand(userId, scope.brandId);
       res.json(leads);
     } catch (error) {
-      console.error("Error fetching leads:", error);
-      res.status(500).json({ message: "Failed to fetch leads" });
+      sendBrandRouteError(res, error, "Failed to fetch leads");
     }
   });
 

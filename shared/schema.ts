@@ -12,6 +12,7 @@ import {
   uuid,
   unique,
   uniqueIndex,
+  customType,
 } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -23,6 +24,18 @@ import type {
   QuizResultSnapshot,
   QuizTheme,
 } from "./quiz";
+import {
+  DEFAULT_PRESENTATION_PROFILE,
+  presentationProfileSchema,
+  type PresentationProfile,
+} from "./presentation";
+import { includeInLibraryInputSchema } from "./library";
+
+const bytea = customType<{ data: Buffer; driverData: Buffer }>({
+  dataType() {
+    return "bytea";
+  },
+});
 
 // Session storage table (required for Replit Auth)
 export const sessions = pgTable(
@@ -70,6 +83,10 @@ export const brands = pgTable("brands", {
   name: varchar("name").notNull(),
   description: text("description"),
   logoUrl: varchar("logo_url"),
+  // Public library identity is generated server-side and never changes with
+  // the brand name. Legacy brands remain null until the library is explicitly
+  // provisioned so a migration cannot create a new public surface by itself.
+  librarySlug: varchar("library_slug", { length: 100 }).unique(),
   isDefault: boolean("is_default").default(false),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -146,6 +163,24 @@ export const mediaAssets = pgTable("media_assets", {
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
+
+// Processed public brand images. These small binary assets live in PostgreSQL
+// so autoscaled application replicas do not depend on an ephemeral filesystem.
+export const brandAssets = pgTable("brand_assets", {
+  assetKey: varchar("asset_key", { length: 255 }).primaryKey(),
+  ownerUserId: varchar("owner_user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  brandId: integer("brand_id").references(() => brands.id, { onDelete: "cascade" }),
+  contentType: varchar("content_type", { length: 32 }).notNull(),
+  byteSize: integer("byte_size").notNull(),
+  contentSha256: varchar("content_sha256", { length: 64 }).notNull(),
+  content: bytea("content").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [
+  index("brand_assets_owner_created_idx").on(table.ownerUserId, table.createdAt),
+  index("brand_assets_brand_created_idx")
+    .on(table.brandId, table.createdAt)
+    .where(sql`${table.brandId} IS NOT NULL`),
+]);
 
 // Branding settings for each brand
 export const brandingSettings = pgTable("branding_settings", {
@@ -235,11 +270,19 @@ export const guides = pgTable("guides", {
   transcript: text("transcript"),
   aiAnalysis: jsonb("ai_analysis"),
   content: jsonb("content"), // Generated guide content
+  presentationProfile: jsonb("presentation_profile")
+    .$type<PresentationProfile>()
+    .notNull()
+    .default(DEFAULT_PRESENTATION_PROFILE),
   screenshots: jsonb("screenshots"), // Array of screenshot metadata with timestamps
   category: varchar("category"),
   tags: text("tags").array(),
   leadTags: text("lead_tags").array(), // Tags applied to leads captured from this guide
+  // Nullable by design: legacy rows stay null (not discoverable), while the
+  // database default opts newly-created magnets into their brand library.
+  includeInLibrary: boolean("include_in_library").default(true),
   status: varchar("status").default("draft"), // draft, published, unlisted, archived
+  revision: integer("revision").notNull().default(0),
   slug: varchar("slug").unique(),
   views: integer("views").default(0),
   downloads: integer("downloads").default(0),
@@ -707,6 +750,11 @@ export const mediaAssetsRelations = relations(mediaAssets, ({ one }) => ({
   brand: one(brands, { fields: [mediaAssets.brandId], references: [brands.id] }),
 }));
 
+export const brandAssetsRelations = relations(brandAssets, ({ one }) => ({
+  owner: one(users, { fields: [brandAssets.ownerUserId], references: [users.id] }),
+  brand: one(brands, { fields: [brandAssets.brandId], references: [brands.id] }),
+}));
+
 export const googleConnectionsRelations = relations(googleConnections, ({ one }) => ({
   user: one(users, {
     fields: [googleConnections.userId],
@@ -730,8 +778,14 @@ export const brandUsersRelations = relations(brandUsers, ({ one }) => ({
 }));
 
 // Insert schemas
-export const insertGuideSchema = createInsertSchema(guides).omit({
+export const insertGuideSchema = createInsertSchema(guides, {
+  presentationProfile: presentationProfileSchema,
+  // Null is reserved for pre-library rows. New writes must choose a boolean or
+  // omit the field to receive the database default of true.
+  includeInLibrary: includeInLibraryInputSchema.optional(),
+}).omit({
   id: true,
+  revision: true,
   createdAt: true,
   updatedAt: true,
 });
@@ -873,6 +927,9 @@ export const insertGoogleConnectionSchema = createInsertSchema(googleConnections
 
 export const insertBrandSchema = createInsertSchema(brands).omit({
   id: true,
+  // A public library is provisioned through its dedicated endpoint. Keeping
+  // this out of ordinary create/update payloads makes the slug immutable.
+  librarySlug: true,
   createdAt: true,
   updatedAt: true,
 });
@@ -972,6 +1029,8 @@ export type PromptTemplate = typeof promptTemplates.$inferSelect;
 export type InsertPromptTemplate = z.infer<typeof insertPromptTemplateSchema>;
 export type MediaAsset = typeof mediaAssets.$inferSelect;
 export type InsertMediaAsset = z.infer<typeof insertMediaAssetSchema>;
+export type BrandAsset = typeof brandAssets.$inferSelect;
+export type InsertBrandAsset = typeof brandAssets.$inferInsert;
 
 // Storage Management Types
 export type StorageUsage = typeof storageUsage.$inferSelect;

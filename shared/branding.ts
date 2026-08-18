@@ -2,6 +2,7 @@ import { z } from "zod";
 
 export const SUPPORTED_BRAND_FONTS = [
   "Inter",
+  "Barlow Condensed",
   "Roboto",
   "Open Sans",
   "Montserrat",

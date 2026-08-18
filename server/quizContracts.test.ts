@@ -3,10 +3,12 @@ import test from "node:test";
 import { z } from "zod";
 
 import {
+  authoredQuizDefinitionSchema,
   benefitAssetCreateSchema,
   benefitAssetUpdateSchema,
   composeQuizResultSnapshotV2,
   completeQuizRequestSchema,
+  generateQuizRequestSchema,
   normalizeStoredQuizLeadCapture,
   publicQuizResultFromSnapshot,
   quizDefinitionSchema,
@@ -75,6 +77,24 @@ function validQuiz(): QuizDefinition {
       fontFamily: "Inter",
     },
   };
+}
+
+function validAuthoredQuiz(): QuizDefinition {
+  const quiz = structuredClone(validQuiz());
+  quiz.questions = Array.from({ length: 5 }, (_, questionIndex) => ({
+    id: `question_${questionIndex + 1}`,
+    prompt: `Diagnostic question ${questionIndex + 1}`,
+    required: true,
+    options: Array.from({ length: 4 }, (_, optionIndex) => {
+      const outcomeId = optionIndex % 2 === 0 ? "builder" : "optimizer";
+      return {
+        id: `answer_${questionIndex + 1}_${optionIndex + 1}`,
+        label: `Answer ${optionIndex + 1}`,
+        outcomeWeights: { [outcomeId]: 1 },
+      };
+    }),
+  }));
+  return authoredQuizDefinitionSchema.parse(quiz);
 }
 
 function validAnswerAwareQuiz(): QuizDefinition {
@@ -177,6 +197,80 @@ test("quiz contracts accept a reachable definition and optional unanswered quest
 
   assert.equal(scored.outcome.id, "builder");
   assert.deepEqual(scored.scoreMap, { builder: 2, optimizer: 0 });
+});
+
+test("new quiz authoring requires at least five questions with exactly four answers", () => {
+  const legacyQuiz = validQuiz();
+
+  // Stored and already-published V1 quizzes remain readable and scoreable.
+  assert.doesNotThrow(() => quizDefinitionSchema.parse(legacyQuiz));
+  assert.throws(() => authoredQuizDefinitionSchema.parse(legacyQuiz), z.ZodError);
+
+  const authoredQuiz = validAuthoredQuiz();
+  assert.equal(authoredQuiz.questions.length, 5);
+  authoredQuiz.questions.forEach((question) => assert.equal(question.options.length, 4));
+
+  const tooFewAnswers = structuredClone(authoredQuiz);
+  tooFewAnswers.questions[0].options.pop();
+  assert.throws(() => authoredQuizDefinitionSchema.parse(tooFewAnswers), z.ZodError);
+
+  const tooManyAnswers = structuredClone(authoredQuiz);
+  tooManyAnswers.questions[0].options.push({
+    id: "answer_1_5",
+    label: "Answer 5",
+    outcomeWeights: { builder: 1 },
+  });
+  assert.throws(() => authoredQuizDefinitionSchema.parse(tooManyAnswers), z.ZodError);
+});
+
+test("quiz generation and editor update contracts enforce the new quiz shape", () => {
+  const generateRequest = {
+    title: "Find your next step",
+    sourceContent: "A source with enough useful detail to generate a focused diagnostic quiz and practical results.",
+    questionCount: 5,
+    outcomeCount: 2,
+  };
+
+  assert.equal(generateQuizRequestSchema.parse(generateRequest).questionCount, 5);
+  assert.throws(
+    () => generateQuizRequestSchema.parse({ ...generateRequest, questionCount: 4 }),
+    z.ZodError,
+  );
+  assert.doesNotThrow(() => updateQuizRequestSchema.parse({
+    questions: validAuthoredQuiz().questions,
+  }));
+  assert.throws(
+    () => updateQuizRequestSchema.parse({ questions: validQuiz().questions }),
+    z.ZodError,
+  );
+});
+
+test("quiz generation accepts exactly one grounded source", () => {
+  const request = {
+    title: "Find your next step",
+    questionCount: 5,
+    outcomeCount: 2,
+  };
+  const pastedSource = "A grounded lesson with enough useful detail to create a diagnostic quiz and practical next steps.";
+  const youtubeUrl = "https://www.youtube.com/watch?v=WvUSs6yTltE";
+
+  assert.equal(
+    generateQuizRequestSchema.parse({ ...request, sourceContent: pastedSource }).sourceContent,
+    pastedSource,
+  );
+  assert.equal(
+    generateQuizRequestSchema.parse({ ...request, youtubeUrl }).youtubeUrl,
+    youtubeUrl,
+  );
+  assert.throws(() => generateQuizRequestSchema.parse(request), z.ZodError);
+  assert.throws(
+    () => generateQuizRequestSchema.parse({ ...request, youtubeUrl: "https://example.com/watch?v=WvUSs6yTltE" }),
+    z.ZodError,
+  );
+  assert.throws(
+    () => generateQuizRequestSchema.parse({ ...request, sourceContent: pastedSource, youtubeUrl }),
+    z.ZodError,
+  );
 });
 
 test("quiz contracts reject duplicate IDs, unknown mappings, and unreachable outcomes", () => {

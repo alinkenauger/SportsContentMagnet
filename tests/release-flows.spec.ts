@@ -282,8 +282,9 @@ test("a public quiz completes the question, lead, result, gift, and CTA journey"
   await page.getByText("What happens after the call?", { exact: true }).click();
   await expect(page.getByText("Your answer: Everything feels equally important.")).toBeVisible();
   await expect(page.getByText("Competing priorities are preventing a clear first action.")).toBeVisible();
-  await expect(page.getByText("Do this first", { exact: true })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Choose one visible commitment" })).toBeVisible();
+  const outcomeHero = page.getByLabel("The Priority Pile-Up");
+  await expect(outcomeHero.getByText("Do this first", { exact: true })).toBeVisible();
+  await expect(outcomeHero.getByRole("heading", { name: "Choose one visible commitment" })).toBeVisible();
   await expect(page.getByText("Ready-to-use tool", { exact: true })).toBeVisible();
   await expect(page.getByRole("heading", { name: "One-action follow-through worksheet" })).toBeVisible();
   await expect(page.getByText("Copy tool", { exact: true })).toBeVisible();
@@ -305,7 +306,7 @@ test("a public quiz completes the question, lead, result, gift, and CTA journey"
   await expectNoHorizontalOverflow(page);
 });
 
-test("a public guide saves workbook progress across reload and can reset it", async ({ page }) => {
+test("a public guide keeps its teaching content visible and saves workbook progress", async ({ page }) => {
   await page.route("**/api/guide/303/public", (route) => route.fulfill({
     status: 200,
     contentType: "application/json",
@@ -334,6 +335,18 @@ test("a public guide saves workbook progress across reload and can reset it", as
               content: "A useful commitment has one action and one observable finish line.",
               type: "tip",
               objective: "Turn an intention into a verifiable commitment.",
+              drillBreakdown: {
+                painPoint: "Competing priorities can hide the action that matters most.",
+                technique: "Choose one action and name one observable finish line.",
+                keyFocus: "Keep the commitment visible until the proof exists.",
+                repetitions: "One protected commitment",
+                duration: "15 minutes",
+                verbalSteps: [
+                  "Choose the one action that matters most.",
+                  "Name the proof another person could verify.",
+                ],
+                tips: ["Keep the commitment in one sentence."],
+              },
               blocks: [
                 {
                   type: "checklist",
@@ -366,6 +379,11 @@ test("a public guide saves workbook progress across reload and can reset it", as
                       responseType: "long_text",
                       placeholder: "Write one concrete action",
                     },
+                    {
+                      id: "finish_line_clarity",
+                      prompt: "How clear is the finish line?",
+                      responseType: "rating",
+                    },
                   ],
                 },
               ],
@@ -392,33 +410,30 @@ test("a public guide saves workbook progress across reload and can reset it", as
 
   await page.goto("/guide/303");
   await expect(page.getByRole("heading", { name: "The One-Move Follow-Through Workbook" })).toBeVisible();
-  await expect(page.getByRole("progressbar", { name: "Completed guide activities" })).toHaveAttribute("aria-valuenow", "0");
+  await expect(page.getByRole("heading", { name: "Deep dive", exact: true })).toBeVisible();
+  await expect(page.getByText("A useful commitment has one action and one observable finish line.", { exact: true })).toBeVisible();
+  const coachBreakdown = page.getByRole("region", { name: "Coach's breakdown" });
+  await expect(coachBreakdown).toBeVisible();
+  await expect(coachBreakdown.getByText("Competing priorities can hide the action that matters most.", { exact: true })).toBeVisible();
+  await expect(coachBreakdown.getByText("Choose one action and name one observable finish line.", { exact: true })).toBeVisible();
+  await expect(page.locator(".vidmagnet-guide-content details")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Reset progress" })).toHaveCount(0);
 
   const commitmentItem = page.getByRole("button", { name: /Define the one visible commitment/ });
   await commitmentItem.click();
   await page.getByLabel("What is the next visible action?").fill("Schedule the client recap before noon.");
-  await expect(page.getByRole("progressbar", { name: "Completed guide activities" })).toHaveAttribute("aria-valuenow", "2");
+  const ratingField = page.locator("label").filter({ hasText: "How clear is the finish line?" });
+  await ratingField.getByRole("button", { name: "4", exact: true }).click();
   await expect.poll(() => page.evaluate(() =>
     Object.values(window.localStorage).some((value) =>
-      value.includes("Schedule the client recap before noon."),
+      value.includes("Schedule the client recap before noon.") && value.includes('"4"'),
     ),
   )).toBe(true);
 
   await page.reload();
   await expect(page.getByRole("button", { name: /Define the one visible commitment/ })).toHaveAttribute("aria-pressed", "true");
   await expect(page.getByLabel("What is the next visible action?")).toHaveValue("Schedule the client recap before noon.");
-  await expect(page.getByRole("progressbar", { name: "Completed guide activities" })).toHaveAttribute("aria-valuenow", "2");
-
-  page.once("dialog", (dialog) => dialog.accept());
-  await page.getByRole("button", { name: "Reset progress" }).click();
-  await expect(page.getByRole("button", { name: /Define the one visible commitment/ })).toHaveAttribute("aria-pressed", "false");
-  await expect(page.getByLabel("What is the next visible action?")).toHaveValue("");
-  await expect(page.getByRole("progressbar", { name: "Completed guide activities" })).toHaveAttribute("aria-valuenow", "0");
-
-  await page.reload();
-  await expect(page.getByRole("button", { name: /Define the one visible commitment/ })).toHaveAttribute("aria-pressed", "false");
-  await expect(page.getByLabel("What is the next visible action?")).toHaveValue("");
-  await expect(page.getByRole("progressbar", { name: "Completed guide activities" })).toHaveAttribute("aria-valuenow", "0");
+  await expect(ratingField.getByRole("button", { name: "4", exact: true })).toHaveAttribute("aria-pressed", "true");
   await expect(page.getByRole("button", { name: "Print or save PDF" })).toBeVisible();
   await expectNoHorizontalOverflow(page);
 });
@@ -504,6 +519,7 @@ test("an authenticated creator can choose Quiz, submit a grounded brief, and rea
   await page.goto("/create");
   await expect(page.getByRole("heading", { name: "What do you want to create?" })).toBeVisible();
   await page.getByRole("button", { name: /Interactive Quiz/ }).click();
+  await page.getByRole("button", { name: /Paste source content/ }).click();
   await page.getByLabel("Quiz title").fill("  Follow-through diagnostic  ");
   await page.getByRole("textbox", { name: "Content", exact: true }).fill(
     "End every coaching call with one priority, schedule the action, and define visible proof before the conversation ends.",

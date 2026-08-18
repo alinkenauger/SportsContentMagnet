@@ -16,6 +16,7 @@ import {
   type QuizAttempt,
 } from "@shared/schema";
 import {
+  authoredQuizDefinitionSchema,
   composeQuizResultSnapshotV2,
   normalizeStoredQuizLeadCapture,
   quizDefinitionSchema,
@@ -41,7 +42,18 @@ import {
 } from "./brandAccess";
 import { resolveAppearanceForScope } from "./brandAppearance";
 import { toPublicBrandAppearance } from "@shared/branding";
+import {
+  createPresentationProfile,
+  normalizePresentationProfile,
+  youtubeSourceFromStoredFields,
+  type PresentationProfile,
+  type YouTubeSource,
+} from "@shared/presentation";
 import { emailService, publicAppBaseUrl } from "./services/emailService";
+import {
+  ensureBrandLibraryForWriter,
+  resolvePublicLibraryContextForGuide,
+} from "./magnetLibrary";
 
 export class QuizStorageError extends Error {
   constructor(public readonly status: number, message: string) {
@@ -195,45 +207,57 @@ export async function createQuizFunnel(params: {
   sourceContent: string;
   definition: QuizDefinition;
   themeMode?: QuizThemeMode;
+  presentationProfile: PresentationProfile;
+  sourceVideo: YouTubeSource | null;
+  includeInLibrary?: boolean;
 }): Promise<QuizBundle> {
+  const authoredDefinition = authoredQuizDefinitionSchema.parse(params.definition);
   const brandId = await resolveBrandIdForUser(params.userId, params.brandId, "write_content");
-  await validateOutcomeAssets(params.userId, brandId, params.definition);
+  await validateOutcomeAssets(params.userId, brandId, authoredDefinition);
+  if ((params.includeInLibrary ?? true) && brandId !== null) {
+    await ensureBrandLibraryForWriter(params.userId, brandId);
+  }
 
   const suffix = randomUUID().slice(0, 8);
-  const slug = `${slugify(params.definition.title)}-${suffix}`;
+  const slug = `${slugify(authoredDefinition.title)}-${suffix}`;
 
   return db.transaction(async (tx) => {
     const [guide] = await tx.insert(guides).values({
       userId: params.userId,
       brandId,
       magnetType: "quiz",
-      title: params.definition.title,
-      description: params.definition.description,
-      youtubeUrl: null,
-      youtubeVideoId: null,
+      title: authoredDefinition.title,
+      description: authoredDefinition.description,
+      youtubeUrl: params.sourceVideo?.canonicalUrl ?? null,
+      youtubeVideoId: params.sourceVideo?.videoId ?? null,
+      channelTitle: params.sourceVideo?.channelTitle ?? null,
       transcript: null,
       aiAnalysis: { type: "quiz", generatedAt: new Date().toISOString() },
       content: {
-        title: params.definition.title,
-        description: params.definition.description,
-        ...(params.definition.dimensions
-          ? { quizDimensions: params.definition.dimensions }
+        title: authoredDefinition.title,
+        description: authoredDefinition.description,
+        ...(authoredDefinition.dimensions
+          ? { quizDimensions: authoredDefinition.dimensions }
           : {}),
       },
-      category: "quiz",
+      category: params.presentationProfile.preset === "editorial"
+        ? "quiz"
+        : params.presentationProfile.preset,
       tags: ["quiz"],
       leadTags: [],
       status: "draft",
       slug,
+      presentationProfile: params.presentationProfile,
+      includeInLibrary: params.includeInLibrary ?? true,
     }).returning();
 
     const [landingPage] = await tx.insert(landingPages).values({
       guideId: guide.id,
       userId: params.userId,
-      title: params.definition.title,
-      headline: params.definition.title,
-      subheadline: params.definition.description.slice(0, 200),
-      description: params.definition.description,
+      title: authoredDefinition.title,
+      headline: authoredDefinition.title,
+      subheadline: authoredDefinition.description.slice(0, 200),
+      description: authoredDefinition.description,
       bulletPoints: [],
       buttonText: "Take the Quiz",
       customFields: [],
@@ -246,10 +270,10 @@ export async function createQuizFunnel(params: {
       userId: params.userId,
       brandId,
       sourceContent: params.sourceContent,
-      questions: params.definition.questions,
-      outcomes: params.definition.outcomes,
-      leadCapture: params.definition.leadCapture,
-      theme: params.definition.theme,
+      questions: authoredDefinition.questions,
+      outcomes: authoredDefinition.outcomes,
+      leadCapture: authoredDefinition.leadCapture,
+      theme: authoredDefinition.theme,
       themeMode: params.themeMode ?? "brand",
     }).returning();
 
@@ -268,8 +292,21 @@ export async function updateQuizForUser(
 ): Promise<QuizBundle> {
   const bundle = await getQuizBundleForUser(userId, guideId, true);
   const current = parseQuizDefinition(bundle.guide, bundle.quiz);
-  const definition = quizDefinitionSchema.parse({ ...current, ...update });
+  const { presentationSelection, includeInLibrary, ...definitionUpdate } = update;
+  const definition = quizDefinitionSchema.parse({ ...current, ...definitionUpdate });
+  const presentationProfile = presentationSelection
+    ? createPresentationProfile(presentationSelection, {
+        title: definition.title,
+        description: definition.description,
+        sourceExcerpt: bundle.quiz.sourceContent,
+      })
+    : normalizePresentationProfile(bundle.guide.presentationProfile);
   await validateOutcomeAssets(userId, bundle.quiz.brandId, definition);
+  if (includeInLibrary && bundle.guide.brandId !== null) {
+    await ensureBrandLibraryForWriter(userId, bundle.guide.brandId);
+  }
+  const invalidatesPublication = Object.keys(update)
+    .some((key) => key !== "includeInLibrary");
 
   await db.transaction(async (tx) => {
     const currentGuideContent = bundle.guide.content
@@ -277,18 +314,30 @@ export async function updateQuizForUser(
       && !Array.isArray(bundle.guide.content)
       ? bundle.guide.content as Record<string, unknown>
       : {};
-    await tx.update(guides).set({
+    const [claimedGuide] = await tx.update(guides).set({
       title: definition.title,
       description: definition.description,
+      presentationProfile,
+      ...(includeInLibrary === undefined ? {} : { includeInLibrary }),
       content: {
         ...currentGuideContent,
         title: definition.title,
         description: definition.description,
         ...(definition.dimensions ? { quizDimensions: definition.dimensions } : {}),
       },
-      status: "draft",
+      ...(invalidatesPublication ? { status: "draft" } : {}),
+      revision: sql`${guides.revision} + 1`,
       updatedAt: new Date(),
-    }).where(eq(guides.id, guideId));
+    }).where(and(
+      eq(guides.id, guideId),
+      eq(guides.revision, bundle.guide.revision),
+    )).returning({ id: guides.id });
+    if (!claimedGuide) {
+      throw new QuizStorageError(
+        409,
+        "This Interactive Quiz changed in another session. Reload the latest Draft and try again.",
+      );
+    }
 
     await tx.update(landingPages).set({
       title: definition.title,
@@ -314,11 +363,32 @@ export async function updateQuizForUser(
 export async function publishQuizForUser(userId: string, guideId: number): Promise<QuizBundle> {
   const bundle = await getQuizBundleForUser(userId, guideId, true);
   const definition = parseQuizDefinition(bundle.guide, bundle.quiz);
+  if (!authoredQuizDefinitionSchema.safeParse(definition).success) {
+    throw new QuizStorageError(
+      400,
+      "Interactive Quizzes need at least 5 questions with exactly 4 answer choices each before publishing.",
+    );
+  }
   await validateOutcomeAssets(userId, bundle.quiz.brandId, definition);
+  if (bundle.guide.includeInLibrary === true && bundle.guide.brandId !== null) {
+    await ensureBrandLibraryForWriter(userId, bundle.guide.brandId);
+  }
 
   await db.transaction(async (tx) => {
-    await tx.update(guides).set({ status: "published", updatedAt: new Date() })
-      .where(eq(guides.id, guideId));
+    const [claimedGuide] = await tx.update(guides).set({
+      status: "published",
+      revision: sql`${guides.revision} + 1`,
+      updatedAt: new Date(),
+    }).where(and(
+      eq(guides.id, guideId),
+      eq(guides.revision, bundle.guide.revision),
+    )).returning({ id: guides.id });
+    if (!claimedGuide) {
+      throw new QuizStorageError(
+        409,
+        "This Interactive Quiz changed while it was being published. Reload the latest Draft and try again.",
+      );
+    }
     await tx.update(landingPages).set({ isActive: true, updatedAt: new Date() })
       .where(eq(landingPages.id, bundle.landingPage.id));
   });
@@ -407,11 +477,18 @@ export async function getPublicQuiz(customUrl: string): Promise<PublicQuizProjec
   const branding = toPublicBrandAppearance(appearance);
   const themeMode: QuizThemeMode = bundle.quiz.themeMode === "custom" ? "custom" : "brand";
   const theme = resolveQuizTheme(appearance, definition.theme, themeMode);
+  const library = await resolvePublicLibraryContextForGuide(bundle.guide.id);
   return {
     guide: {
       id: bundle.guide.id,
       title: bundle.guide.title,
       description: bundle.guide.description,
+      presentationProfile: normalizePresentationProfile(bundle.guide.presentationProfile),
+      sourceVideo: youtubeSourceFromStoredFields(
+        bundle.guide.youtubeUrl,
+        bundle.guide.youtubeVideoId,
+        bundle.guide.channelTitle,
+      ),
     },
     landingPage: {
       customUrl: bundle.landingPage.customUrl || customUrl,
@@ -433,6 +510,7 @@ export async function getPublicQuiz(customUrl: string): Promise<PublicQuizProjec
       themeMode,
     },
     branding,
+    library,
   };
 }
 

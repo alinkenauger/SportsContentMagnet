@@ -16,6 +16,11 @@ const BRAND_FONT_METADATA: Record<SupportedBrandFont, {
     stack: "Inter, Arial, sans-serif",
     googleFamily: "Inter:wght@400;500;600;700",
   },
+  "Barlow Condensed": {
+    description: "Athletic condensed display",
+    stack: "'Barlow Condensed', Arial, sans-serif",
+    googleFamily: "Barlow+Condensed:wght@400;500;600;700;800;900",
+  },
   Roboto: {
     description: "Neutral, highly readable",
     stack: "Roboto, Arial, sans-serif",

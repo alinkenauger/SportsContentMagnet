@@ -8,15 +8,22 @@ import {
 import {
   formatCreationBrief,
   guideV2JsonShape,
+  isTrainingGuide,
   sourceGroundingRules,
 } from './guideContentPrompt';
 import {
+  buildGuideTrainingDepthProfile,
   buildGuideQualityRepairPrompt,
   ensurePublishableGuide,
   GuideQualityError,
   guideQualityGenerationRequirements,
   guideQualityRepairSystemPrompt,
 } from './guideQuality';
+import type { VideoAnalysis } from './openai';
+import {
+  formatLibraryKnowledgeForPrompt,
+  type PreparedLibraryKnowledge,
+} from './libraryKnowledge';
 
 interface TranscriptSegment {
   start: number;
@@ -34,11 +41,17 @@ export async function generateTimestampedContent(
   selectedTemplate?: string,
   creationBrief?: GuideCreationBrief,
   brandingSettings?: any,
+  libraryKnowledge?: PreparedLibraryKnowledge,
+  sourceAnalysis?: VideoAnalysis,
 ): Promise<GuideContentV2> {
   // Create a detailed prompt that includes both transcript and segment timing
   const segmentData = segments.map(seg => 
     `${formatTime(seg.start)} - ${formatTime(seg.end)}: ${seg.text.trim()}`
   ).join('\n');
+  const sourceTimingRanges = segments.map((segment) => ({
+    startSeconds: segment.start,
+    endSeconds: segment.end,
+  }));
 
   // Get template prompts
   const { getTemplate } = await import('./promptTemplates');
@@ -46,6 +59,17 @@ export async function generateTimestampedContent(
   const brief = guideCreationBriefSchema.parse(creationBrief ?? {
     format: inferGuideFormatFromTemplate(selectedTemplate),
   });
+  const requireTrainingRecipe = isTrainingGuide({
+    selectedTemplate,
+    brief,
+    title: videoData.title,
+    category: `${videoData.category || ""} ${brandingSettings?.targetAudience || ""}`,
+    sourceText: transcript,
+    drillCount: sourceAnalysis?.drills?.length ?? 0,
+  });
+  const trainingDepthProfile = requireTrainingRecipe
+    ? buildGuideTrainingDepthProfile(sourceAnalysis)
+    : undefined;
   
   // Use template prompts if available, fallback to default
   const templatePrompt = template ? template.guidePrompt : `Create a comprehensive practice guide with these sections:
@@ -71,7 +95,11 @@ ${template?.analysisPrompt || 'Extract every source-supported idea that helps th
 
 ${formatCreationBrief(brief)}
 
-${guideQualityGenerationRequirements(brief.format)}
+${guideQualityGenerationRequirements(brief.format, {
+  requireTrainingRecipe,
+  sourceTimingRanges,
+  trainingDepthProfile,
+})}
 
 ${sourceGroundingRules}
 
@@ -82,6 +110,7 @@ BRAND CONTEXT
 - Intended audience: ${brandingSettings?.targetAudience || brief.audience || 'Infer from the source'}
 Use this context for vocabulary, tone, and examples. It must never override source grounding or introduce unsupported claims.
 
+${formatLibraryKnowledgeForPrompt(libraryKnowledge)}
 <source_content>
 TRANSCRIPT WITH TIMESTAMPS:
 ${segmentData}
@@ -93,6 +122,11 @@ VIDEO METADATA:
 - Duration: ${videoData.duration}
 - Channel: ${videoData.channelTitle}
 - Views: ${videoData.viewCount?.toLocaleString() || 'N/A'}
+
+SOURCE CONTENT INVENTORY:
+${sourceAnalysis
+  ? JSON.stringify(sourceAnalysis, null, 2)
+  : "Not provided; use only the timestamped transcript above."}
 </source_content>
 
 ${trainingSettings ? `
@@ -113,6 +147,7 @@ CRITICAL REQUIREMENTS:
 - Use timestamp as M:SS, timestampSeconds as the numeric start, and durationSeconds as the duration
 - Only create sections for content that actually exists in the transcript
 - Map each section to the specific time period where that information is discussed
+- Add sourceRefs beside an individual step or checklist item when an exact supplied segment demonstrates or explains it; otherwise omit item-level sourceRefs
 - Preserve useful nuance; do not impose an arbitrary 4-6 section limit
 - Make every step, checklist item, worksheet, template, and metric specific to the source
 `;
@@ -136,16 +171,14 @@ CRITICAL REQUIREMENTS:
     });
 
     const rawResult = JSON.parse(response.choices[0].message.content || '{}');
-    const sourceTimingRanges = segments.map((segment) => ({
-      startSeconds: segment.start,
-      endSeconds: segment.end,
-    }));
-
     const result = await ensurePublishableGuide(rawResult, async (guide, audit) => {
-      const repairPrompt = buildGuideQualityRepairPrompt({
+      const repairPrompt = `${buildGuideQualityRepairPrompt({
         brief,
         draft: guide,
         audit,
+        requireTrainingRecipe,
+        sourceTimingRanges,
+        trainingDepthProfile,
         sourceContext: {
           title: videoData.title || "Not provided",
           creator: videoData.channelTitle || "Not provided",
@@ -158,8 +191,9 @@ CRITICAL REQUIREMENTS:
             text: segment.text.trim(),
           })),
           fullTranscript: transcript,
+          contentInventory: sourceAnalysis,
         },
-      });
+      })}${formatLibraryKnowledgeForPrompt(libraryKnowledge)}`;
 
       const repairResponse = await openai.chat.completions.create({
         model: "gpt-4o",
@@ -182,6 +216,8 @@ CRITICAL REQUIREMENTS:
     }, {
       expectedFormat: brief.format,
       sourceTimingRanges,
+      requireTrainingRecipe,
+      trainingDepthProfile,
     });
 
     result.sections.sort((first, second) =>

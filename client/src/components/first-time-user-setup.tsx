@@ -49,12 +49,9 @@ export default function FirstTimeUserSetup({ user, onComplete }: FirstTimeUserSe
 
   const onPasswordSubmit = async (values: z.infer<typeof passwordSchema>) => {
     try {
-      await apiRequest('/api/auth/change-password', {
-        method: 'POST',
-        body: JSON.stringify({
-          currentPassword: values.currentPassword,
-          newPassword: values.newPassword,
-        }),
+      await apiRequest('/api/auth/change-password', 'POST', {
+        currentPassword: values.currentPassword,
+        newPassword: values.newPassword,
       });
 
       setPasswordChanged(true);

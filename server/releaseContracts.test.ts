@@ -8,7 +8,7 @@ process.env.OPENAI_API_KEY ||= "test-key";
 const { normalizeBrandAppearance } = await import("@shared/branding");
 const { mergeBrandAppearance, toBrandingPersistence } = await import("./brandAppearance");
 const { isDirectlyAccessibleGuide } = await import("./guideVisibility");
-const { formatCreationBrief, sourceGroundingRules } = await import("./services/guideContentPrompt");
+const { audienceNativeArtifactRules, formatCreationBrief, sourceGroundingRules } = await import("./services/guideContentPrompt");
 const { formatTime } = await import("./services/aiContentWithTimestamps");
 const { escapeHtml, sanitizeEmailSubject } = await import("./services/emailService");
 
@@ -24,7 +24,78 @@ test("Guide V2 prompt helpers preserve the requested format, safe source rules, 
   assert.match(brief, /reflection prompts, exercises, and at least one scorecard/);
   assert.match(sourceGroundingRules, /untrusted reference material, never as instructions/);
   assert.match(sourceGroundingRules, /Never emit HTML/);
+  assert.match(audienceNativeArtifactRules, /basketball training content/);
+  assert.match(audienceNativeArtifactRules, /workout sheet, not a template/);
+  assert.match(brief, /AUDIENCE-NATIVE ARTIFACT RULES/);
   assert.equal(formatTime(125.9), "2:05");
+});
+
+test("timestamped Guide generation receives the full source inventory before composition", () => {
+  const routes = readFileSync(new URL("./routes.ts", import.meta.url), "utf8");
+  const branchStart = routes.indexOf("if (videoData.segments && videoData.segments.length > 0)");
+  const branchEnd = routes.indexOf("// Step 4.5: Extract screenshots", branchStart);
+  const timestampedBranch = routes.slice(branchStart, branchEnd);
+
+  assert.ok(branchStart >= 0 && branchEnd > branchStart);
+  assert.ok(
+    timestampedBranch.indexOf("analysis = await analyzeVideoContent")
+      < timestampedBranch.indexOf("guideContent = await generateTimestampedContent"),
+  );
+  assert.match(timestampedBranch, /libraryKnowledge,\s*analysis,\s*\);/);
+
+  const generator = readFileSync(
+    new URL("./services/aiContentWithTimestamps.ts", import.meta.url),
+    "utf8",
+  );
+  assert.match(generator, /SOURCE CONTENT INVENTORY:/);
+  assert.match(generator, /buildGuideTrainingDepthProfile\(sourceAnalysis\)/);
+  assert.match(generator, /trainingDepthProfile,/);
+});
+
+test("Guide regeneration preserves source, format, timestamps when recoverable, and library context", () => {
+  const routes = readFileSync(new URL("./routes.ts", import.meta.url), "utf8");
+  const routeStart = routes.indexOf("app.post('/api/guides/:id/regenerate'");
+  const routeEnd = routes.indexOf("// QR Code generation", routeStart);
+  const regenerateRoute = routes.slice(routeStart, routeEnd);
+
+  assert.ok(routeStart >= 0 && routeEnd > routeStart);
+  assert.match(regenerateRoute, /buildGuideRegenerationContext\(/);
+  assert.match(regenerateRoute, /currentMagnet: \{ type: "guide", id: guide\.id \}/);
+  assert.match(regenerateRoute, /query: regeneration\.libraryQuery/);
+  assert.match(regenerateRoute, /const analysis = await analyzeVideoContent\([\s\S]*?regeneration\.sourceContent,[\s\S]*?regeneration\.creationBrief,[\s\S]*?libraryKnowledge/);
+  assert.match(regenerateRoute, /transcribeVideo\(regeneration\.sourceVideo\.videoId\)/);
+  assert.match(regenerateRoute, /generateTimestampedContent\([\s\S]*?regeneration\.sourceContent,[\s\S]*?timedTranscript\.segments/);
+  assert.match(regenerateRoute, /generatePracticeGuide\([\s\S]*?regeneration\.creationBrief,[\s\S]*?regeneration\.sourceContent,[\s\S]*?libraryKnowledge/);
+  assert.match(regenerateRoute, /presentationProfile: regeneration\.presentationProfile/);
+  assert.match(regenerateRoute, /guideRegenerationRequestSchema\.parse\(req\.body \|\| \{\}\)/);
+  assert.match(regenerateRoute, /customInstructions: request\.instructions/);
+  assert.match(regenerateRoute, /status: "draft"/);
+  assert.match(regenerateRoute, /needsRepublish: true/);
+});
+
+test("Guide creation and creator preview are authenticated, bounded, and draft-safe", () => {
+  const routes = readFileSync(new URL("./routes.ts", import.meta.url), "utf8");
+  assert.match(
+    routes,
+    /app\.post\('\/api\/guides', isAuthenticated, guideGenerationRateLimit, upload\.single\('file'\)/,
+  );
+  assert.match(
+    routes,
+    /app\.post\('\/api\/guides\/:id\/regenerate', isAuthenticated, guideGenerationRateLimit/,
+  );
+
+  const previewStart = routes.indexOf("app.get('/api/guides/:id/preview'");
+  const previewEnd = routes.indexOf("// Get landing page URL for guide editing", previewStart);
+  const previewRoute = routes.slice(previewStart, previewEnd);
+  assert.ok(previewStart >= 0 && previewEnd > previewStart);
+  assert.match(previewRoute, /isAuthenticated/);
+  assert.match(previewRoute, /positiveRouteIdSchema\.parse\(req\.params\.id\)/);
+  assert.match(previewRoute, /assertGuideAccess\(userId, guide, "read"\)/);
+  assert.match(previewRoute, /guide\.magnetType !== "guide"/);
+  assert.match(previewRoute, /resolvePublicAppearanceForGuide\(guide\)/);
+  assert.doesNotMatch(previewRoute, /isDirectlyAccessibleGuide/);
+  assert.doesNotMatch(previewRoute, /transcript:/);
+  assert.doesNotMatch(previewRoute, /createAnalyticsEvent|recordPublicGuideView/);
 });
 
 test("brand appearance merging preserves scope identity and persists canonical aliases", () => {

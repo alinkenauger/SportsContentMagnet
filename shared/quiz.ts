@@ -1,5 +1,19 @@
 import { z } from "zod";
 import type { PublicBrandAppearance } from "./branding";
+import {
+  includeInLibraryInputSchema,
+  type LibraryContext,
+} from "./library";
+import {
+  parseYouTubeSource,
+  presentationProfileSchema,
+  presentationSelectionSchema,
+  sourceMomentSchema,
+  youtubeSourceSchema,
+  type PresentationProfile,
+  type PresentationSelection,
+  type YouTubeSource,
+} from "./presentation";
 
 const stableIdSchema = z
   .string()
@@ -23,12 +37,16 @@ const optionalTrimmedText = (maxLength: number) => z.preprocess(
   z.string().trim().min(1).max(maxLength).optional(),
 );
 
+export const MIN_AUTHORED_QUIZ_QUESTIONS = 5;
+export const AUTHORED_QUIZ_OPTION_COUNT = 4;
+
 export const quizOptionSchema = z.object({
   id: stableIdSchema,
   label: z.string().trim().min(1).max(240),
   outcomeWeights: z.record(stableIdSchema, z.number().finite().min(-100).max(100)),
   answerInsight: z.string().trim().min(1).max(600).optional(),
   evidence: z.string().trim().min(1).max(600).optional(),
+  sourceRefs: z.array(sourceMomentSchema).max(3).optional(),
   dimensionWeights: z
     .record(stableIdSchema, z.number().finite().min(-100).max(100))
     .optional(),
@@ -48,6 +66,32 @@ export const quizQuestionSchema = z.object({
   options: z.array(quizOptionSchema).min(2).max(8),
 }).strict();
 
+/**
+ * Persisted V1 quizzes may have fewer questions and answer choices, so
+ * `quizQuestionSchema` intentionally remains tolerant at read/scoring
+ * boundaries. New generation, editing, and publishing use this stricter
+ * authoring contract.
+ */
+export const authoredQuizQuestionSchema = quizQuestionSchema.superRefine(
+  (question, context) => {
+    if (question.options.length !== AUTHORED_QUIZ_OPTION_COUNT) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["options"],
+        message: `Each question must have exactly ${AUTHORED_QUIZ_OPTION_COUNT} answer choices`,
+      });
+    }
+  },
+);
+
+export const authoredQuizQuestionsSchema = z
+  .array(authoredQuizQuestionSchema)
+  .min(
+    MIN_AUTHORED_QUIZ_QUESTIONS,
+    `Interactive Quizzes must have at least ${MIN_AUTHORED_QUIZ_QUESTIONS} questions`,
+  )
+  .max(20);
+
 export const quizDiagnosticDimensionSchema = z.object({
   id: stableIdSchema,
   title: z.string().trim().min(1).max(160),
@@ -62,6 +106,7 @@ export const quizPrescriptionStepSchema = z.object({
   why: z.string().trim().min(1).max(600),
   timeframe: z.string().trim().min(1).max(120),
   successCriteria: z.string().trim().min(1).max(500),
+  sourceRefs: z.array(sourceMomentSchema).max(5).optional(),
 }).strict();
 
 export const quizMistakeCorrectionSchema = z.object({
@@ -247,29 +292,82 @@ export const quizDefinitionSchema = z.object({
   });
 });
 
+/** Strict contract for quizzes created, edited, or newly published today. */
+export const authoredQuizDefinitionSchema = quizDefinitionSchema.superRefine(
+  (definition, context) => {
+    if (definition.questions.length < MIN_AUTHORED_QUIZ_QUESTIONS) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["questions"],
+        message: `Interactive Quizzes must have at least ${MIN_AUTHORED_QUIZ_QUESTIONS} questions`,
+      });
+    }
+
+    definition.questions.forEach((question, questionIndex) => {
+      if (question.options.length !== AUTHORED_QUIZ_OPTION_COUNT) {
+        context.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["questions", questionIndex, "options"],
+          message: `Each question must have exactly ${AUTHORED_QUIZ_OPTION_COUNT} answer choices`,
+        });
+      }
+    });
+  },
+);
+
 export const generateQuizRequestSchema = z.object({
   title: z.string().trim().min(1).max(200),
-  sourceContent: z.string().trim().min(50).max(100_000),
+  sourceContent: z.preprocess(
+    (value) => typeof value === "string" && value.trim().length === 0 ? undefined : value,
+    z.string().trim().min(50).max(100_000).optional(),
+  ),
+  youtubeUrl: optionalTrimmedText(2048).refine(
+    (value) => value === undefined || parseYouTubeSource(value) !== null,
+    "Enter a valid YouTube video URL",
+  ),
   audience: optionalTrimmedText(500),
   objective: optionalTrimmedText(500),
   brandVoice: optionalTrimmedText(4000),
-  questionCount: z.number().int().min(2).max(12).default(6),
+  questionCount: z.number().int().min(MIN_AUTHORED_QUIZ_QUESTIONS).max(12).default(6),
   outcomeCount: z.number().int().min(2).max(6).default(3),
   leadCapture: quizLeadCaptureSchema.optional(),
   brandId: z.number().int().positive().nullable().optional(),
   theme: quizThemeSchema.optional(),
   themeMode: quizThemeModeSchema.optional(),
-}).strict();
+  presentationSelection: presentationSelectionSchema.optional(),
+  includeInLibrary: includeInLibraryInputSchema.optional().default(true),
+}).strict().superRefine((value, context) => {
+  const hasPastedSource = value.sourceContent !== undefined;
+  const hasYouTubeSource = value.youtubeUrl !== undefined;
+
+  if (!hasPastedSource && !hasYouTubeSource) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["sourceContent"],
+      message: "Paste source content or enter a YouTube video URL",
+    });
+  }
+
+  if (hasPastedSource && hasYouTubeSource) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["youtubeUrl"],
+      message: "Choose either a YouTube video or pasted source content",
+    });
+  }
+});
 
 export const updateQuizRequestSchema = z.object({
   title: z.string().trim().min(1).max(200).optional(),
   description: z.string().trim().min(1).max(2000).optional(),
   dimensions: z.array(quizDiagnosticDimensionSchema).min(1).max(8).optional(),
-  questions: z.array(quizQuestionSchema).min(2).max(20).optional(),
+  questions: authoredQuizQuestionsSchema.optional(),
   outcomes: z.array(quizOutcomeSchema).min(2).max(8).optional(),
   leadCapture: quizLeadCaptureSchema.optional(),
   theme: quizThemeSchema.optional(),
   themeMode: quizThemeModeSchema.optional(),
+  presentationSelection: presentationSelectionSchema.optional(),
+  includeInLibrary: includeInLibraryInputSchema.optional(),
 }).strict().refine((value) => Object.keys(value).length > 0, {
   message: "At least one quiz field is required",
 });
@@ -318,6 +416,7 @@ export type QuizOutcome = z.infer<typeof quizOutcomeSchema>;
 export type QuizLeadCapture = z.infer<typeof quizLeadCaptureSchema>;
 export type QuizTheme = z.infer<typeof quizThemeSchema>;
 export type QuizThemeMode = z.infer<typeof quizThemeModeSchema>;
+export type { PresentationProfile, PresentationSelection, YouTubeSource };
 export type QuizDefinition = z.infer<typeof quizDefinitionSchema>;
 export type GenerateQuizRequest = z.infer<typeof generateQuizRequestSchema>;
 export type UpdateQuizRequest = z.infer<typeof updateQuizRequestSchema>;
@@ -421,6 +520,7 @@ const quizAnswerEvidenceSnapshotSchema = z.object({
   answer: z.string().min(1).max(240),
   answerInsight: z.string().min(1).max(600).optional(),
   evidence: z.string().min(1).max(600).optional(),
+  sourceRefs: z.array(sourceMomentSchema).max(3).optional(),
 }).strict();
 
 const quizDimensionScoreSnapshotSchema = z.object({
@@ -492,6 +592,8 @@ export type PublicQuizProjection = {
     id: number;
     title: string;
     description: string | null;
+    presentationProfile: PresentationProfile;
+    sourceVideo: YouTubeSource | null;
   };
   landingPage: {
     customUrl: string;
@@ -513,6 +615,7 @@ export type PublicQuizProjection = {
     themeMode: QuizThemeMode;
   };
   branding: PublicBrandAppearance;
+  library: LibraryContext | null;
 };
 
 export type PublicQuizResult = {
@@ -539,6 +642,7 @@ export type PublicQuizResult = {
       answer: string;
       answerInsight?: string;
       evidence?: string;
+      sourceRefs?: z.infer<typeof sourceMomentSchema>[];
     }>;
   };
   gift: PublicBenefitAsset | null;
@@ -591,6 +695,7 @@ export function publicQuizResultFromSnapshot(
         answer: answer.answer,
         ...(answer.answerInsight ? { answerInsight: answer.answerInsight } : {}),
         ...(answer.evidence ? { evidence: answer.evidence } : {}),
+        ...(answer.sourceRefs ? { sourceRefs: answer.sourceRefs } : {}),
       })),
     },
   };
@@ -726,6 +831,7 @@ export function composeQuizResultSnapshotV2(params: {
       answer: option.label,
       ...(option.answerInsight ? { answerInsight: option.answerInsight } : {}),
       ...(option.evidence ? { evidence: option.evidence } : {}),
+      ...(option.sourceRefs ? { sourceRefs: option.sourceRefs } : {}),
     }];
   });
 
