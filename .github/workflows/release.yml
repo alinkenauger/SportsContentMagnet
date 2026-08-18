@@ -38,9 +38,6 @@ jobs:
       - name: Check the public marketing surface
         run: npm run check:marketing
 
-      - name: Install the browser used by release journeys
-        run: npx playwright install --with-deps chromium
-
       - name: Run desktop and mobile release journeys
         run: npm run test:e2e:marketing
 
