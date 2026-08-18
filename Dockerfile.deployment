@@ -1,68 +1,40 @@
-# Multi-stage Dockerfile for deployment without heavy packages
-FROM node:20-alpine AS base
-
-# Install system dependencies
-RUN apk add --no-cache python3 make g++ git
-
-WORKDIR /app
-
-# Copy package files
-COPY package*.json ./
-
-# Create lightweight package.json for deployment
-RUN npm pkg delete dependencies.puppeteer dependencies.sharp dependencies.ytdl-core dependencies.pdf-parse && \
-    npm pkg delete devDependencies.tsx && \
-    npm install --only=production --legacy-peer-deps
-
+# Production image with native build tooling isolated to the builder stage.
 FROM node:20-alpine AS builder
 
+RUN apk add --no-cache python3 make g++ git
 WORKDIR /app
 
-# Copy source code
+COPY package.json package-lock.json ./
+RUN npm ci
+
 COPY . .
-
-# Copy lightweight dependencies from base stage
-COPY --from=base /app/node_modules ./node_modules
-
-# Build the application
 RUN npm run build
 
-# Production stage
 FROM node:20-alpine AS production
 
 RUN apk add --no-cache python3
-
-# Create non-root user
-RUN addgroup -g 1001 -S nodejs && \
-    adduser -S nodejs -u 1001
-
 WORKDIR /app
 
-# Copy built application
+COPY package.json package-lock.json ./
+RUN npm ci --omit=dev && npm cache clean --force
+
 COPY --from=builder /app/dist ./dist
-COPY --from=builder /app/client/dist ./client/dist
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/package.json ./
-
-# Copy essential files
 COPY --from=builder /app/public ./public
-COPY --from=builder /app/server/services/pdfGenerator-lite.ts ./server/services/pdfGenerator-lite.ts
-COPY --from=builder /app/server/services/imageProcessor-lite.ts ./server/services/imageProcessor-lite.ts
+COPY --from=builder /app/server/templates ./server/templates
 
-# Set environment variables for lightweight deployment
 ENV NODE_ENV=production
 ENV DISABLE_PDF_GENERATION=true
 ENV DISABLE_IMAGE_PROCESSING=true
 ENV USE_LIGHTWEIGHT_SERVICES=true
 
-# Change ownership
-RUN chown -R nodejs:nodejs /app
-
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S nodejs -u 1001 && \
+    chown -R nodejs:nodejs /app
 USER nodejs
 
 EXPOSE 5000
 
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD node -e "require('http').get('http://localhost:5000/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })"
+  CMD node -e "require('http').get('http://localhost:5000/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })"
 
-CMD ["node", "dist/index.js"]
+CMD ["npm", "run", "start"]

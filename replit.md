@@ -1,110 +1,145 @@
-# ConvertMag.net - Transform Any Content into Lead Magnets
+# VidMagnet - Turn Trusted Content into Useful Lead Magnets
 
-## Overview
+Current release: **v1.1.0.0 (2026-08-14)**. This opening section is the operating overview for the current application. The dated notes at the end are retained as legacy implementation history; use `CHANGELOG.md` for the authoritative release record.
 
-ConvertMag.net is a comprehensive SAAS application that transforms ANY video, audio, stream, post, blog, or book into high-converting lead magnets for content creators across multiple niches including fitness, sports, how-to skill teaching, cooking, and coding. The platform automatically extracts video content, transcribes it, uses AI to analyze expertise and insights, and generates branded practice guides with customizable landing pages for lead capture with optional SMS collection and legal compliance features.
+## What VidMagnet Does
 
-## System Architecture
+VidMagnet turns content a creator already trusts into one of two branded lead magnets:
 
-### Frontend Architecture
-- **Framework**: React with TypeScript using Vite as the build tool
-- **Styling**: TailwindCSS with shadcn/ui component library for consistent design
-- **State Management**: TanStack Query (React Query) for server state and caching
-- **Routing**: Wouter for lightweight client-side routing
-- **UI Components**: Radix UI primitives with custom styling through shadcn/ui
+- A **Guide** that helps a lead implement the source through concrete steps, checklists, worksheets, scorecards, templates, troubleshooting, and an action plan. Generated drafts must pass the format-specific quality gate before they are saved.
+- An **Interactive Quiz** that scores answers, captures the lead when configured, and delivers an answer-aware diagnostic report with visible evidence, response dimensions, a quick win, an ordered plan, a ready-to-use tool, and matched free gift or call to action.
 
-### Backend Architecture
-- **Runtime**: Node.js with Express.js framework
-- **Database**: PostgreSQL with Drizzle ORM for type-safe database operations
-- **Database Provider**: Neon Database (serverless PostgreSQL)
-- **Authentication**: Replit Auth integration with OpenID Connect
-- **Session Management**: Express sessions with PostgreSQL storage
+Creators can save appearance in Brand Studio and offers in the Benefit Library, then reuse both inside a personal or team workspace. Public recipient pages receive only safe projections; pasted source material and private creator fields are not returned by public APIs.
 
-### Project Structure
+Verified public source wording is intentionally narrow: pasted content is supported for Guides and Quizzes, and YouTube-to-Guide is supported. Do not market PDF, webpage, streaming, audio, or identical source parity across both builders until those paths pass production-like verification.
+
+## Architecture
+
+### Frontend
+
+- React 18 and TypeScript, built with Vite.
+- Tailwind CSS, shadcn/ui, and Radix primitives.
+- Wouter for routing and TanStack Query for server state.
+- Lazy route boundaries keep public, auth, creator, and admin pages out of the anonymous entry bundle until needed.
+
+### Backend and data
+
+- Express on Node.js, bundled with esbuild.
+- Drizzle ORM over Neon/PostgreSQL.
+- PostgreSQL-backed Express sessions.
+- Password/session authentication and Replit OpenID Connect converge on one canonical request identity.
+- Global roles protect platform administration; accepted brand memberships and permissions protect team content and assets.
+- Ordered SQL migrations are checksummed, serialized with a PostgreSQL advisory lock, and applied before every production start.
+- Processed brand images use PostgreSQL in production so Replit Autoscale replicas share durable bytes; local development falls back to `public/uploads/branding`.
+
+### Project structure
+
+```text
+client/       React application and public recipient experiences
+server/       Express routes, auth, generation, storage, migration runner, and tests
+shared/       Drizzle schema plus Guide, Quiz, and branding contracts
+migrations/   Ordered production SQL migrations
+tests/        Playwright release journeys
+public/       Static uploads and generated public assets
 ```
-├── client/              # Frontend React application
-├── server/              # Backend Express server
-├── shared/              # Shared types and schemas
-├── migrations/          # Database migration files
-└── attached_assets/     # Project documentation
+
+## Main Product Flows
+
+### Create and publish a Guide
+
+1. Choose the personal or brand workspace that should own the asset.
+2. Paste source content or use the verified YouTube-to-Guide path.
+3. Choose a format and creation brief. Generation produces the V2 implementation blocks, audits their quality, and permits one targeted repair before rejecting a below-bar draft.
+4. Review the landing page, recipient experience, brand appearance, saved workbook interactions, print-ready export, and next action.
+5. Publish or share an unlisted direct link. Unlisted Guides remain directly accessible but do not appear in public discovery.
+
+### Create and publish an Interactive Quiz
+
+1. Choose the owning workspace and paste at least 50 characters of source content.
+2. Generate, edit, and validate questions, outcomes, lead-capture settings, theme, and reachable answer mappings.
+3. Attach active Benefit Library items to outcomes when useful.
+4. Publish the Quiz. A public attempt is scored once and stores an immutable snapshot of its result, answer evidence, diagnostic dimensions, prescription, takeaway tool, and attached offers.
+
+### Brand Studio and Benefit Library
+
+- Brand Studio saves workspace-scoped identity, colors, typography, surfaces, brand voice, audience context, legal links, and validated public image assets.
+- The Benefit Library stores active or archived free gifts and calls to action for the current workspace.
+- Switching workspaces changes the authoring scope and cache key. Cross-workspace transfers draft Quizzes and clear benefit assignments that no longer belong to the destination.
+
+## Selected v1.1 Routes
+
+| Surface | Authenticated routes | Public routes |
+|---|---|---|
+| Interactive Quizzes | `POST /api/quizzes/generate`, `GET/PUT /api/quizzes/:guideId`, `POST /api/quizzes/:guideId/publish` | `GET /api/public/quizzes/:customUrl`, `POST .../start`, `POST .../complete`, `GET /api/public/quiz-results/:attemptId`, `POST .../click` |
+| Benefit Library | `GET/POST /api/benefit-assets`, `PUT /api/benefit-assets/:assetId` | Attached active offers are projected through a completed Quiz result |
+| Account completion | `GET /api/auth/me`, password change, and logout after authentication | `POST /api/auth/signup`, `POST /api/auth/pending-signup`, `POST /api/auth/complete-account`, `POST /api/auth/login` |
+
+The shared Zod contracts in `shared/quiz.ts`, `shared/guideContent.ts`, and `shared/branding.ts` are the source of truth for request and stored shapes. Public response builders deliberately omit source text, Benefit Library database IDs, private tags, and internal metadata. Public resource and attempt identifiers remain in the response where the recipient flow needs them.
+
+## Local Development
+
+Use Node.js 20 and a PostgreSQL database.
+
+```bash
+npm ci
+npm run build
+node dist/migrate.js
+npm run dev
 ```
 
-## Key Components
+The one-time build produces the bundled migration runner; run it against the configured `DATABASE_URL` before starting a fresh or newly updated local database. The Express API and client are then served together on port 5000. For isolated sales-page work, `npm run dev:marketing` runs Vite on `127.0.0.1:4173` without booting the database-backed API.
 
-### Video Processing Pipeline
-- **YouTube Integration**: Extracts video metadata, thumbnails, and basic information
-- **Transcription Service**: Converts video audio to text with timestamps
-- **AI Analysis**: Uses OpenAI GPT-4o to identify key coaching insights, drills, and techniques
-- **Content Generation**: Creates structured practice guides from analyzed content
+### Required environment
 
-### Lead Capture System
-- **Landing Pages**: Customizable templates with branding options
-- **Form Builder**: Dynamic form creation with custom fields
-- **Lead Management**: Stores and tracks lead information and engagement
-- **Delivery System**: Automated guide delivery after email capture
+- `DATABASE_URL`: PostgreSQL connection string; required by the app and migration runner.
+- `SESSION_SECRET`: strong secret used to sign application sessions.
+- `REPLIT_DOMAINS`: comma-separated allowed hostnames; required by the current OIDC setup and used as an auth-email URL fallback.
+- `REPL_ID`: Replit OIDC client identifier.
+- `STRIPE_SECRET_KEY`: required during API startup by the current billing integration.
 
-### User Management
-- **Authentication**: Secure login through Replit's OAuth system with role-based access
-- **Role-Based Access**: Four-tier system (Super Admin, Account Admin, Brand Admin, User)
-- **User Profiles**: Stores user preferences and branding settings
-- **Session Handling**: Persistent sessions with database storage
+### Feature environment
 
-### Analytics & Tracking
-- **Conversion Metrics**: Tracks views, downloads, and conversion rates
-- **Performance Analytics**: Monitors guide performance and user engagement
-- **QR Code Generation**: Creates scannable codes for easy guide sharing
+- `OPENAI_API_KEY`: required for Guide and Quiz generation.
+- `YOUTUBE_API_KEY`: used for YouTube metadata and the YouTube-to-Guide path.
+- `SENDGRID_API_KEY`: required to send password reset, cross-browser account-completion, and captured Interactive Quiz result email.
+- `PUBLIC_APP_URL`: canonical absolute app origin used in auth and Quiz-result links. Production email requires HTTPS; if absent, the first `REPLIT_DOMAINS` host is used.
+- `SENDGRID_WELCOME_TEMPLATE_ID` and `SENDGRID_PASSWORD_RESET_TEMPLATE_ID`: optional dynamic-template overrides for those two messages; built-in HTML remains the fallback. Other current email paths use inline HTML.
+- `HIGHLEVEL_API_KEY`: optional signup CRM sync; the request is time-bounded and cannot fail account creation.
+- `VITE_STRIPE_PUBLIC_KEY`: required when building or opening the subscription page.
+- `STRIPE_WEBHOOK_SECRET`: required when processing Stripe webhooks.
+- `BRAND_ASSET_STORAGE`: optional `database` or `filesystem`. It defaults to `database` in production and `filesystem` outside production. The database mode uses the required `DATABASE_URL` and needs no additional vendor or credential.
+- `BRAND_ASSET_FILESYSTEM_DIR` and `BRAND_ASSET_FILESYSTEM_IS_DURABLE=true`: only for a deployment that supplies an absolute, shared persistent mount. Production refuses filesystem mode without both. Replit Autoscale should keep the default database mode.
 
-## Data Flow
+Never put credentials, source content, lead PII, or account-completion tokens in committed documentation, client storage, query strings, or analytics events.
 
-1. **Content Creation**: User submits YouTube URL through dashboard
-2. **Processing Pipeline**: 
-   - Extract video metadata using YouTube API
-   - Transcribe video content
-   - Analyze content with OpenAI for coaching insights
-   - Generate structured practice guide
-   - Create customized landing page
-3. **Lead Capture**: Visitors access landing page, submit contact information
-4. **Delivery**: System delivers branded guide and tracks engagement
-5. **Analytics**: Real-time tracking of conversions and user behavior
+## Verification Commands
 
-## External Dependencies
+```bash
+npm run check:marketing
+npm run test:release
+npm run test:admin-security
+npm run test:rate-limit
+npm run test:e2e:marketing
+npm run build
+git diff --check
+```
 
-### APIs and Services
-- **YouTube Data API v3**: Video metadata extraction and validation
-- **OpenAI API**: GPT-4o for content analysis and guide generation
-- **QRCode Library**: Generate QR codes for guide sharing
-- **Neon Database**: Serverless PostgreSQL hosting
+`npm run test:release` is the consolidated server contract/security suite. `test:admin-security` and `test:rate-limit` are focused shortcuts for the privileged-route and limiter contracts already included in that umbrella suite. The Playwright command starts its own marketing Vite server and covers desktop and mobile Chrome. The repository-wide `npm run check` still reports older TypeScript debt outside this release surface; do not describe the whole repository as type-clean until that debt is resolved.
 
-### Authentication
-- **Replit Auth**: OAuth-based authentication system
-- **OpenID Connect**: Industry-standard authentication protocol
+## Production Start and Migrations
 
-### Frontend Libraries
-- **TanStack Query**: Server state management and caching
-- **Radix UI**: Accessible component primitives
-- **Tailwind CSS**: Utility-first styling framework
-- **Wouter**: Lightweight routing solution
+```bash
+npm run build
+npm run start
+```
 
-## Deployment Strategy
+`npm run start` runs `dist/migrate.js` before `dist/index.js`. It applies the ordered `0000_core_baseline.sql` through `0006_guide_revision.sql` chain, records SHA-256 checksums in `vidmagnet_schema_migrations`, and refuses to start if an applied migration was edited. The baseline creates the complete pre-quiz schema on an empty database, is safe to replay against a complete legacy schema, and fails closed instead of guessing when only part of that legacy schema exists. Migration `0005` adds the PostgreSQL-backed public brand-image store used by production; migration `0006` adds the Guide revision used to prevent stale edit, publish, transfer, and delete races. The production Dockerfiles use the same start command. Do not replace this release path with `db:push`.
 
-### Development Environment
-- **Vite Dev Server**: Hot module replacement and fast builds
-- **TypeScript**: Full type safety across frontend and backend
-- **ESLint/Prettier**: Code quality and formatting standards
+Before enabling generation, provide `OPENAI_API_KEY`. Before testing cross-browser signup recovery, provide a valid HTTPS `PUBLIC_APP_URL` (or `REPLIT_DOMAINS`) and working SendGrid configuration.
 
-### Production Build
-- **Frontend**: Vite build with optimized bundles
-- **Backend**: esbuild for server bundling
-- **Database**: Drizzle migrations for schema management
+## Legacy Implementation History
 
-### Environment Variables
-- `DATABASE_URL`: PostgreSQL connection string
-- `SESSION_SECRET`: Session encryption key
-- `YOUTUBE_API_KEY`: YouTube Data API credentials
-- `OPENAI_API_KEY`: OpenAI API credentials
-- `REPLIT_DOMAINS`: Allowed domains for OAuth
-
-## Changelog
+The notes below predate the v1.1 release and may mention ConvertMag, temporary passwords, retired source claims, old deployment sizes, or superseded auth behavior. They are historical context, not current operating instructions.
 
 ```
 Changelog:

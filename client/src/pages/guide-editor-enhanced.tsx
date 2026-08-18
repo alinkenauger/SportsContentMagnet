@@ -1,8 +1,9 @@
 import { useState, useEffect, DragEvent } from "react";
-import { useLocation } from "wouter";
+import { useLocation, useSearch } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
+import type { Brand } from "@/hooks/useBrands";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import { apiRequest } from "@/lib/queryClient";
 import { Guide } from "@shared/schema";
@@ -12,9 +13,17 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Slider } from "@/components/ui/slider";
+import { Switch } from "@/components/ui/switch";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { 
   Type, 
   AlignLeft, 
@@ -33,18 +42,41 @@ import {
   Settings,
   Layout,
   Play,
-  ChevronLeft,
-  ChevronRight,
   Upload,
   Globe,
-  EyeOff,
   BookOpen,
   Building2,
   User,
   ArrowRightLeft,
   MoreHorizontal,
-  ChevronDown
+  AlertTriangle,
+  CheckCircle2,
+  Eye,
+  Loader2,
+  Sparkles,
 } from "lucide-react";
+
+const MAX_IMPROVEMENT_INSTRUCTIONS = 1200;
+const MIN_IMPROVEMENT_INSTRUCTIONS = 10;
+
+function readableApiError(error: Error): string {
+  const message = error.message.replace(/^\d+:\s*/, "");
+  try {
+    const payload = JSON.parse(message) as { message?: unknown };
+    if (typeof payload.message === "string") return payload.message;
+  } catch {
+    // The API may return plain text. Use it as-is.
+  }
+  return message || "Something went wrong. Please try again.";
+}
+
+function EditorSidebar() {
+  return (
+    <div className="hidden shrink-0 md:block">
+      <Sidebar />
+    </div>
+  );
+}
 
 interface EditableElement {
   id: string;
@@ -57,143 +89,6 @@ interface EditableElement {
   timestampSeconds?: number;
 }
 
-// StatusControls Component - Consolidated dropdown
-function StatusControls({ guide }: { guide: any }) {
-  const { toast } = useToast();
-  const queryClient = useQueryClient();
-  const [isOpen, setIsOpen] = useState(false);
-
-  const updateStatusMutation = useMutation({
-    mutationFn: async (status: string) => {
-      const response = await apiRequest(`/api/guides/${guide.id}/status`, "PATCH", { status });
-      return response;
-    },
-    onSuccess: (data, status) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/guides", guide.id] });
-      
-      // Show status-specific success message
-      let message = "Guide updated successfully";
-      if (status === "published") {
-        message = "Guide published and added to Practice Library!";
-      } else if (status === "unlisted") {
-        message = "Guide unlisted - accessible only via direct link";
-      } else if (status === "draft") {
-        message = "Guide moved to draft";
-      }
-      
-      toast({
-        title: "Status Updated",
-        description: message,
-      });
-    },
-    onError: (error) => {
-      toast({
-        title: "Error",
-        description: "Failed to update guide status",
-        variant: "destructive",
-      });
-    },
-  });
-
-  const handleStatusChange = (status: string) => {
-    updateStatusMutation.mutate(status);
-    setIsOpen(false);
-  };
-
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'published':
-        return <Globe className="w-4 h-4" />;
-      case 'unlisted':
-        return <EyeOff className="w-4 h-4" />;
-      case 'draft':
-        return <BookOpen className="w-4 h-4" />;
-      default:
-        return <BookOpen className="w-4 h-4" />;
-    }
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'published':
-        return 'text-green-600 border-green-600 bg-green-50';
-      case 'unlisted':
-        return 'text-orange-600 border-orange-600 bg-orange-50';
-      case 'draft':
-        return 'text-gray-600 border-gray-600 bg-gray-50';
-      default:
-        return 'text-gray-600 border-gray-600 bg-gray-50';
-    }
-  };
-
-  const getCurrentStatusLabel = () => {
-    switch (guide.status) {
-      case 'published':
-        return 'Published';
-      case 'unlisted':
-        return 'Unlisted';
-      case 'draft':
-        return 'Draft';
-      default:
-        return 'Draft';
-    }
-  };
-
-  const statuses = [
-    { value: 'published', label: 'Published', icon: Globe, description: 'Visible in Practice Library' },
-    { value: 'unlisted', label: 'Unlisted', icon: EyeOff, description: 'Only accessible via link' },
-    { value: 'draft', label: 'Draft', icon: BookOpen, description: 'Private - only you can see' }
-  ];
-
-  return (
-    <div className="relative">
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={() => setIsOpen(!isOpen)}
-        disabled={updateStatusMutation.isPending}
-        className={`flex items-center gap-2 ${getStatusColor(guide.status)}`}
-      >
-        {getStatusIcon(guide.status)}
-        <span>{getCurrentStatusLabel()}</span>
-        <ChevronDown className="w-4 h-4" />
-      </Button>
-      
-      {isOpen && (
-        <div className="absolute top-full left-0 mt-1 w-64 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
-          <div className="p-1">
-            {statuses.map((status) => (
-              <button
-                key={status.value}
-                onClick={() => handleStatusChange(status.value)}
-                disabled={updateStatusMutation.isPending}
-                className={`w-full flex items-center gap-3 px-3 py-2 rounded-md hover:bg-gray-50 transition-colors ${
-                  guide.status === status.value ? 'bg-blue-50 text-blue-600' : ''
-                }`}
-              >
-                <status.icon className="w-4 h-4" />
-                <div className="flex-1 text-left">
-                  <div className="font-medium">{status.label}</div>
-                  <div className="text-sm text-gray-500">{status.description}</div>
-                </div>
-                {guide.status === status.value && (
-                  <div className="w-2 h-2 bg-blue-600 rounded-full" />
-                )}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-      
-      {updateStatusMutation.isPending && (
-        <div className="absolute -right-6 top-1/2 transform -translate-y-1/2">
-          <div className="animate-spin w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full" />
-        </div>
-      )}
-    </div>
-  );
-}
-
 // ActionsMenu Component - 3-dots menu for Transfer and Delete
 function ActionsMenu({ guide }: { guide: any }) {
   const { toast } = useToast();
@@ -204,23 +99,23 @@ function ActionsMenu({ guide }: { guide: any }) {
   const [targetBrandId, setTargetBrandId] = useState<string>("");
 
   // Get user's brands for transfer options
-  const { data: brands = [] } = useQuery({
+  const { data: brands = [] } = useQuery<Brand[]>({
     queryKey: ["/api/brands"],
   });
 
   const transferMutation = useMutation({
     mutationFn: async (data: { targetBrandId: number | null }) => {
       const response = await apiRequest(`/api/guides/${guide.id}/transfer`, "PATCH", data);
-      return response;
+      return await response.json() as { message?: string };
     },
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/guides", guide.id] });
+      queryClient.invalidateQueries({ queryKey: [`/api/guides/${guide.id}`] });
       queryClient.invalidateQueries({ queryKey: ["/api/guides"] });
       setShowTransferDialog(false);
       
       toast({
         title: "Transfer Complete",
-        description: data.message,
+        description: data.message || "Guide moved to the selected workspace",
       });
     },
     onError: (error) => {
@@ -444,11 +339,14 @@ interface ColumnData {
 
 export default function GuideEditorEnhanced() {
   const [location, navigate] = useLocation();
+  const search = useSearch();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { isAuthenticated, isLoading } = useAuth();
   
-  const guideId = location.split('/')[2];
+  const [editorPath] = location.split("?");
+  const guideId = editorPath.split('/')[2];
+  const isNewGuide = new URLSearchParams(search).get("new") === "1";
   
   const [isEditing, setIsEditing] = useState<string | null>(null);
   const [draggedElement, setDraggedElement] = useState<string | null>(null);
@@ -457,56 +355,164 @@ export default function GuideEditorEnhanced() {
   const [elements, setElements] = useState<EditableElement[]>([]);
   const [guideTitle, setGuideTitle] = useState("");
   const [guideDescription, setGuideDescription] = useState("");
+  const [ctaText, setCtaText] = useState("");
+  const [ctaLink, setCtaLink] = useState("");
+  const [includeInLibrary, setIncludeInLibrary] = useState(false);
   const [dragOverColumn, setDragOverColumn] = useState<string | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
   const [isResizing, setIsResizing] = useState<string | null>(null);
-  const [isToolbarCollapsed, setIsToolbarCollapsed] = useState(false);
+  const [improveDialogOpen, setImproveDialogOpen] = useState(false);
+  const [improvementInstructions, setImprovementInstructions] = useState("");
+  const [saveIntent, setSaveIntent] = useState<"draft" | "publish" | null>(null);
 
   // Fetch guide data
-  const { data: guide, isLoading: guideLoading } = useQuery<Guide>({
-    queryKey: [`/api/guides/${guideId}`],
+  const guideQueryKey = [`/api/guides/${guideId}`] as const;
+  const { data: guide, isLoading: guideLoading, refetch: refetchGuide } = useQuery<Guide>({
+    queryKey: guideQueryKey,
     enabled: !!guideId && isAuthenticated,
     retry: false,
   });
 
-  // Save guide mutation
-  const saveGuideMutation = useMutation({
+  const updateGuideCaches = (updatedGuide: Guide) => {
+    queryClient.setQueryData<Guide>(guideQueryKey, (current) => (
+      current ? { ...current, ...updatedGuide } : updatedGuide
+    ));
+    void queryClient.invalidateQueries({ queryKey: ["/api/guides"] });
+  };
+
+  // Save the creator's current fields before any status transition.
+  const saveGuideMutation = useMutation<Guide, Error, Partial<Guide>>({
     mutationFn: async (updatedGuide: Partial<Guide>) => {
       const response = await apiRequest(`/api/guides/${guideId}`, "PUT", updatedGuide);
-      return response;
+      return await response.json() as Guide;
     },
-    onSuccess: () => {
-      toast({
-        title: "Guide Saved",
-        description: "Your changes have been saved successfully.",
+    onSuccess: (updatedGuide) => {
+      updateGuideCaches(updatedGuide);
+    },
+  });
+
+  const publishGuideMutation = useMutation<Guide, Error, void>({
+    mutationFn: async () => {
+      const response = await apiRequest(`/api/guides/${guideId}/status`, "PATCH", {
+        status: "published",
       });
-      queryClient.invalidateQueries({ queryKey: ["/api/guides"] });
+      const payload = await response.json() as { guide: Guide };
+      return payload.guide;
     },
-    onError: (error: Error) => {
-      if (isUnauthorizedError(error)) {
-        toast({
-          title: "Unauthorized",
-          description: "You are logged out. Logging in again...",
-          variant: "destructive",
-        });
-        setTimeout(() => {
-          window.location.href = "/api/login";
-        }, 500);
-        return;
-      }
+    onSuccess: (updatedGuide) => {
+      updateGuideCaches(updatedGuide);
+    },
+  });
+
+  const draftGuideMutation = useMutation<Guide, Error, void>({
+    mutationFn: async () => {
+      const response = await apiRequest(`/api/guides/${guideId}/status`, "PATCH", {
+        status: "draft",
+      });
+      const payload = await response.json() as { guide: Guide };
+      return payload.guide;
+    },
+    onSuccess: (updatedGuide) => {
+      updateGuideCaches(updatedGuide);
+    },
+  });
+
+  const updateLibraryMutation = useMutation<unknown, Error, boolean, { previous: boolean }>({
+    mutationFn: async (nextValue) => {
+      const response = await apiRequest(`/api/guides/${guideId}/library`, "PATCH", {
+        includeInLibrary: nextValue,
+      });
+      const text = await response.text();
+      return text ? JSON.parse(text) : null;
+    },
+    onMutate: (nextValue) => {
+      const previous = includeInLibrary;
+      setIncludeInLibrary(nextValue);
+      return { previous };
+    },
+    onSuccess: (_, nextValue) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/guides"] });
       toast({
-        title: "Save Failed",
-        description: "Failed to save changes. Please try again.",
+        title: nextValue ? "Added to Library" : "Removed from Library",
+        description: nextValue
+          ? "Leads can discover this guide after it is published."
+          : "The guide remains available from its direct link.",
+      });
+    },
+    onError: (error, _nextValue, context) => {
+      if (context) setIncludeInLibrary(context.previous);
+      toast({
+        title: "Could not update Library",
+        description: error.message,
         variant: "destructive",
       });
     },
   });
+
+  const regenerateGuideMutation = useMutation<unknown, Error, string>({
+    mutationFn: async (instructions) => {
+      const response = await apiRequest(`/api/guides/${guideId}/regenerate`, "POST", {
+        instructions,
+      });
+      const text = await response.text();
+      return text ? JSON.parse(text) : null;
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: guideQueryKey,
+        exact: true,
+        refetchType: "none",
+      });
+      await refetchGuide();
+      await queryClient.invalidateQueries({ queryKey: ["/api/guides"] });
+      toast({
+        title: "New draft ready",
+        description: "Review the regenerated Guide in the lead preview before publishing it again.",
+      });
+    },
+    onError: (error) => {
+      if (isUnauthorizedError(error)) {
+        toast({
+          title: "Session expired",
+          description: "Log in again before regenerating this Guide.",
+          variant: "destructive",
+        });
+      }
+    },
+  });
+
+  const handleImproveDialogChange = (open: boolean) => {
+    if (!open && regenerateGuideMutation.isPending) return;
+    setImproveDialogOpen(open);
+    if (!open) {
+      setImprovementInstructions("");
+      regenerateGuideMutation.reset();
+    } else {
+      regenerateGuideMutation.reset();
+    }
+  };
+
+  const handleRegenerate = () => {
+    const instructions = improvementInstructions.trim();
+    if (
+      instructions.length < MIN_IMPROVEMENT_INSTRUCTIONS ||
+      instructions.length > MAX_IMPROVEMENT_INSTRUCTIONS
+    ) return;
+    regenerateGuideMutation.mutate(instructions);
+  };
+
+  const handleLeadPreview = () => {
+    window.open(`/guide/${guideId}?preview=1`, "_blank", "noopener,noreferrer");
+  };
 
   // Initialize elements from guide content
   useEffect(() => {
     if (guide) {
       setGuideTitle(guide.title || '');
       setGuideDescription(guide.description || '');
+      setCtaText(guide.ctaText || '');
+      setCtaLink(guide.ctaLink || '');
+      setIncludeInLibrary(guide.includeInLibrary === true);
       
       const initialElements: EditableElement[] = [];
       let order = 0;
@@ -523,10 +529,7 @@ export default function GuideEditorEnhanced() {
         }
         
         if (content.sections) {
-          console.log('Processing sections:', content.sections.length);
           content.sections.forEach((section: any, index: number) => {
-            console.log(`Section ${index}:`, section);
-            console.log(`Section ${index} timestamp:`, section.timestamp, 'timestampSeconds:', section.timestampSeconds);
             initialElements.push({
               id: `section-title-${index}`,
               type: 'heading',
@@ -567,7 +570,7 @@ export default function GuideEditorEnhanced() {
   if (isLoading || guideLoading) {
     return (
       <div className="flex h-screen bg-background">
-        <Sidebar />
+        <EditorSidebar />
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
@@ -581,7 +584,7 @@ export default function GuideEditorEnhanced() {
   if (!isAuthenticated) {
     return (
       <div className="flex h-screen bg-background">
-        <Sidebar />
+        <EditorSidebar />
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center">
             <h2 className="text-xl font-semibold mb-2">Authentication Required</h2>
@@ -598,7 +601,7 @@ export default function GuideEditorEnhanced() {
   if (!guide) {
     return (
       <div className="flex h-screen bg-background">
-        <Sidebar />
+        <EditorSidebar />
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center">
             <h2 className="text-xl font-semibold mb-2">Guide Not Found</h2>
@@ -613,43 +616,100 @@ export default function GuideEditorEnhanced() {
     );
   }
 
-  const handleSave = () => {
-    const sections: any[] = [];
-    let currentSection: any = null;
-    
-    elements.forEach(element => {
-      if (element.type === 'heading' && !element.parentId) {
-        if (currentSection) {
-          sections.push(currentSection);
-        }
-        currentSection = {
-          title: element.content.text,
-          content: '',
-          type: 'section'
-        };
-      } else if (element.type === 'paragraph' && currentSection && !element.parentId) {
-        currentSection.content += element.content.text + '\n\n';
-      }
-    });
-    
-    if (currentSection) {
-      sections.push(currentSection);
-    }
+  const buildGuideUpdate = (): Partial<Guide> => {
+    const title = guideTitle.trim();
+    const currentContent = guide.content;
+    const contentWithCurrentTitle = (
+      currentContent && typeof currentContent === "object" && !Array.isArray(currentContent)
+    )
+      ? { ...currentContent, title }
+      : currentContent;
 
-    const content = guide?.content as any;
-    const updatedContent = {
-      title: guideTitle,
-      introduction: elements.find(e => e.id.startsWith('intro-') && !e.parentId)?.content.text || '',
-      sections,
-      conclusion: content?.conclusion || '',
-      callToAction: content?.callToAction || ''
+    return {
+      title,
+      description: guideDescription.trim() || null,
+      ctaText: ctaText.trim() || null,
+      ctaLink: ctaLink.trim() || null,
+      ...(contentWithCurrentTitle ? { content: contentWithCurrentTitle } : {}),
     };
+  };
 
-    saveGuideMutation.mutate({
-      title: guideTitle,
-      description: guideDescription,
-      content: updatedContent
+  const ensureGuideIsDraft = async () => {
+    if (guide.status !== "draft") {
+      await draftGuideMutation.mutateAsync();
+    }
+  };
+
+  const handleSessionFailure = (error: Error): boolean => {
+    if (!isUnauthorizedError(error)) return false;
+    toast({
+      title: "Session expired",
+      description: "Log in again before saving this Guide.",
+      variant: "destructive",
     });
+    setTimeout(() => {
+      window.location.href = "/api/login";
+    }, 500);
+    return true;
+  };
+
+  const handleSaveDraft = async () => {
+    if (!guideTitle.trim()) return;
+    setSaveIntent("draft");
+    try {
+      // Public Guides become private before their content is changed.
+      await ensureGuideIsDraft();
+      await saveGuideMutation.mutateAsync(buildGuideUpdate());
+      toast({
+        title: "Draft saved",
+        description: "Your changes are private until you choose Save & publish.",
+      });
+    } catch (caught) {
+      const error = caught instanceof Error ? caught : new Error("Failed to save Guide");
+      if (!handleSessionFailure(error)) {
+        toast({
+          title: "Draft not saved",
+          description: `${readableApiError(error)} Your edits are still here so you can try again.`,
+          variant: "destructive",
+        });
+      }
+    } finally {
+      setSaveIntent(null);
+    }
+  };
+
+  const handleSaveAndPublish = async () => {
+    if (!guideTitle.trim()) return;
+    setSaveIntent("publish");
+    let changesSaved = false;
+
+    try {
+      // Save the visible fields as a private Draft first. If the publish gate
+      // rejects them, an older Published status must not expose the new edits.
+      await ensureGuideIsDraft();
+      await saveGuideMutation.mutateAsync(buildGuideUpdate());
+      changesSaved = true;
+      await publishGuideMutation.mutateAsync();
+      toast({
+        title: "Guide published",
+        description: includeInLibrary
+          ? "The latest version is live and discoverable in your Library."
+          : "The latest version is live at its public link.",
+      });
+    } catch (caught) {
+      const error = caught instanceof Error ? caught : new Error("Failed to publish Guide");
+      if (!handleSessionFailure(error)) {
+        toast({
+          title: changesSaved ? "Saved as Draft; publish failed" : "Guide not saved",
+          description: changesSaved
+            ? `${readableApiError(error)} Your edits are safe and remain private until the Guide passes review.`
+            : `${readableApiError(error)} Your edits are still here and nothing was published.`,
+          variant: "destructive",
+        });
+      }
+    } finally {
+      setSaveIntent(null);
+    }
   };
 
   const addElement = (type: EditableElement['type'], columnId?: string, parentId?: string, insertIndex?: number) => {
@@ -767,13 +827,13 @@ export default function GuideEditorEnhanced() {
     const targetIndex = insertIndex !== undefined ? insertIndex : dragOverIndex;
     
     if (draggedFromToolbar) {
-      addElement(draggedFromToolbar, columnId, parentId, targetIndex);
+      addElement(draggedFromToolbar, columnId, parentId, targetIndex ?? undefined);
       setDraggedFromToolbar(null);
       setDropZoneVisible(false);
       setDragOverColumn(null);
       setDragOverIndex(null);
     } else if (draggedElement) {
-      moveElement(draggedElement, targetIndex, columnId, parentId);
+      moveElement(draggedElement, targetIndex ?? undefined, columnId, parentId);
       setDraggedElement(null);
       setDragOverIndex(null);
     }
@@ -834,10 +894,6 @@ export default function GuideEditorEnhanced() {
   };
 
   const updateElement = (id: string, content: any) => {
-    console.log('updateElement called for:', id, 'with content:', content);
-    if (content.src && content.src.startsWith('data:image/')) {
-      console.log('Updating element with image data, length:', content.src.length);
-    }
     setElements(elements.map(el => 
       el.id === id ? { ...el, content } : el
     ));
@@ -1042,8 +1098,6 @@ export default function GuideEditorEnhanced() {
           ) : (
             <div className="space-y-3">
               <div className="flex items-start gap-3">
-                {/* Debug timestamp button rendering */}
-                {console.log('Heading element:', element.id, 'timestamp:', element.timestamp, 'timestampSeconds:', element.timestampSeconds, 'youtubeVideoId:', guide?.youtubeVideoId)}
                 {element.timestamp && element.timestampSeconds && guide?.youtubeVideoId && (
                   <Button
                     variant="default"
@@ -1248,7 +1302,6 @@ export default function GuideEditorEnhanced() {
                       const reader = new FileReader();
                       reader.onload = (event) => {
                         const imageData = event.target?.result as string;
-                        console.log('Image uploaded successfully:', file.name, 'Data length:', imageData.length);
                         updateElement(element.id, {
                           ...element.content,
                           src: imageData,
@@ -1314,10 +1367,6 @@ export default function GuideEditorEnhanced() {
                 console.error('Element content:', element.content);
                 console.error('Error details:', e);
               }}
-              onLoad={() => {
-                console.log('Image loaded successfully:', element.content.src?.substring(0, 100) + '...');
-                console.log('Element content:', element.content);
-              }}
             />
             {element.content.caption && (
               <p className="text-sm text-muted-foreground mt-2 italic">
@@ -1351,7 +1400,6 @@ export default function GuideEditorEnhanced() {
                 const reader = new FileReader();
                 reader.onload = (event) => {
                   const imageData = event.target?.result as string;
-                  console.log('Image dropped successfully:', imageFile.name, 'Data length:', imageData.length);
                   updateElement(element.id, {
                     ...element.content,
                     src: imageData,
@@ -1548,291 +1596,404 @@ export default function GuideEditorEnhanced() {
     }
   };
 
+  const guideContent = (guide.content || {}) as any;
+  const guideSections = Array.isArray(guideContent.sections) ? guideContent.sections : [];
+  const isRichGuide = guideContent.schemaVersion === 2;
+  const hasTimestampedSections = guideSections.some((section: any) => (
+    typeof section?.timestampSeconds === "number" || Boolean(section?.timestamp)
+  ));
+  const hasUnsavedChanges = (
+    guideTitle !== (guide.title || "") ||
+    guideDescription !== (guide.description || "") ||
+    ctaText !== (guide.ctaText || "") ||
+    ctaLink !== (guide.ctaLink || "")
+  );
+  const workflowPending = saveIntent !== null || saveGuideMutation.isPending || publishGuideMutation.isPending;
+  const isPublished = guide.status === "published";
+  const isUnlisted = guide.status === "unlisted";
+  const statusLabel = isPublished ? "Published" : isUnlisted ? "Unlisted" : "Draft";
+  const statusDescription = isPublished
+    ? "Live at its public link"
+    : isUnlisted
+      ? "Available only to people with the direct link"
+      : "Private to your workspace";
+
   return (
-    <div className="flex h-screen bg-background">
-      <Sidebar />
-      
-      <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Header */}
-        <div className="border-b bg-card p-4 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Button variant="ghost" size="sm" onClick={() => navigate('/content-library')}>
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Library
+    <div className="flex h-screen bg-[#f7f4ee]">
+      <EditorSidebar />
+
+      <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+        <header className="flex flex-wrap items-center justify-between gap-3 border-b border-black/10 bg-[#fffdf9] px-4 py-3 sm:px-6">
+          <div className="flex min-w-0 items-center gap-3">
+            <Button variant="ghost" size="sm" onClick={() => navigate('/content-library')} className="shrink-0">
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              <span className="hidden sm:inline">Content Library</span>
+              <span className="sm:hidden">Back</span>
             </Button>
-            <div className="flex flex-col">
-              <Input
-                value={guideTitle}
-                onChange={(e) => setGuideTitle(e.target.value)}
-                className="font-semibold text-lg border-none p-0 h-auto bg-transparent"
-                placeholder="Guide Title"
-              />
-              <Input
-                value={guideDescription}
-                onChange={(e) => setGuideDescription(e.target.value)}
-                className="text-sm text-muted-foreground border-none p-0 h-auto bg-transparent"
-                placeholder="Guide description..."
-              />
+            <div className="h-7 w-px bg-black/10" aria-hidden="true" />
+            <div className="min-w-0">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Review &amp; publish</p>
+              <p className="truncate text-sm font-semibold text-[#101419]">{guide.title}</p>
             </div>
           </div>
-          <Button onClick={handleSave} disabled={saveGuideMutation.isPending}>
-            <Save className="h-4 w-4 mr-2" />
-            {saveGuideMutation.isPending ? 'Saving...' : 'Save Guide'}
-          </Button>
-        </div>
+          <div className="flex items-center gap-2">
+            <Badge
+              variant="outline"
+              className={isPublished
+                ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+                : isUnlisted
+                  ? "border-amber-200 bg-amber-50 text-amber-800"
+                  : "border-slate-200 bg-white text-slate-700"}
+            >
+              {isPublished ? <Globe className="mr-1.5 h-3.5 w-3.5" aria-hidden="true" /> : <BookOpen className="mr-1.5 h-3.5 w-3.5" aria-hidden="true" />}
+              {statusLabel}
+            </Badge>
+            <ActionsMenu guide={guide} />
+          </div>
+        </header>
 
-        <div className="flex-1 flex overflow-hidden">
-          {/* Enhanced Element Toolbar - Accordion Style */}
-          <div className={`${isToolbarCollapsed ? 'w-12' : 'w-64'} border-r bg-card overflow-y-auto transition-all duration-300 ease-in-out relative`}>
-            {/* Toggle Button - Fixed positioning */}
-            <div className="absolute top-4 right-2 z-20">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setIsToolbarCollapsed(!isToolbarCollapsed)}
-                className="h-8 w-8 p-0 rounded-full bg-background border shadow-md hover:shadow-lg transition-all duration-200 hover:scale-105"
-              >
-                {isToolbarCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
-              </Button>
+        {isNewGuide ? (
+          <aside className="flex flex-wrap items-center justify-between gap-3 border-b border-emerald-200 bg-emerald-50 px-4 py-3 text-emerald-950 sm:px-6">
+            <div className="flex items-start gap-2 text-sm leading-6">
+              <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" aria-hidden="true" />
+              <p>
+                <strong>Your new draft is ready.</strong>{" "}
+                Review the details, preview the lead experience, then publish when it feels right.
+              </p>
             </div>
+            <Button type="button" size="sm" variant="outline" onClick={handleLeadPreview} className="border-emerald-300 bg-white text-emerald-900 hover:bg-emerald-100">
+              <Eye className="mr-2 h-4 w-4" aria-hidden="true" />
+              Preview new Guide
+            </Button>
+          </aside>
+        ) : null}
 
-            {isToolbarCollapsed ? (
-              /* Collapsed State - Icon Only */
-              <div className="p-2 space-y-2">
-                {[
-                  { type: 'heading', icon: Type, label: 'Heading' },
-                  { type: 'paragraph', icon: AlignLeft, label: 'Text' },
-                  { type: 'image', icon: Image, label: 'Image' },
-                  { type: 'video', icon: Video, label: 'Video' },
-                  { type: 'audio', icon: Music, label: 'Audio' },
-                  { type: 'columns', icon: Columns, label: 'Columns' },
-                  { type: 'button', icon: MousePointer, label: 'Button' },
-                  { type: 'spacing', icon: Minus, label: 'Spacing' },
-                ].map(({ type, icon: Icon, label }) => (
-                  <Button
-                    key={type}
-                    variant="outline"
-                    size="sm"
-                    onClick={() => addElement(type as EditableElement['type'])}
-                    className="w-8 h-8 p-0 cursor-grab active:cursor-grabbing"
-                    draggable
-                    onDragStart={(e) => handleToolbarDragStart(e, type as EditableElement['type'])}
-                    onDragEnd={handleToolbarDragEnd}
-                    title={label}
-                  >
-                    <Icon className="h-4 w-4" />
+        <main className="flex-1 overflow-y-auto">
+          <div className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 sm:py-10 lg:px-8">
+            <section className="mb-8 flex flex-col justify-between gap-5 md:flex-row md:items-end">
+              <div className="max-w-2xl">
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#c54d2b]">Final review</p>
+                <h1 className="mt-3 text-3xl font-bold tracking-tight text-[#101419] sm:text-4xl">Make the lead experience ready to share.</h1>
+                <p className="mt-3 max-w-xl text-sm leading-6 text-slate-600 sm:text-base">
+                  VidMagnet has already built the Guide. Review it as your lead, refine the positioning, and publish the finished version.
+                </p>
+              </div>
+              <div className="flex flex-col items-start gap-2 md:items-end">
+                <div className="flex flex-wrap gap-2">
+                  <Button type="button" variant="outline" onClick={handleLeadPreview} className="border-black/15 bg-white">
+                    <Eye className="mr-2 h-4 w-4" aria-hidden="true" />
+                    Preview as lead
                   </Button>
-                ))}
-              </div>
-            ) : (
-              /* Expanded State - Full Toolbar */
-              <div className="p-4">
-                <h3 className="font-semibold mb-4">Add Elements</h3>
-                <div className="space-y-2">
-                  <p className="text-xs text-muted-foreground mb-4">
-                    Drag elements onto the canvas or into columns
-                  </p>
-                  
-                  <div className="grid grid-cols-2 gap-2">
-                    {[
-                      { type: 'heading', icon: Type, label: 'Heading' },
-                      { type: 'paragraph', icon: AlignLeft, label: 'Text' },
-                      { type: 'image', icon: Image, label: 'Image' },
-                      { type: 'video', icon: Video, label: 'Video' },
-                      { type: 'audio', icon: Music, label: 'Audio' },
-                      { type: 'columns', icon: Columns, label: 'Columns' },
-                      { type: 'button', icon: MousePointer, label: 'Button' },
-                      { type: 'spacing', icon: Minus, label: 'Spacing' },
-                    ].map(({ type, icon: Icon, label }) => (
-                      <Button
-                        key={type}
-                        variant="outline"
-                        size="sm"
-                        onClick={() => addElement(type as EditableElement['type'])}
-                        className="flex flex-col h-16 cursor-grab active:cursor-grabbing"
-                        draggable
-                        onDragStart={(e) => handleToolbarDragStart(e, type as EditableElement['type'])}
-                        onDragEnd={handleToolbarDragEnd}
-                      >
-                        <Icon className="h-4 w-4 mb-1" />
-                        <span className="text-xs">{label}</span>
-                      </Button>
-                    ))}
-                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => handleImproveDialogChange(true)}
+                    disabled={workflowPending || hasUnsavedChanges}
+                    aria-describedby={hasUnsavedChanges ? "improve-save-first" : undefined}
+                    className="border-violet-200 bg-white text-violet-700 hover:bg-violet-50 hover:text-violet-800"
+                  >
+                    <Sparkles className="mr-2 h-4 w-4" aria-hidden="true" />
+                    Improve with AI
+                  </Button>
                 </div>
-                
-                <Separator className="my-4" />
-                
-                <div className="space-y-2">
-                  <p className="text-xs text-muted-foreground">
-                    • Click elements to edit inline
+                {hasUnsavedChanges ? (
+                  <p id="improve-save-first" className="max-w-sm text-xs leading-5 text-amber-800">
+                    Save this Draft first so AI improvement cannot replace unsaved title, description, or CTA edits.
                   </p>
-                  <p className="text-xs text-muted-foreground">
-                    • Drag elements to reorder
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    • Drop into columns for layouts
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    • Adjust column widths when selected
-                  </p>
-                </div>
+                ) : null}
               </div>
-            )}
-          </div>
+            </section>
 
-          {/* Enhanced Editor Canvas - Match Guide View Design */}
-          <div 
-            className={`flex-1 overflow-y-auto bg-slate-50 ${dropZoneVisible ? 'bg-primary/5' : ''}`}
-            onDragOver={handleDragOver}
-            onDrop={(e) => handleCanvasDrop(e)}
-            onDragLeave={handleElementDragLeave}
-          >
-            {/* Guide-Style Header */}
-            <div className="bg-white border-b border-slate-200 px-8 py-6">
-              <div className="max-w-4xl mx-auto">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h1 className="text-xl font-bold text-slate-800">Practice Guide Editor</h1>
-                    <p className="text-sm text-slate-600">Create your professional training guide</p>
+            <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
+              <Card className="overflow-hidden rounded-3xl border-black/10 bg-[#fffdf9] shadow-[0_24px_70px_rgba(16,20,25,0.08)]">
+                <CardContent className="p-0">
+                  <div className="border-b border-black/10 px-5 py-5 sm:px-7 sm:py-6">
+                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Guide details</p>
+                    <h2 className="mt-2 text-xl font-bold text-[#101419]">What your lead sees before they begin</h2>
+                    <p className="mt-2 text-sm leading-6 text-slate-600">Keep the promise clear and the next step specific. The generated Guide content stays intact.</p>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <StatusControls guide={guide} />
-                    <Badge variant="secondary" className="bg-blue-100 text-blue-700">
-                      Preview Mode
-                    </Badge>
-                    <ActionsMenu guide={guide} />
-                  </div>
-                </div>
-              </div>
-            </div>
 
+                  <div className="space-y-7 px-5 py-6 sm:px-7 sm:py-7">
+                    <div className="space-y-2">
+                      <label htmlFor="guide-review-title" className="text-sm font-semibold text-slate-900">Guide title</label>
+                      <Input
+                        id="guide-review-title"
+                        value={guideTitle}
+                        onChange={(event) => setGuideTitle(event.target.value)}
+                        disabled={workflowPending}
+                        aria-invalid={!guideTitle.trim()}
+                        className="h-12 rounded-xl border-slate-200 bg-white text-base font-semibold"
+                        placeholder="Give this Guide a clear outcome-led title"
+                      />
+                      {!guideTitle.trim() ? <p className="text-xs font-medium text-red-600">A title is required before this Guide can be saved.</p> : null}
+                    </div>
 
+                    <div className="space-y-2">
+                      <label htmlFor="guide-review-description" className="text-sm font-semibold text-slate-900">Short description</label>
+                      <Textarea
+                        id="guide-review-description"
+                        value={guideDescription}
+                        onChange={(event) => setGuideDescription(event.target.value)}
+                        disabled={workflowPending}
+                        rows={4}
+                        className="resize-none rounded-xl border-slate-200 bg-white leading-6"
+                        placeholder="Explain the useful result this Guide helps the lead achieve."
+                      />
+                    </div>
 
-            {/* Main Guide Content Area */}
-            <div className="px-8 py-8">
-              <div className="max-w-4xl mx-auto">
+                    <div className="border-t border-black/10 pt-7">
+                      <div className="flex items-start gap-3">
+                        <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-[#101419] text-white">
+                          <MousePointer className="h-4 w-4" aria-hidden="true" />
+                        </span>
+                        <div>
+                          <h3 className="text-base font-bold text-[#101419]">Call to action</h3>
+                          <p className="mt-1 text-sm leading-6 text-slate-600">Offer the most relevant next step after the lead finishes the Guide.</p>
+                        </div>
+                      </div>
+                      <div className="mt-5 grid gap-4 sm:grid-cols-2">
+                        <div className="space-y-2">
+                          <label htmlFor="guide-review-cta-text" className="text-sm font-semibold text-slate-900">Button text</label>
+                          <Input
+                            id="guide-review-cta-text"
+                            value={ctaText}
+                            onChange={(event) => setCtaText(event.target.value)}
+                            disabled={workflowPending}
+                            className="h-11 rounded-xl border-slate-200 bg-white"
+                            placeholder="Explore the full program"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label htmlFor="guide-review-cta-link" className="text-sm font-semibold text-slate-900">Destination URL</label>
+                          <Input
+                            id="guide-review-cta-link"
+                            type="url"
+                            inputMode="url"
+                            value={ctaLink}
+                            onChange={(event) => setCtaLink(event.target.value)}
+                            disabled={workflowPending}
+                            className="h-11 rounded-xl border-slate-200 bg-white"
+                            placeholder="https://yourbrand.com/next-step"
+                          />
+                        </div>
+                      </div>
+                    </div>
 
-                
-                {/* YouTube Video Player for Timestamp Navigation */}
-                {guide?.youtubeVideoId && (
-                  <div className="mb-6 bg-white rounded-xl shadow-sm p-6">
-                    <h3 className="text-lg font-semibold text-slate-800 mb-4 flex items-center gap-2">
-                      <Play className="h-5 w-5 text-blue-600" />
-                      Source Video - Click timestamp buttons to navigate
-                    </h3>
-                    <div className="relative aspect-video rounded-lg overflow-hidden bg-slate-100">
-                      <iframe
-                        id="youtube-player"
-                        className="w-full h-full"
-                        src={`https://www.youtube.com/embed/${guide.youtubeVideoId}?enablejsapi=1`}
-                        title="YouTube video player"
-                        frameBorder="0"
-                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                        allowFullScreen
+                    <div className="flex flex-col gap-4 rounded-2xl border border-[#79d9c7]/55 bg-[#effaf7] p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
+                      <div className="flex items-start gap-3">
+                        <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-[#79d9c7] text-[#101419]">
+                          <BookOpen className="h-4 w-4" aria-hidden="true" />
+                        </span>
+                        <div>
+                          <label htmlFor="guide-editor-library" className="text-sm font-bold text-[#101419]">Add to your lead Library</label>
+                          <p className="mt-1 max-w-lg text-sm leading-5 text-slate-600">Let leads find this Guide again alongside the other resources your brand publishes.</p>
+                        </div>
+                      </div>
+                      <Switch
+                        id="guide-editor-library"
+                        checked={includeInLibrary}
+                        onCheckedChange={(checked) => updateLibraryMutation.mutate(checked)}
+                        disabled={updateLibraryMutation.isPending || workflowPending}
+                        aria-label="Add this guide to your public Library"
                       />
                     </div>
                   </div>
-                )}
+                </CardContent>
+              </Card>
 
-                {/* Guide Content Card - Matches guide-view.tsx exactly */}
-                <div className="bg-white rounded-xl shadow-sm p-8 space-y-2">
-              {elements.filter(el => !el.parentId).length === 0 ? (
-                <div className="text-center py-16 text-slate-500">
-                  <Type className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <h3 className="text-lg font-medium mb-2 text-slate-700">Start Building Your Guide</h3>
-                  <p className="mb-4">Drag elements from the sidebar to begin creating your guide.</p>
-                  <Button onClick={() => addElement('heading')} className="bg-primary hover:bg-primary/90">
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add Your First Element
-                  </Button>
-                </div>
-              ) : (
-                <>
-                  {/* Drag Instructions */}
-                  <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                    <div className="flex items-center gap-2 text-blue-800">
-                      <GripVertical className="h-4 w-4" />
-                      <span className="text-sm font-medium">Drag & Drop Guide</span>
+              <aside className="space-y-5 lg:sticky lg:top-6">
+                <Card className="rounded-3xl border-black/10 bg-[#101419] text-white shadow-[0_20px_60px_rgba(16,20,25,0.18)]">
+                  <CardContent className="p-6">
+                    <div className="flex items-start justify-between gap-4">
+                      <div>
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/50">Lead experience</p>
+                        <h2 className="mt-2 text-xl font-bold">Review the real output</h2>
+                      </div>
+                      <Eye className="h-5 w-5 text-[#79d9c7]" aria-hidden="true" />
                     </div>
-                    <p className="text-xs text-blue-600 mt-1">
-                      • Hover over elements to see drag handles
-                      • Drag elements to reorder them
-                      • Click the edit icon to modify content
-                      • Use the larger drop zones between elements to place new content
-                    </p>
-                  </div>
+                    <p className="mt-3 text-sm leading-6 text-white/65">Preview opens the private lead view—even while this Guide is still a Draft. Preview visits are not counted.</p>
+                    <div className="mt-5 grid grid-cols-2 gap-px overflow-hidden rounded-2xl border border-white/10 bg-white/10">
+                      <div className="bg-[#101419] p-4">
+                        <p className="text-2xl font-bold tabular-nums">{guideSections.length}</p>
+                        <p className="mt-1 text-xs text-white/50">Guide sections</p>
+                      </div>
+                      <div className="bg-[#101419] p-4">
+                        <p className="text-sm font-bold">{hasTimestampedSections ? "Clickable" : guide.youtubeVideoId ? "Video" : "Source"}</p>
+                        <p className="mt-1 text-xs text-white/50">{hasTimestampedSections ? "Video moments" : guide.youtubeVideoId ? "Embedded source" : "Content grounded"}</p>
+                      </div>
+                    </div>
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      {isRichGuide ? <Badge className="border-white/10 bg-white/10 text-white hover:bg-white/10">Rich Guide</Badge> : null}
+                      {includeInLibrary ? <Badge className="border-white/10 bg-white/10 text-white hover:bg-white/10">Library ready</Badge> : null}
+                    </div>
+                    <Button type="button" onClick={handleLeadPreview} className="mt-6 w-full rounded-xl bg-[#ff6b3d] text-white hover:bg-[#eb5b30]">
+                      <Eye className="mr-2 h-4 w-4" aria-hidden="true" />
+                      Preview as lead
+                    </Button>
+                  </CardContent>
+                </Card>
 
-                  {/* Drop zone at top */}
-                  <div
-                    className={`transition-all duration-200 cursor-pointer group ${
-                      dragOverIndex === 0 
-                        ? 'h-16 border-2 border-dashed border-primary bg-primary/10 rounded-lg flex items-center justify-center' 
-                        : 'h-8 border border-dashed border-gray-200 hover:border-primary/40 hover:bg-gray-50 rounded-lg flex items-center justify-center'
-                    }`}
-                    onDragOver={(e) => handleElementDragOver(e, 0)}
-                    onDrop={(e) => handleCanvasDrop(e, 0)}
-                  >
-                    {dragOverIndex === 0 ? (
-                      <div className="flex items-center gap-2 text-primary font-medium">
-                        <Plus className="h-4 w-4" />
-                        <span>Drop Element Here</span>
+                <Card className="rounded-3xl border-black/10 bg-[#fffdf9] shadow-[0_18px_50px_rgba(16,20,25,0.07)]">
+                  <CardContent className="p-6">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Publication</p>
+                    <div className="mt-4 flex items-start gap-3">
+                      <span className={isPublished
+                        ? "grid h-10 w-10 shrink-0 place-items-center rounded-full bg-emerald-100 text-emerald-700"
+                        : isUnlisted
+                          ? "grid h-10 w-10 shrink-0 place-items-center rounded-full bg-amber-100 text-amber-700"
+                          : "grid h-10 w-10 shrink-0 place-items-center rounded-full bg-slate-100 text-slate-700"}
+                      >
+                        {isPublished ? <Globe className="h-4 w-4" aria-hidden="true" /> : <BookOpen className="h-4 w-4" aria-hidden="true" />}
+                      </span>
+                      <div>
+                        <h2 className="text-lg font-bold text-[#101419]">{statusLabel}</h2>
+                        <p className="mt-1 text-sm leading-5 text-slate-600">{statusDescription}</p>
                       </div>
-                    ) : (
-                      <div className="flex items-center gap-2 text-gray-400 group-hover:text-primary/60 transition-colors">
-                        <Plus className="h-3 w-3" />
-                        <span className="text-xs">Drop Zone</span>
-                      </div>
-                    )}
-                  </div>
-                  
-                  {elements
-                    .filter(el => !el.parentId)
-                    .sort((a, b) => a.order - b.order)
-                    .map((element, index) => (
-                      <div key={element.id}>
-                        {renderElement(element)}
-                        
-                        {/* Drop zone between elements */}
-                        <div
-                          className={`transition-all duration-200 cursor-pointer group my-2 ${
-                            dragOverIndex === index + 1 
-                              ? 'h-16 border-2 border-dashed border-primary bg-primary/10 rounded-lg flex items-center justify-center' 
-                              : 'h-8 border border-dashed border-gray-200 hover:border-primary/40 hover:bg-gray-50 rounded-lg flex items-center justify-center'
-                          }`}
-                          onDragOver={(e) => handleElementDragOver(e, index + 1)}
-                          onDrop={(e) => handleCanvasDrop(e, index + 1)}
-                        >
-                          {dragOverIndex === index + 1 ? (
-                            <div className="flex items-center gap-2 text-primary font-medium">
-                              <Plus className="h-4 w-4" />
-                              <span>Drop Element Here</span>
-                            </div>
-                          ) : (
-                            <div className="flex items-center gap-2 text-gray-400 group-hover:text-primary/60 transition-colors">
-                              <Plus className="h-3 w-3" />
-                              <span className="text-xs">Drop Zone</span>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                </>
-              )}
+                    </div>
 
-              {/* Global drop zone indicator */}
-              {dropZoneVisible && dragOverIndex === null && (
-                <div className="border-2 border-dashed border-primary rounded-lg p-8 text-center bg-primary/10 mt-6">
-                  <Plus className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                  <p className="text-sm text-muted-foreground">Drop element here</p>
-                </div>
-              )}
-                </div>
-              </div>
+                    <div className={hasUnsavedChanges
+                      ? "mt-5 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs leading-5 text-amber-900"
+                      : "mt-5 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-xs leading-5 text-emerald-900"}
+                      aria-live="polite"
+                    >
+                      {hasUnsavedChanges
+                        ? "You have unsaved changes. Preview reflects the last saved version until you save."
+                        : "Everything shown here is saved. Preview reflects the current version."}
+                    </div>
+
+                    <div className="mt-5 grid gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => void handleSaveDraft()}
+                        disabled={!guideTitle.trim() || workflowPending}
+                        className="h-11 rounded-xl border-black/15 bg-white"
+                      >
+                        {saveIntent === "draft" ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" /> : <Save className="mr-2 h-4 w-4" aria-hidden="true" />}
+                        {saveIntent === "draft" ? "Saving draft…" : "Save draft"}
+                      </Button>
+                      <Button
+                        type="button"
+                        onClick={() => void handleSaveAndPublish()}
+                        disabled={!guideTitle.trim() || workflowPending}
+                        className="h-11 rounded-xl bg-[#101419] text-white hover:bg-[#20262d]"
+                      >
+                        {saveIntent === "publish" ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" /> : <Globe className="mr-2 h-4 w-4" aria-hidden="true" />}
+                        {saveIntent === "publish" ? "Saving & publishing…" : "Save & publish"}
+                      </Button>
+                    </div>
+                    <p className="mt-3 text-center text-[11px] leading-4 text-slate-500">Save &amp; publish saves these fields first, then makes that saved version live.</p>
+                  </CardContent>
+                </Card>
+              </aside>
             </div>
           </div>
-        </div>
+        </main>
       </div>
+
+      <Dialog open={improveDialogOpen} onOpenChange={handleImproveDialogChange}>
+        <DialogContent className="sm:max-w-xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Sparkles className="h-5 w-5 text-violet-600" aria-hidden="true" />
+              Improve this Guide with AI
+            </DialogTitle>
+            <DialogDescription>
+              Tell VidMagnet what would make this Guide more valuable for your audience.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-950">
+              <div className="flex gap-2">
+                <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+                <p>
+                  <strong>This replaces the Guide&apos;s generated structure and returns it to Draft.</strong>{" "}
+                  Review the new lead experience before publishing again.
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label htmlFor="guide-improvement-instructions" className="text-sm font-medium">
+                Improvement instructions
+              </label>
+              <Textarea
+                id="guide-improvement-instructions"
+                value={improvementInstructions}
+                onChange={(event) => setImprovementInstructions(event.target.value)}
+                maxLength={MAX_IMPROVEMENT_INSTRUCTIONS}
+                minLength={MIN_IMPROVEMENT_INSTRUCTIONS}
+                rows={6}
+                disabled={regenerateGuideMutation.isPending || regenerateGuideMutation.isSuccess}
+                placeholder="Example: Make the drill breakdowns more specific for high-school guards. Add coaching cues, common mistakes, and a four-week workout progression."
+                aria-describedby="guide-improvement-help guide-improvement-count"
+              />
+              <div className="flex items-start justify-between gap-4 text-xs text-muted-foreground">
+                <p id="guide-improvement-help">Use at least 10 characters. Be specific about the audience, depth, format, or missing takeaways.</p>
+                <p id="guide-improvement-count" className="shrink-0 tabular-nums">
+                  {improvementInstructions.length}/{MAX_IMPROVEMENT_INSTRUCTIONS}
+                </p>
+              </div>
+            </div>
+
+            <div aria-live="polite">
+              {regenerateGuideMutation.isPending ? (
+                <div className="flex items-center gap-2 rounded-lg border border-blue-200 bg-blue-50 p-3 text-sm text-blue-900">
+                  <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                  Rebuilding the Guide from its source content…
+                </div>
+              ) : null}
+              {regenerateGuideMutation.isError ? (
+                <div role="alert" className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-900">
+                  <strong>We couldn&apos;t regenerate this Guide.</strong>{" "}
+                  {readableApiError(regenerateGuideMutation.error)}
+                </div>
+              ) : null}
+              {regenerateGuideMutation.isSuccess ? (
+                <div className="flex items-start gap-2 rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-950">
+                  <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+                  <p><strong>Your new draft is ready.</strong> The Guide has been rebuilt from its source and is ready for another lead preview.</p>
+                </div>
+              ) : null}
+            </div>
+          </div>
+
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => handleImproveDialogChange(false)}
+              disabled={regenerateGuideMutation.isPending}
+            >
+              {regenerateGuideMutation.isSuccess ? "Done" : "Cancel"}
+            </Button>
+            {!regenerateGuideMutation.isSuccess ? (
+              <Button
+                type="button"
+                onClick={handleRegenerate}
+                disabled={
+                  improvementInstructions.trim().length < MIN_IMPROVEMENT_INSTRUCTIONS ||
+                  regenerateGuideMutation.isPending
+                }
+                className="bg-violet-600 text-white hover:bg-violet-700"
+              >
+                {regenerateGuideMutation.isPending ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
+                ) : (
+                  <Sparkles className="mr-2 h-4 w-4" aria-hidden="true" />
+                )}
+                {regenerateGuideMutation.isPending ? "Improving Guide…" : "Replace with improved draft"}
+              </Button>
+            ) : (
+              <Button type="button" onClick={handleLeadPreview}>
+                <Eye className="mr-2 h-4 w-4" aria-hidden="true" />
+                Preview new draft
+              </Button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

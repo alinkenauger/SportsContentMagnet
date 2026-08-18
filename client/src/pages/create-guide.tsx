@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useLocation } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
 import { useBrands } from "@/hooks/useBrands";
 import { useToast } from "@/hooks/use-toast";
@@ -13,24 +14,58 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { Sparkles, Youtube, FileText, Settings, Zap, Info, Mic, Upload, X, Link, Radio, File } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Sparkles, Youtube, FileText, Settings, Zap, Info, LibraryBig } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 
+function guideCreationErrorMessage(error: unknown) {
+  if (!(error instanceof Error)) return "Failed to create the guide. Please try again.";
+  const payload = error.message.replace(/^\d+:\s*/, "");
+  try {
+    const parsed = JSON.parse(payload) as { message?: string; issues?: Array<{ message?: string }> };
+    const issue = parsed.issues?.find((candidate) => candidate.message)?.message;
+    return [parsed.message, issue].filter(Boolean).join(" ") || error.message;
+  } catch {
+    return error.message || "Failed to create the guide. Please try again.";
+  }
+}
+
+const GUIDE_CREATION_OVERVIEW = [
+  {
+    title: "Prepare the source",
+    description: "We retrieve the YouTube transcript or read the transcript you pasted.",
+  },
+  {
+    title: "Find the coaching value",
+    description: "AI identifies the strongest drills, takeaways, best practices, and common mistakes.",
+  },
+  {
+    title: "Build the branded guide",
+    description: "VidMagnet creates a useful resource with actions, checks, tools, and a clear next step.",
+  },
+  {
+    title: "Open it for review",
+    description: "You land in the editor to refine the guide and lead page before publishing.",
+  },
+] as const;
+
 export default function CreateGuide() {
+  const [, navigate] = useLocation();
   const { toast } = useToast();
   const { user } = useAuth();
   const { brands } = useBrands();
   
-  // Check if user has a current brand set (not using default account)
-  const currentBrand = brands.find(brand => brand.isDefault) || null;
+  // Brand knowledge belongs to the currently selected workspace, not merely
+  // whichever brand was created as the user's default.
+  const currentBrand = typeof user?.currentBrandId === "number"
+    ? brands.find((brand) => brand.id === user.currentBrandId) || null
+    : null;
   const [youtubeUrl, setYoutubeUrl] = useState("");
-  const [inputMethod, setInputMethod] = useState<"youtube" | "manual" | "pdf" | "audio" | "link" | "stream">("youtube");
+  const [inputMethod, setInputMethod] = useState<"youtube" | "manual">("youtube");
   const [manualTranscript, setManualTranscript] = useState("");
   const [manualTitle, setManualTitle] = useState("");
-  const [contentUrl, setContentUrl] = useState("");
-  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
-  const [contentTitle, setContentTitle] = useState("");
   const [selectedTemplate, setSelectedTemplate] = useState<string>("full_report");
+  const [presentationPreset, setPresentationPreset] = useState("auto");
   const [showCustomTemplate, setShowCustomTemplate] = useState(false);
   const [customTemplate, setCustomTemplate] = useState({
     name: "",
@@ -41,211 +76,105 @@ export default function CreateGuide() {
   });
   const [customSettings, setCustomSettings] = useState({
     category: "",
+    focus: "",
+    desiredOutcome: "",
+    availableTime: "",
     customInstructions: "",
     targetAudience: "",
     difficulty: "",
     collectSms: false,
     smsConsentText: "I consent to receive text messages from this business. Message and data rates may apply. Reply STOP to opt out.",
     leadTags: "",
+    includeInLibrary: true,
     addToKnowledgeBase: true, // Default to true - automatically include in knowledge base
   });
   type ProcessingStatus = "pending" | "processing" | "completed";
   type ProcessingStep = { id: string; title: string; status: ProcessingStatus };
-  
+
   const [isProcessing, setIsProcessing] = useState(false);
-  const [processingSteps, setProcessingSteps] = useState<ProcessingStep[]>([
-    { id: "metadata", title: "Extracting video metadata", status: "pending" },
-    { id: "transcript", title: "Transcribing video content", status: "pending" },
-    { id: "analysis", title: "Analyzing coaching insights with AI", status: "pending" },
-    { id: "guide", title: "Generating personalized practice guide", status: "pending" },
-    { id: "landing", title: "Creating landing page", status: "pending" },
-  ]);
-  const [currentStep, setCurrentStep] = useState("");
-  const [progress, setProgress] = useState(0);
+  const [formError, setFormError] = useState<string | null>(null);
+  const processingSteps: ProcessingStep[] = [
+    {
+      id: "source",
+      title: inputMethod === "youtube" ? "Prepare the YouTube transcript" : "Read the pasted transcript",
+      status: "pending",
+    },
+    { id: "analysis", title: "Analyze drills, takeaways, and coaching insights", status: "pending" },
+    { id: "guide", title: "Build the branded practice guide", status: "pending" },
+    { id: "landing", title: "Prepare the lead page and editor", status: "pending" },
+  ];
 
   // Validation function for all input methods
   const isValidInput = () => {
-    switch (inputMethod) {
-      case "youtube":
-        return youtubeUrl.trim().length > 0;
-      case "manual":
-        return manualTitle.trim().length > 0 && manualTranscript.trim().length > 0;
-      case "pdf":
-      case "audio":
-        return uploadedFile !== null;
-      case "link":
-      case "stream":
-        return contentUrl.trim().length > 0;
-      default:
-        return false;
-    }
+    return inputMethod === "youtube"
+      ? youtubeUrl.trim().length > 0
+      : manualTitle.trim().length > 0 && manualTranscript.trim().length > 0;
   };
 
   const handleCreateGuide = async () => {
-    // Comprehensive validation for all input methods
+    setFormError(null);
+
     if (inputMethod === "youtube" && !youtubeUrl.trim()) {
+      const message = "Paste the YouTube video URL you want to turn into a guide.";
+      setFormError(message);
       toast({
-        title: "Error",
-        description: "Please enter a YouTube URL",
+        title: "YouTube URL required",
+        description: message,
         variant: "destructive",
       });
       return;
     }
 
     if (inputMethod === "manual" && (!manualTitle.trim() || !manualTranscript.trim())) {
+      const message = "Add both a title and the transcript before generating the guide.";
+      setFormError(message);
       toast({
-        title: "Error",
-        description: "Please enter both content title and transcript",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (inputMethod === "pdf" && !uploadedFile) {
-      toast({
-        title: "Error",
-        description: "Please upload a PDF file",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (inputMethod === "audio" && !uploadedFile) {
-      toast({
-        title: "Error",
-        description: "Please upload an audio file",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (inputMethod === "link" && !contentUrl.trim()) {
-      toast({
-        title: "Error",
-        description: "Please enter a web page URL",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (inputMethod === "stream" && !contentUrl.trim()) {
-      toast({
-        title: "Error",
-        description: "Please enter a streaming URL",
+        title: "Transcript details required",
+        description: message,
         variant: "destructive",
       });
       return;
     }
 
     setIsProcessing(true);
-    setProgress(0);
-    setCurrentStep("metadata");
-
-    // Simulate processing steps with realistic timing
-    const stepTimings = [
-      { step: "metadata", duration: 1500, progress: 20 },
-      { step: "transcript", duration: 3000, progress: 40 },
-      { step: "analysis", duration: 4000, progress: 70 },
-      { step: "guide", duration: 2500, progress: 90 },
-      { step: "landing", duration: 1000, progress: 100 },
-    ];
 
     try {
-      for (const { step, duration, progress: stepProgress } of stepTimings) {
-        setCurrentStep(step);
-        setProcessingSteps(prev => 
-          prev.map(s => 
-            s.id === step ? { ...s, status: "processing" } : s
-          )
-        );
-        
-        await new Promise(resolve => setTimeout(resolve, duration));
-        
-        setProgress(stepProgress);
-        setProcessingSteps(prev => 
-          prev.map(s => 
-            s.id === step ? { ...s, status: "completed" } : s
-          )
-        );
-      }
+      const authoredTemplateInstructions = selectedTemplate === "custom"
+        ? [
+            customTemplate.name ? `Custom output: ${customTemplate.name}` : "",
+            customTemplate.description,
+            customTemplate.analysisPrompt ? `Analyze for: ${customTemplate.analysisPrompt}` : "",
+            customTemplate.guidePrompt ? `Build the output this way: ${customTemplate.guidePrompt}` : "",
+            customTemplate.personalizationPrompt ? `Adapt it this way: ${customTemplate.personalizationPrompt}` : "",
+          ].filter(Boolean).join("\n")
+        : "";
+      const effectiveCustomInstructions = [customSettings.customInstructions, authoredTemplateInstructions]
+        .filter(Boolean)
+        .join("\n\n")
+        .slice(0, 2000);
 
-      // Actually create the guide - handle different input methods
-      let response;
-      
-      if (inputMethod === "pdf" || inputMethod === "audio") {
-        // Use FormData for file uploads
-        const formData = new FormData();
-        formData.append('inputMethod', inputMethod);
-        formData.append('selectedTemplate', selectedTemplate);
-        if (uploadedFile) {
-          formData.append('file', uploadedFile);
-        }
-        if (contentTitle) {
-          formData.append('title', contentTitle);
-        }
-        
-        // Add custom settings to FormData
-        Object.entries(customSettings).forEach(([key, value]) => {
-          formData.append(key, value.toString());
-        });
-        
-        response = await fetch('/api/guides', {
-          method: 'POST',
-          body: formData,
-        });
-        
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-      } else {
-        // Use JSON for YouTube, manual, link, and stream methods
-        const requestData: any = {
-          inputMethod,
-          selectedTemplate,
-          ...customSettings
-        };
-        
-        if (inputMethod === "youtube") {
-          requestData.youtubeUrl = youtubeUrl;
-        } else if (inputMethod === "manual") {
-          requestData.manualTranscript = manualTranscript;
-          requestData.manualTitle = manualTitle;
-        } else if (inputMethod === "link") {
-          requestData.contentUrl = contentUrl;
-          requestData.title = contentTitle || "Web Content";
-        } else if (inputMethod === "stream") {
-          requestData.contentUrl = contentUrl;
-          requestData.title = contentTitle || "Stream Content";
-        }
-        
-        response = await apiRequest("/api/guides", "POST", requestData);
+      const requestData = {
+        inputMethod,
+        selectedTemplate,
+        ...customSettings,
+        customInstructions: effectiveCustomInstructions,
+        presentationPreset,
+        ...(inputMethod === "youtube"
+          ? { youtubeUrl: youtubeUrl.trim() }
+          : { transcript: manualTranscript.trim(), title: manualTitle.trim() }),
+      };
+      const response = await apiRequest("/api/guides", "POST", requestData);
+      const result = await response.json() as { guide?: { id?: number; title?: string } };
+
+      if (!result.guide?.id) {
+        throw new Error("The guide was created, but the editor link was missing. Please try again.");
       }
-      
-      const result = await response.json();
       
       toast({
-        title: "Success!",
-        description: `Guide "${result.guide.title}" created successfully!`,
+        title: "Guide ready to review",
+        description: `${result.guide.title || "Your guide"} is ready in the editor.`,
       });
-      
-      // Reset form
-      setYoutubeUrl("");
-      setManualTranscript("");
-      setManualTitle("");
-      setContentUrl("");
-      setUploadedFile(null);
-      setContentTitle("");
-      setCustomSettings({
-        category: "",
-        customInstructions: "",
-        targetAudience: "",
-        difficulty: "",
-        collectSms: false,
-        smsConsentText: "I consent to receive text messages from this business. Message and data rates may apply. Reply STOP to opt out.",
-        leadTags: "",
-        addToKnowledgeBase: true,
-      });
-      
+      navigate(`/guide-editor/${result.guide.id}?new=1`);
     } catch (error) {
       if (isUnauthorizedError(error as Error)) {
         toast({
@@ -258,31 +187,33 @@ export default function CreateGuide() {
         }, 500);
         return;
       }
-      
+
+      const message = guideCreationErrorMessage(error);
+      setFormError(message);
       toast({
-        title: "Error",
-        description: "Failed to create guide. Please try again.",
+        title: "The guide needs another pass",
+        description: message,
         variant: "destructive",
       });
     } finally {
       setIsProcessing(false);
-      setProcessingSteps(prev => prev.map(s => ({ ...s, status: "pending" })));
-      setProgress(0);
     }
   };
 
   return (
     <div className="flex h-screen bg-background">
-      <Sidebar />
+      <div className="hidden md:block">
+        <Sidebar />
+      </div>
       
-      <div className="flex-1 flex flex-col">
+      <div className="flex min-w-0 flex-1 flex-col">
         {/* Header */}
         <header className="bg-card border-b border-border px-6 py-4">
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-2xl font-bold text-foreground">Create New Guide</h2>
               <p className="text-muted-foreground mt-1">
-                Transform your YouTube video into a high-converting lead magnet
+                Turn one source into an implementation-ready lead magnet.
               </p>
             </div>
           </div>
@@ -300,228 +231,104 @@ export default function CreateGuide() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div>
-                  <Label>Content Source</Label>
-                  <Select value={inputMethod} onValueChange={(value: "youtube" | "manual" | "pdf" | "audio" | "link" | "stream") => setInputMethod(value)}>
-                    <SelectTrigger className="mt-1">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="youtube">
-                        <div className="flex items-center space-x-2">
-                          <Youtube className="w-4 h-4 text-red-500" />
-                          <span>YouTube Video</span>
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="pdf">
-                        <div className="flex items-center space-x-2">
-                          <File className="w-4 h-4 text-red-500" />
-                          <span>PDF Document</span>
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="audio">
-                        <div className="flex items-center space-x-2">
-                          <Mic className="w-4 h-4 text-green-500" />
-                          <span>Audio File</span>
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="link">
-                        <div className="flex items-center space-x-2">
-                          <Link className="w-4 h-4 text-blue-500" />
-                          <span>Web Page</span>
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="stream">
-                        <div className="flex items-center space-x-2">
-                          <Radio className="w-4 h-4 text-purple-500" />
-                          <span>Streaming Link</span>
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="manual">
-                        <div className="flex items-center space-x-2">
-                          <FileText className="w-4 h-4 text-gray-500" />
-                          <span>Manual Transcript</span>
-                        </div>
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
+                <div
+                  className="grid gap-3 sm:grid-cols-2"
+                  role="group"
+                  aria-label="Choose a content source"
+                >
+                  <button
+                    type="button"
+                    aria-pressed={inputMethod === "youtube"}
+                    onClick={() => setInputMethod("youtube")}
+                    className={`rounded-xl border p-4 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
+                      inputMethod === "youtube"
+                        ? "border-primary bg-primary/5 shadow-sm"
+                        : "border-border bg-background hover:border-primary/50"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="flex items-center gap-2 font-semibold">
+                        <Youtube className="h-5 w-5 text-red-500" aria-hidden="true" />
+                        YouTube video
+                      </span>
+                      <span className="rounded-full bg-primary/10 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-primary">
+                        Recommended
+                      </span>
+                    </div>
+                    <p className="mt-2 text-xs leading-5 text-muted-foreground">
+                      Paste a public or unlisted link. VidMagnet will retrieve the source and transcript.
+                    </p>
+                  </button>
+
+                  <button
+                    type="button"
+                    aria-pressed={inputMethod === "manual"}
+                    onClick={() => setInputMethod("manual")}
+                    className={`rounded-xl border p-4 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
+                      inputMethod === "manual"
+                        ? "border-primary bg-primary/5 shadow-sm"
+                        : "border-border bg-background hover:border-primary/50"
+                    }`}
+                  >
+                    <span className="flex items-center gap-2 font-semibold">
+                      <FileText className="h-5 w-5 text-muted-foreground" aria-hidden="true" />
+                      Paste transcript
+                    </span>
+                    <p className="mt-2 text-xs leading-5 text-muted-foreground">
+                      Use this fallback when a video has no accessible transcript or your source is already written.
+                    </p>
+                  </button>
                 </div>
 
-                {/* Render appropriate input fields based on selected method */}
                 {inputMethod === "youtube" && (
-                  <div>
-                    <Label htmlFor="youtube-url">YouTube URL</Label>
+                  <div className="rounded-xl border bg-muted/20 p-4">
+                    <Label htmlFor="youtube-url">YouTube video URL</Label>
                     <Input
                       id="youtube-url"
+                      type="url"
+                      inputMode="url"
+                      autoComplete="url"
                       value={youtubeUrl}
-                      onChange={(e) => setYoutubeUrl(e.target.value)}
-                      placeholder="https://youtube.com/watch?v=..."
-                      className="mt-1"
+                      onChange={(event) => setYoutubeUrl(event.target.value)}
+                      placeholder="https://www.youtube.com/watch?v=..."
+                      className="mt-2 bg-background"
                     />
-                    <p className="text-sm text-muted-foreground mt-1">
-                      ✅ We'll extract the audio and transcribe it automatically using advanced AI
+                    <p className="mt-2 text-xs leading-5 text-muted-foreground">
+                      Best for guides with clickable timestamps that replay key drills inside the guide.
                     </p>
-                  </div>
-                )}
-
-                {inputMethod === "pdf" && (
-                  <div className="space-y-4">
-                    <div>
-                      <Label htmlFor="pdf-upload">Upload PDF Document</Label>
-                      <div className="mt-1 border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-gray-400 transition-colors">
-                        <input
-                          type="file"
-                          id="pdf-upload"
-                          accept=".pdf"
-                          onChange={(e) => setUploadedFile(e.target.files?.[0] || null)}
-                          className="hidden"
-                        />
-                        <label htmlFor="pdf-upload" className="cursor-pointer flex flex-col items-center space-y-2">
-                          <File className="w-8 h-8 text-gray-400" />
-                          <span className="text-sm text-gray-600">
-                            {uploadedFile ? uploadedFile.name : "Click to upload PDF or drag and drop"}
-                          </span>
-                          <span className="text-xs text-gray-500">Supports PDF files up to 100MB</span>
-                        </label>
-                      </div>
-                    </div>
-                    {uploadedFile && (
-                      <div>
-                        <Label htmlFor="content-title">Document Title (Optional)</Label>
-                        <Input
-                          id="content-title"
-                          value={contentTitle}
-                          onChange={(e) => setContentTitle(e.target.value)}
-                          placeholder="Enter a title for this document..."
-                          className="mt-1"
-                        />
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {inputMethod === "audio" && (
-                  <div className="space-y-4">
-                    <div>
-                      <Label htmlFor="audio-upload">Upload Audio File</Label>
-                      <div className="mt-1 border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-gray-400 transition-colors">
-                        <input
-                          type="file"
-                          id="audio-upload"
-                          accept="audio/*,.mp3,.wav,.m4a,.aac,.ogg"
-                          onChange={(e) => setUploadedFile(e.target.files?.[0] || null)}
-                          className="hidden"
-                        />
-                        <label htmlFor="audio-upload" className="cursor-pointer flex flex-col items-center space-y-2">
-                          <Mic className="w-8 h-8 text-gray-400" />
-                          <span className="text-sm text-gray-600">
-                            {uploadedFile ? uploadedFile.name : "Click to upload audio or drag and drop"}
-                          </span>
-                          <span className="text-xs text-gray-500">Supports MP3, WAV, M4A, AAC, OGG files up to 100MB</span>
-                        </label>
-                      </div>
-                    </div>
-                    {uploadedFile && (
-                      <div>
-                        <Label htmlFor="content-title">Audio Title</Label>
-                        <Input
-                          id="content-title"
-                          value={contentTitle}
-                          onChange={(e) => setContentTitle(e.target.value)}
-                          placeholder="Enter a title for this audio..."
-                          className="mt-1"
-                        />
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {inputMethod === "link" && (
-                  <div className="space-y-4">
-                    <div>
-                      <Label htmlFor="web-url">Web Page URL</Label>
-                      <Input
-                        id="web-url"
-                        value={contentUrl}
-                        onChange={(e) => setContentUrl(e.target.value)}
-                        placeholder="https://example.com/article..."
-                        className="mt-1"
-                      />
-                      <p className="text-sm text-muted-foreground mt-1">
-                        We'll extract and analyze the text content from this web page
-                      </p>
-                    </div>
-                    <div>
-                      <Label htmlFor="content-title">Page Title (Optional)</Label>
-                      <Input
-                        id="content-title"
-                        value={contentTitle}
-                        onChange={(e) => setContentTitle(e.target.value)}
-                        placeholder="Enter a title for this content..."
-                        className="mt-1"
-                      />
-                    </div>
-                  </div>
-                )}
-
-                {inputMethod === "stream" && (
-                  <div className="space-y-4">
-                    <div>
-                      <Label htmlFor="stream-url">Streaming Link URL</Label>
-                      <Input
-                        id="stream-url"
-                        value={contentUrl}
-                        onChange={(e) => setContentUrl(e.target.value)}
-                        placeholder="https://example.com/stream.m3u8 or https://twitch.tv/..."
-                        className="mt-1"
-                      />
-                      <p className="text-sm text-muted-foreground mt-1">
-                        Supports live streams, recorded streams, and video streaming platforms
-                      </p>
-                    </div>
-                    <div>
-                      <Label htmlFor="content-title">Stream Title</Label>
-                      <Input
-                        id="content-title"
-                        value={contentTitle}
-                        onChange={(e) => setContentTitle(e.target.value)}
-                        placeholder="Enter a title for this stream..."
-                        className="mt-1"
-                      />
-                    </div>
                   </div>
                 )}
 
                 {inputMethod === "manual" && (
                   <div className="space-y-4">
                     <div>
-                      <Label htmlFor="manual-title">Content Title</Label>
+                      <Label htmlFor="manual-title">Source title</Label>
                       <Input
                         id="manual-title"
                         value={manualTitle}
-                        onChange={(e) => setManualTitle(e.target.value)}
-                        placeholder="Enter the title of your content..."
+                        onChange={(event) => setManualTitle(event.target.value)}
+                        placeholder="e.g., ILB Elite Mid-Range Mastery"
                         className="mt-1"
                       />
                     </div>
                     <div>
-                      <Label htmlFor="manual-transcript">Content Transcript</Label>
+                      <Label htmlFor="manual-transcript">Transcript or source text</Label>
                       <Textarea
                         id="manual-transcript"
                         value={manualTranscript}
-                        onChange={(e) => setManualTranscript(e.target.value)}
-                        placeholder="Paste the transcript or text content here..."
+                        onChange={(event) => setManualTranscript(event.target.value)}
+                        placeholder="Paste the complete transcript or source text here..."
                         className="mt-1"
-                        rows={8}
+                        rows={10}
                       />
                     </div>
-                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                      <div className="flex">
-                        <Info className="w-5 h-5 text-blue-600 mr-2 flex-shrink-0 mt-0.5" />
+                    <div className="rounded-xl border border-blue-200 bg-blue-50 p-4">
+                      <div className="flex gap-2">
+                        <Info className="mt-0.5 h-5 w-5 flex-shrink-0 text-blue-600" aria-hidden="true" />
                         <div>
-                          <h4 className="text-sm font-medium text-blue-800">💡 Tip</h4>
-                          <p className="text-xs text-blue-700 mt-1">
-                            You can get transcripts from YouTube manually by clicking the transcript button below the video.
+                          <h4 className="text-sm font-medium text-blue-800">Transcript fallback</h4>
+                          <p className="mt-1 text-xs leading-5 text-blue-700">
+                            In YouTube, open the video description and choose “Show transcript,” then paste the complete text here.
                           </p>
                         </div>
                       </div>
@@ -573,6 +380,7 @@ export default function CreateGuide() {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="basketball">Basketball</SelectItem>
+                        <SelectItem value="golf">Golf</SelectItem>
                         <SelectItem value="soccer">Soccer</SelectItem>
                         <SelectItem value="tennis">Tennis</SelectItem>
                         <SelectItem value="football">Football</SelectItem>
@@ -580,6 +388,25 @@ export default function CreateGuide() {
                         <SelectItem value="other">Other</SelectItem>
                       </SelectContent>
                     </Select>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="presentation-style">Recipient experience</Label>
+                    <Select value={presentationPreset} onValueChange={setPresentationPreset}>
+                      <SelectTrigger id="presentation-style">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="auto">Auto-detect from the content</SelectItem>
+                        <SelectItem value="basketball">Basketball · Arena energy</SelectItem>
+                        <SelectItem value="golf">Golf · Course precision</SelectItem>
+                        <SelectItem value="performance">Performance · Training lab</SelectItem>
+                        <SelectItem value="editorial">Editorial · Clean report</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Your brand stays intact; this changes the output's composition and visual cues.
+                    </p>
                   </div>
 
                   <div>
@@ -612,11 +439,46 @@ export default function CreateGuide() {
                   />
                 </div>
 
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  <div>
+                    <Label htmlFor="desired-outcome">What Should They Be Able to Do?</Label>
+                    <Input
+                      id="desired-outcome"
+                      value={customSettings.desiredOutcome}
+                      onChange={(e) => setCustomSettings(prev => ({ ...prev, desiredOutcome: e.target.value }))}
+                      placeholder="e.g., Build a repeatable weekly content plan"
+                      className="mt-1"
+                    />
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      A concrete finish line produces a stronger quick win, toolkit, and action plan.
+                    </p>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="available-time">Time They Have Available</Label>
+                    <Select
+                      value={customSettings.availableTime}
+                      onValueChange={(value) => setCustomSettings(prev => ({ ...prev, availableTime: value }))}
+                    >
+                      <SelectTrigger id="available-time" className="mt-1">
+                        <SelectValue placeholder="Choose a realistic time budget" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="5 minutes">5 minutes</SelectItem>
+                        <SelectItem value="15 minutes">15 minutes</SelectItem>
+                        <SelectItem value="30 minutes">30 minutes</SelectItem>
+                        <SelectItem value="60 minutes">60 minutes</SelectItem>
+                        <SelectItem value="One week">One week</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
                 <div>
                   <Label htmlFor="focus-area">What Should the Guide Focus On? (Optional)</Label>
                   <Select 
-                    value={customSettings.customInstructions} 
-                    onValueChange={(value) => setCustomSettings(prev => ({ ...prev, customInstructions: value }))}
+                    value={customSettings.focus}
+                    onValueChange={(value) => setCustomSettings(prev => ({ ...prev, focus: value }))}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Choose what to emphasize (or leave blank for balanced guide)" />
@@ -634,7 +496,23 @@ export default function CreateGuide() {
                     </SelectContent>
                   </Select>
                   <p className="text-xs text-muted-foreground mt-1">
-                    💡 This helps the AI know what aspects of your video to emphasize in the practice guide. If unsure, leave it blank for a balanced approach.
+                    This helps the AI decide what to turn into steps, checklists, worksheets, scorecards, and examples. If unsure, leave it blank for a balanced approach.
+                  </p>
+                </div>
+
+                <div>
+                  <Label htmlFor="custom-instructions">What Would Make This Especially Valuable? (Optional)</Label>
+                  <Textarea
+                    id="custom-instructions"
+                    value={customSettings.customInstructions}
+                    onChange={(e) => setCustomSettings(prev => ({ ...prev, customInstructions: e.target.value }))}
+                    placeholder="e.g., Include our three-step framework, a client-facing script, a scorecard, and examples for small agencies. Avoid jargon."
+                    className="mt-1"
+                    rows={3}
+                    maxLength={2000}
+                  />
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Ask for the concrete tools, examples, vocabulary, and boundaries that make this feel like your expertise.
                   </p>
                 </div>
 
@@ -700,6 +578,35 @@ export default function CreateGuide() {
                   </div>
                 </div>
 
+                <div className="border-t pt-6">
+                  <h4 className="mb-4 flex items-center space-x-2 font-semibold">
+                    <LibraryBig className="h-4 w-4" aria-hidden="true" />
+                    <span>Recipient Library</span>
+                  </h4>
+                  <div className="rounded-xl border bg-muted/20 p-4">
+                    <div className="flex items-start gap-3">
+                      <input
+                        type="checkbox"
+                        id="includeInLibrary"
+                        checked={customSettings.includeInLibrary}
+                        onChange={(event) => setCustomSettings((previous) => ({
+                          ...previous,
+                          includeInLibrary: event.target.checked,
+                        }))}
+                        className="mt-0.5 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      />
+                      <div>
+                        <Label htmlFor="includeInLibrary" className="text-sm font-medium">
+                          Add this guide to your public Library
+                        </Label>
+                        <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                          Checked by default. Once published, leads can discover it from the Library button on your guides. Uncheck it for a one-off or direct-link-only resource.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
                 {/* Knowledge Base Settings - Only show for brand accounts */}
                 {currentBrand && (
                   <div className="border-t pt-6">
@@ -741,8 +648,16 @@ export default function CreateGuide() {
               <CardContent>
                 <div className="text-center space-y-4">
                   <p className="text-muted-foreground">
-                    Ready to create your practice guide? Our AI will analyze your video and extract valuable coaching insights.
+                    Ready to create your lead magnet? VidMagnet will turn the source into a structured resource your audience can put to work.
                   </p>
+                  {formError && (
+                    <Alert variant="destructive" className="text-left" role="alert">
+                      <AlertTitle>Guide generation stopped</AlertTitle>
+                      <AlertDescription>
+                        {formError} Your source and settings are still here, so you can correct the issue and try again.
+                      </AlertDescription>
+                    </Alert>
+                  )}
                   <Button 
                     onClick={handleCreateGuide}
                     disabled={isProcessing || !isValidInput()}
@@ -755,9 +670,6 @@ export default function CreateGuide() {
                 </div>
               </CardContent>
             </Card>
-
-
-
             {/* How It Works */}
             <Card>
               <CardHeader>
@@ -768,34 +680,17 @@ export default function CreateGuide() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
-                  <div className="flex items-start space-x-3">
-                    <div className="w-6 h-6 bg-primary rounded-full flex items-center justify-center text-white text-xs font-bold">1</div>
-                    <div>
-                      <p className="font-medium">Content Analysis</p>
-                      <p className="text-sm text-muted-foreground">We extract and transcribe your content using advanced AI</p>
+                  {GUIDE_CREATION_OVERVIEW.map((item, index) => (
+                    <div key={item.title} className="flex items-start gap-3">
+                      <div className="flex h-6 w-6 flex-none items-center justify-center rounded-full bg-primary text-xs font-bold text-white">
+                        {index + 1}
+                      </div>
+                      <div>
+                        <p className="font-medium">{item.title}</p>
+                        <p className="text-sm leading-6 text-muted-foreground">{item.description}</p>
+                      </div>
                     </div>
-                  </div>
-                  <div className="flex items-start space-x-3">
-                    <div className="w-6 h-6 bg-primary rounded-full flex items-center justify-center text-white text-xs font-bold">2</div>
-                    <div>
-                      <p className="font-medium">AI Content Extraction</p>
-                      <p className="text-sm text-muted-foreground">Our AI identifies key coaching tips, drills, and techniques</p>
-                    </div>
-                  </div>
-                  <div className="flex items-start space-x-3">
-                    <div className="w-6 h-6 bg-primary rounded-full flex items-center justify-center text-white text-xs font-bold">3</div>
-                    <div>
-                      <p className="font-medium">Guide Generation</p>
-                      <p className="text-sm text-muted-foreground">We create a branded practice guide with actionable steps</p>
-                    </div>
-                  </div>
-                  <div className="flex items-start space-x-3">
-                    <div className="w-6 h-6 bg-primary rounded-full flex items-center justify-center text-white text-xs font-bold">4</div>
-                    <div>
-                      <p className="font-medium">Landing Page Creation</p>
-                      <p className="text-sm text-muted-foreground">We generate a beautiful landing page to capture leads</p>
-                    </div>
-                  </div>
+                  ))}
                 </div>
               </CardContent>
             </Card>
@@ -807,8 +702,6 @@ export default function CreateGuide() {
       <ProcessingModal
         isOpen={isProcessing}
         steps={processingSteps}
-        currentStep={currentStep}
-        progress={progress}
       />
 
       {/* Custom Template Dialog */}
@@ -879,7 +772,7 @@ export default function CreateGuide() {
                   id="guide-prompt"
                   value={customTemplate.guidePrompt}
                   onChange={(e) => setCustomTemplate(prev => ({ ...prev, guidePrompt: e.target.value }))}
-                  placeholder="Instructions for how AI should structure the practice guide..."
+                  placeholder="Instructions for the outcome, structure, exercises, templates, or tools this resource should include..."
                   className="mt-1"
                   rows={3}
                 />

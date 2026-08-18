@@ -1,4 +1,5 @@
 import { YoutubeTranscript } from 'youtube-transcript';
+import { parseYouTubeSource } from '@shared/presentation';
 import { whisperYoutubeService } from './whisperYoutubeService.js';
 
 export interface YouTubeVideoData {
@@ -13,66 +14,265 @@ export interface YouTubeVideoData {
   likeCount: number;
 }
 
+export interface YouTubeTranscriptRow {
+  text: unknown;
+  offset: unknown;
+  duration: unknown;
+}
+
+export interface YouTubeTranscriptSegment {
+  start: number;
+  end: number;
+  text: string;
+}
+
+export interface YouTubeTimedTranscript {
+  text: string;
+  segments: YouTubeTranscriptSegment[];
+  method: string;
+}
+
+export type YouTubeTranscriptTimeUnit = 'milliseconds' | 'seconds' | 'auto';
+
 export function extractVideoId(url: string): string | null {
-  const regex = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/;
-  const match = url.match(regex);
-  return match ? match[1] : null;
+  return parseYouTubeSource(url)?.videoId ?? null;
+}
+
+function cleanPlainText(value: unknown, maxLength: number): string {
+  if (typeof value !== 'string') return '';
+  return value
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, maxLength);
+}
+
+function canonicalThumbnailUrl(videoId: string): string {
+  return `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`;
+}
+
+/**
+ * Projects the tiny trusted portion of YouTube's oEmbed response into the
+ * application's metadata contract. URL and HTML fields from oEmbed are never
+ * accepted; all URLs are constructed from the already validated video ID.
+ */
+export function buildYouTubeVideoDataFromOEmbed(
+  videoIdInput: string,
+  payload: unknown,
+): YouTubeVideoData {
+  const source = parseYouTubeSource(videoIdInput);
+  if (!source) throw new Error('Invalid YouTube video ID');
+
+  const record = payload && typeof payload === 'object'
+    ? payload as Record<string, unknown>
+    : {};
+
+  return {
+    videoId: source.videoId,
+    title: cleanPlainText(record.title, 500) || 'YouTube video',
+    description: '',
+    thumbnailUrl: canonicalThumbnailUrl(source.videoId),
+    duration: 'PT0S',
+    channelTitle: cleanPlainText(record.author_name, 300) || 'YouTube',
+    publishedAt: '',
+    viewCount: 0,
+    likeCount: 0,
+  };
+}
+
+async function fetchYouTubeOEmbedData(videoId: string): Promise<YouTubeVideoData> {
+  const endpoint = new URL('https://www.youtube.com/oembed');
+  endpoint.searchParams.set('url', `https://www.youtube.com/watch?v=${videoId}`);
+  endpoint.searchParams.set('format', 'json');
+
+  const response = await fetch(endpoint);
+  if (!response.ok) {
+    throw new Error(`YouTube oEmbed error: ${response.status}`);
+  }
+
+  return buildYouTubeVideoDataFromOEmbed(videoId, await response.json());
+}
+
+async function fetchOfficialYouTubeVideoData(
+  videoId: string,
+  apiKey: string,
+): Promise<YouTubeVideoData> {
+  const endpoint = new URL('https://www.googleapis.com/youtube/v3/videos');
+  endpoint.searchParams.set('part', 'snippet,statistics,contentDetails');
+  endpoint.searchParams.set('id', videoId);
+  endpoint.searchParams.set('key', apiKey);
+  const response = await fetch(endpoint);
+
+  if (!response.ok) {
+    throw new Error(`YouTube API error: ${response.status}`);
+  }
+
+  const data = await response.json() as any;
+  if (!data.items || data.items.length === 0) {
+    throw new Error('Video not found');
+  }
+
+  const video = data.items[0];
+  const snippet = video.snippet;
+  const statistics = video.statistics;
+  const contentDetails = video.contentDetails;
+
+  return {
+    videoId,
+    title: snippet.title,
+    description: snippet.description,
+    thumbnailUrl: snippet.thumbnails.maxres?.url || snippet.thumbnails.high?.url || snippet.thumbnails.default?.url,
+    duration: contentDetails.duration,
+    channelTitle: snippet.channelTitle,
+    publishedAt: snippet.publishedAt,
+    viewCount: parseInt(statistics.viewCount || '0'),
+    likeCount: parseInt(statistics.likeCount || '0'),
+  };
 }
 
 export async function getYouTubeVideoData(url: string): Promise<YouTubeVideoData> {
-  const videoId = extractVideoId(url);
-  if (!videoId) {
-    throw new Error("Invalid YouTube URL");
+  const source = parseYouTubeSource(url);
+  if (!source) throw new Error('Invalid YouTube URL');
+
+  const apiKey = (
+    process.env.YOUTUBE_API_KEY
+    || process.env.YOUTUBE_API_KEY_ENV_VAR
+    || ''
+  ).trim();
+
+  if (apiKey) {
+    try {
+      return await fetchOfficialYouTubeVideoData(source.videoId, apiKey);
+    } catch (error) {
+      console.warn('YouTube Data API metadata lookup failed; using oEmbed fallback:', error);
+    }
   }
 
-  const apiKey = process.env.YOUTUBE_API_KEY || process.env.YOUTUBE_API_KEY_ENV_VAR || "default_key";
-  
   try {
-    const response = await fetch(
-      `https://www.googleapis.com/youtube/v3/videos?part=snippet,statistics,contentDetails&id=${videoId}&key=${apiKey}`
-    );
-
-    if (!response.ok) {
-      throw new Error(`YouTube API error: ${response.status}`);
-    }
-
-    const data = await response.json();
-    
-    if (!data.items || data.items.length === 0) {
-      throw new Error("Video not found");
-    }
-
-    const video = data.items[0];
-    const snippet = video.snippet;
-    const statistics = video.statistics;
-    const contentDetails = video.contentDetails;
-
-    return {
-      videoId,
-      title: snippet.title,
-      description: snippet.description,
-      thumbnailUrl: snippet.thumbnails.maxres?.url || snippet.thumbnails.high?.url || snippet.thumbnails.default?.url,
-      duration: contentDetails.duration,
-      channelTitle: snippet.channelTitle,
-      publishedAt: snippet.publishedAt,
-      viewCount: parseInt(statistics.viewCount || '0'),
-      likeCount: parseInt(statistics.likeCount || '0'),
-    };
+    return await fetchYouTubeOEmbedData(source.videoId);
   } catch (error) {
-    console.error("Error fetching YouTube data:", error);
-    throw new Error("Failed to fetch video data: " + (error as Error).message);
+    console.error('Error fetching YouTube data:', error);
+    throw new Error(`Failed to fetch video data: ${(error as Error).message}`);
   }
 }
 
-export async function transcribeVideo(videoId: string): Promise<string | { text: string; segments: Array<{ start: number; end: number; text: string; }>; method: string; }> {
+function decodeTranscriptEntities(value: string): string {
+  return value
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&amp;/gi, '&')
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
+    .replace(/&quot;/gi, '"')
+    .replace(/&(?:#39|apos);/gi, "'")
+    .replace(/&#x([0-9a-f]+);/gi, (match, hex: string) => {
+      const codePoint = Number.parseInt(hex, 16);
+      return Number.isInteger(codePoint) && codePoint >= 0 && codePoint <= 0x10ffff
+        ? String.fromCodePoint(codePoint)
+        : match;
+    })
+    .replace(/&#(\d+);/g, (match, decimal: string) => {
+      const codePoint = Number.parseInt(decimal, 10);
+      return Number.isInteger(codePoint) && codePoint >= 0 && codePoint <= 0x10ffff
+        ? String.fromCodePoint(codePoint)
+        : match;
+    });
+}
+
+function cleanTranscriptText(value: unknown): string {
+  if (typeof value !== 'string') return '';
+  return decodeTranscriptEntities(value)
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F\u200B-\u200D\uFEFF]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function inferTranscriptTimeUnit(rows: readonly YouTubeTranscriptRow[]): Exclude<YouTubeTranscriptTimeUnit, 'auto'> {
+  const values = rows.flatMap((row) => [Number(row.offset), Number(row.duration)]);
+  if (values.some((value) => Number.isFinite(value) && !Number.isInteger(value))) {
+    return 'seconds';
+  }
+
+  const durations = rows
+    .map((row) => Number(row.duration))
+    .filter((value) => Number.isFinite(value) && value >= 0)
+    .sort((left, right) => left - right);
+  const medianDuration = durations.length > 0
+    ? durations[Math.floor(durations.length / 2)]
+    : 0;
+
+  // srv3 emits integer milliseconds and normal caption rows are usually well
+  // above 100 ms. Ambiguous small integers are treated as classic seconds.
+  return medianDuration >= 100 ? 'milliseconds' : 'seconds';
+}
+
+function roundTranscriptTime(value: number): number {
+  return Math.round(value * 1000) / 1000;
+}
+
+/** Normalizes youtube-transcript's srv3 millisecond and classic second rows. */
+export function normalizeYouTubeTranscriptRows(
+  rowsInput: readonly YouTubeTranscriptRow[],
+  timeUnit: YouTubeTranscriptTimeUnit = 'auto',
+): Pick<YouTubeTimedTranscript, 'text' | 'segments'> {
+  const rows = Array.isArray(rowsInput) ? rowsInput : [];
+  const resolvedUnit = timeUnit === 'auto' ? inferTranscriptTimeUnit(rows) : timeUnit;
+  const divisor = resolvedUnit === 'milliseconds' ? 1000 : 1;
+  const segments: YouTubeTranscriptSegment[] = [];
+
+  for (const row of rows) {
+    const text = cleanTranscriptText(row?.text);
+    const rawStart = Number(row?.offset);
+    const rawDuration = Number(row?.duration);
+    if (
+      !text
+      || !Number.isFinite(rawStart)
+      || !Number.isFinite(rawDuration)
+      || rawStart < 0
+      || rawDuration < 0
+    ) {
+      continue;
+    }
+
+    const start = roundTranscriptTime(rawStart / divisor);
+    const end = roundTranscriptTime((rawStart + rawDuration) / divisor);
+    if (!Number.isFinite(start) || !Number.isFinite(end) || start < 0 || end < start) {
+      continue;
+    }
+    segments.push({ start, end, text });
+  }
+
+  return {
+    text: segments.map((segment) => segment.text).join(' ').replace(/\s+/g, ' ').trim(),
+    segments,
+  };
+}
+
+export function detectYouTubeTranscriptTimeUnit(
+  transcriptXml: string,
+): Exclude<YouTubeTranscriptTimeUnit, 'auto'> | null {
+  if (/<p\s+[^>]*\bt="\d+"[^>]*\bd="\d+"[^>]*>/i.test(transcriptXml)) {
+    return 'milliseconds';
+  }
+  if (/<text\s+[^>]*\bstart="[\d.]+"[^>]*\bdur="[\d.]+"[^>]*>/i.test(transcriptXml)) {
+    return 'seconds';
+  }
+  return null;
+}
+
+export async function transcribeVideo(videoId: string): Promise<string | YouTubeTimedTranscript> {
   try {
-    console.log(`Attempting to transcribe video: ${videoId}`);
+    const source = parseYouTubeSource(videoId);
+    if (!source) throw new Error('Invalid YouTube video ID');
+    const validatedVideoId = source.videoId;
+    console.log(`Attempting to transcribe video: ${validatedVideoId}`);
     
     // Primary method: Try youtube-transcript library FIRST (fastest, if available)
     console.log("Trying youtube-transcript library (fastest method)...");
-    const transcript = await getYouTubeTranscript(videoId);
-    if (transcript && transcript.length > 100) {
-      console.log(`Successfully extracted transcript via youtube-transcript: ${transcript.length} characters`);
+    const transcript = await getYouTubeTranscript(validatedVideoId);
+    if (transcript && transcript.text.length > 100) {
+      console.log(`Successfully extracted transcript via youtube-transcript: ${transcript.text.length} characters`);
       return transcript;
     }
     
@@ -81,7 +281,7 @@ export async function transcribeVideo(videoId: string): Promise<string | { text:
     let ytdlpResult: any = { success: false, error: 'Not attempted' };
     try {
       const { ytdlpTranscription } = await import('./ytdlpTranscription');
-      ytdlpResult = await ytdlpTranscription.extractTranscript(videoId);
+      ytdlpResult = await ytdlpTranscription.extractTranscript(validatedVideoId);
       
       if (ytdlpResult.success && ytdlpResult.transcript && ytdlpResult.transcript.length > 100) {
         console.log(`Successfully extracted transcript via yt-dlp: ${ytdlpResult.transcript.length} characters`);
@@ -98,7 +298,7 @@ export async function transcribeVideo(videoId: string): Promise<string | { text:
       const { audioExtractionService } = await import('./audioExtractionService');
       const { audioTranscription } = await import('./audioTranscription');
       
-      const videoUrl = `https://www.youtube.com/watch?v=${videoId}`;
+      const videoUrl = `https://www.youtube.com/watch?v=${validatedVideoId}`;
       const extractionResult = await audioExtractionService.extractAudioFromYoutube(videoUrl);
       
       if (extractionResult.success && extractionResult.audioPath) {
@@ -132,7 +332,7 @@ export async function transcribeVideo(videoId: string): Promise<string | { text:
     
     // Final fallback: Try whisper-youtube with fast tiny model (last resort)
     console.log("Trying whisper-youtube as final fallback (with tiny model for speed)...");
-    const whisperYoutubeResult = await whisperYoutubeService.extractAndTranscribe(videoId, 'tiny');
+    const whisperYoutubeResult = await whisperYoutubeService.extractAndTranscribe(validatedVideoId, 'tiny');
     
     if (whisperYoutubeResult.success && whisperYoutubeResult.transcript && whisperYoutubeResult.transcript.length > 100) {
       console.log(`Successfully extracted transcript via whisper-youtube: ${whisperYoutubeResult.transcript.length} characters`);
@@ -182,19 +382,46 @@ export async function transcribeVideo(videoId: string): Promise<string | { text:
   }
 }
 
-async function getYouTubeTranscript(videoId: string): Promise<string | null> {
+async function getYouTubeTranscript(videoId: string): Promise<YouTubeTimedTranscript | null> {
   try {
     // First try the official YouTube Data API v3 captions endpoint (like Glasp)
     console.log("Attempting official YouTube API captions...");
     const transcript = await getOfficialYouTubeTranscript(videoId);
     if (transcript) {
-      return transcript;
+      return {
+        text: cleanTranscriptText(transcript),
+        segments: [],
+        method: 'youtube_data_api',
+      };
     }
     console.log("Official API failed, trying youtube-transcript library...");
 
     // Fallback to youtube-transcript library as secondary option
+    let detectedTimeUnit: Exclude<YouTubeTranscriptTimeUnit, 'auto'> | null = null;
+    const transcriptFetch: typeof globalThis.fetch = async (input, init) => {
+      const response = await globalThis.fetch(input, init);
+      const requestUrl = typeof input === 'string'
+        ? input
+        : input instanceof URL
+          ? input.toString()
+          : input.url;
+      const contentType = response.headers.get('content-type') || '';
+      const couldContainTimedText = requestUrl.includes('/api/timedtext')
+        || contentType.includes('xml');
+
+      if (response.ok && couldContainTimedText) {
+        try {
+          detectedTimeUnit = detectYouTubeTranscriptTimeUnit(await response.clone().text());
+        } catch {
+          // The library can still parse the original response; auto inference is
+          // used below if inspection of the cloned response is unavailable.
+        }
+      }
+      return response;
+    };
     const transcriptArray = await YoutubeTranscript.fetchTranscript(videoId, {
-      lang: 'en'
+      lang: 'en',
+      fetch: transcriptFetch,
     });
     
     if (!transcriptArray || transcriptArray.length === 0) {
@@ -202,14 +429,15 @@ async function getYouTubeTranscript(videoId: string): Promise<string | null> {
       return null;
     }
 
-    // Combine all transcript segments into a single text
-    const fullTranscript = transcriptArray
-      .map(item => item.text)
-      .join(' ')
-      .replace(/\s+/g, ' ') // Normalize whitespace
-      .trim();
-
-    return fullTranscript;
+    const normalized = normalizeYouTubeTranscriptRows(
+      transcriptArray,
+      detectedTimeUnit ?? 'auto',
+    );
+    if (!normalized.text || normalized.segments.length === 0) return null;
+    return {
+      ...normalized,
+      method: 'youtube_transcript',
+    };
     
   } catch (error) {
     console.error("Error getting YouTube transcript:", error);
@@ -311,43 +539,6 @@ function parseCaptionFormat(captionText: string): string {
   } catch (error) {
     console.error("Error parsing caption format:", error);
     return captionText;
-  }
-}
-
-async function transcribeWithWhisper(videoId: string): Promise<string | null> {
-  try {
-    const ytdl = await import('ytdl-core');
-    const OpenAI = await import('openai');
-    
-    if (!process.env.OPENAI_API_KEY) {
-      console.error("OpenAI API key not available for Whisper transcription");
-      return null;
-    }
-
-    const openai = new OpenAI.default({
-      apiKey: process.env.OPENAI_API_KEY,
-    });
-
-    // Check if video is available
-    const videoInfo = await ytdl.default.getInfo(videoId);
-    if (!videoInfo) {
-      console.error("Could not get video info for Whisper transcription");
-      return null;
-    }
-
-    // Note: Full Whisper integration would require:
-    // 1. Downloading video audio using ytdl-core
-    // 2. Converting to audio format (MP3/WAV)
-    // 3. Uploading to OpenAI Whisper API
-    // 4. Getting transcription result
-    
-    // For now, we'll indicate this needs implementation
-    console.log("Whisper transcription would require audio download and processing");
-    return null;
-    
-  } catch (error) {
-    console.error("Error with Whisper transcription:", error);
-    return null;
   }
 }
 

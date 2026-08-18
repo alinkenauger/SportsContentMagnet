@@ -1,5 +1,6 @@
 import type { RequestHandler } from "express";
 import { storage } from "./storage";
+import { getRequestUserId } from "./requestUser";
 
 // Role hierarchy levels
 export enum Role {
@@ -25,19 +26,25 @@ export function hasRole(userRole: string, requiredRole: Role): boolean {
 }
 
 // Middleware to require specific role
-export function requireRole(requiredRole: Role): RequestHandler {
+type RoleUserReader = (userId: string) => Promise<{ role: string | null } | undefined>;
+
+export function createRequireRole(
+  requiredRole: Role,
+  getUser: RoleUserReader = (userId) => storage.getUser(userId),
+): RequestHandler {
   return async (req: any, res, next) => {
-    if (!req.user) {
+    const userId = getRequestUserId(req);
+    if (!userId) {
       return res.status(401).json({ message: "Authentication required" });
     }
 
     try {
-      const user = await storage.getUserById(req.user.sub || req.user.id);
+      const user = await getUser(userId);
       if (!user) {
         return res.status(401).json({ message: "User not found" });
       }
 
-      if (!hasRole(user.role, requiredRole)) {
+      if (!user.role || !hasRole(user.role, requiredRole)) {
         return res.status(403).json({ message: "Insufficient permissions" });
       }
 
@@ -47,6 +54,10 @@ export function requireRole(requiredRole: Role): RequestHandler {
       return res.status(500).json({ message: "Authorization check failed" });
     }
   };
+}
+
+export function requireRole(requiredRole: Role): RequestHandler {
+  return createRequireRole(requiredRole);
 }
 
 // Middleware to require super admin
@@ -61,7 +72,7 @@ export const requireBrandAdmin = requireRole(Role.BRAND_ADMIN);
 // Helper function to check if user is super admin
 export async function isSuperAdmin(userId: string): Promise<boolean> {
   try {
-    const user = await storage.getUserById(userId);
+    const user = await storage.getUser(userId);
     return user?.role === Role.SUPER_ADMIN;
   } catch (error) {
     console.error("Super admin check error:", error);
@@ -72,7 +83,7 @@ export async function isSuperAdmin(userId: string): Promise<boolean> {
 // Helper function to check if user can manage brand
 export async function canManageBrand(userId: string, brandId: number): Promise<boolean> {
   try {
-    const user = await storage.getUserById(userId);
+    const user = await storage.getUser(userId);
     if (!user) return false;
 
     // Super admins can manage any brand

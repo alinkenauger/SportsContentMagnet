@@ -1,296 +1,183 @@
-import { useParams, Link } from "wouter";
+import { useEffect } from "react";
+import { useParams, useSearch } from "wouter";
 import { useQuery } from "@tanstack/react-query";
-import { useEffect, useRef, useState } from "react";
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
-import { 
-  Star, 
-  Target, 
-  CheckCircle, 
-  Users, 
-  Eye, 
-  Share2, 
-  ExternalLink,
+import {
   ArrowLeft,
-  Play,
-  Clock,
-  AlertCircle,
-  Zap,
-  Repeat,
-  TrendingUp,
-  Timer,
-  Award
+  BookOpen,
+  ExternalLink,
+  Eye,
+  Magnet,
+  Share2,
 } from "lucide-react";
+import GuideContentRenderer from "@/components/guide-content-renderer";
+import { PublicLibraryLink } from "@/components/public-library-link";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { ensureReadableTextColor } from "@/lib/color-contrast";
 import { apiRequest } from "@/lib/queryClient";
+import { safeHttpUrl, safePublicAssetUrl } from "@/lib/safe-url";
+import type { LibraryContext } from "@shared/library";
 
-interface DrillBreakdown {
-  painPoint: string;
-  technique: string;
-  duration: string;
-  focus: string;
-  tips: string[];
-  verbalSteps: string[];
+interface PublicBrandAppearance {
+  displayName?: string | null;
+  companyName?: string | null;
+  tagline?: string | null;
+  logoUrl?: string | null;
+  faviconUrl?: string | null;
+  primaryColor?: string | null;
+  secondaryColor?: string | null;
+  accentColor?: string | null;
+  backgroundColor?: string | null;
+  surfaceColor?: string | null;
+  textColor?: string | null;
+  headingFontFamily?: string | null;
+  bodyFontFamily?: string | null;
+  fontFamily?: string | null;
+  websiteUrl?: string | null;
+  privacyUrl?: string | null;
+  termsUrl?: string | null;
+  onPrimaryColor?: string | null;
+  showPoweredBy?: boolean;
 }
 
 interface GuideViewData {
   guide: {
     id: number;
     title: string;
-    description: string;
-    thumbnailUrl: string;
-    youtubeUrl: string;
-    youtubeVideoId: string;
-    channelTitle: string;
-    views: number;
-    screenshots?: Array<{
-      timestamp: number;
-      filename: string;
-      path: string;
-      type: 'start' | 'middle' | 'key_moment';
-      size: number;
-    }>;
-    content: {
-      title: string;
-      introduction: string;
-      sections: Array<{
-        title: string;
-        content: string;
-        type: 'tip' | 'drill' | 'technique' | 'equipment';
-        timestamp?: string;
-        timestampSeconds?: number;
-      }>;
-      conclusion: string;
-      callToAction: string;
+    description?: string | null;
+    thumbnailUrl?: string | null;
+    youtubeUrl?: string | null;
+    youtubeVideoId?: string | null;
+    channelTitle?: string | null;
+    views?: number | null;
+    ctaLink?: string | null;
+    ctaText?: string | null;
+    content: unknown;
+    category?: string | null;
+    presentationProfile?: {
+      version: 1;
+      mode: "auto" | "manual";
+      preset: "editorial" | "basketball" | "golf" | "performance";
     };
+    sourceVideo?: { canonicalUrl: string; videoId: string; channelTitle?: string } | null;
   };
-  brandingSettings?: {
-    logoUrl?: string;
-    primaryColor: string;
-    secondaryColor: string;
-    accentColor: string;
-    fontFamily: string;
-    companyName?: string;
-    tagline?: string;
-  };
+  brandingSettings?: PublicBrandAppearance;
+  branding?: PublicBrandAppearance | { appearance?: PublicBrandAppearance };
+  library?: LibraryContext | null;
 }
 
-function parseDrillContent(content: string): DrillBreakdown | null {
-  try {
-    // Extract key information using pattern matching
-    const painPointMatch = content.match(/(?:pain point|problem|issue|struggle|difficulty)[:\s]+(.*?)(?:\.|,|\n|$)/i);
-    const techniqueMatch = content.match(/(?:technique|method|approach|way|how)[:\s]+(.*?)(?:\.|,|\n|$)/i);
-    const durationMatch = content.match(/(?:duration|time|seconds|minutes)[:\s]+(.*?)(?:\.|,|\n|$)/i);
-    const focusMatch = content.match(/(?:focus|concentrate|attention|key)[:\s]+(.*?)(?:\.|,|\n|$)/i);
-
-    // Extract tips - look for bullet points, numbered lists, or "tip" keywords
-    const tipMatches = content.match(/(?:tip|hint|note|remember|important)[:\s]+(.*?)(?:\.|,|\n|$)/gi) || [];
-    const bulletTips = content.match(/[-•*]\s+(.*?)(?:\n|$)/gi) || [];
-    const tips = [...tipMatches, ...bulletTips].map(t => t.replace(/^(?:tip|hint|note|remember|important)[:\s]+/i, '').replace(/^[-•*]\s+/, '').trim());
-
-    // Extract verbal steps - look for numbered steps or sequential instructions
-    const stepMatches = content.match(/(?:\d+[.)]\s+|step\s+\d+[:\s]+|first|second|third|then|next|finally)[:\s]+(.*?)(?:\.|,|\n|$)/gi) || [];
-    const verbalSteps = stepMatches.map(s => s.replace(/^(?:\d+[.)]\s+|step\s+\d+[:\s]+|first|second|third|then|next|finally)[:\s]+/i, '').trim());
-
-    // Fallback to extracting meaningful phrases
-    const sentences = content.split(/[.!?]/).filter(s => s.trim());
-    
-    return {
-      painPoint: painPointMatch?.[1]?.trim() || sentences.find(s => s.includes('problem') || s.includes('issue'))?.trim() || "Improve fundamentals",
-      technique: techniqueMatch?.[1]?.trim() || sentences.find(s => s.includes('technique') || s.includes('method'))?.trim() || "Practice proper form",
-      duration: durationMatch?.[1]?.trim() || sentences.find(s => /\d+\s*(?:seconds|minutes)/i.test(s))?.match(/\d+\s*(?:seconds|minutes)/i)?.[0] || "5-10 minutes",
-      focus: focusMatch?.[1]?.trim() || sentences[sentences.length - 1]?.trim() || "Maintain consistency",
-      tips: tips.length > 0 ? tips : ["Focus on proper form", "Start slowly and build intensity"],
-      verbalSteps: verbalSteps.length > 0 ? verbalSteps : ["Begin in proper position", "Execute the movement", "Return to starting position"]
-    };
-  } catch {
-    return null;
+function resolvedBranding(data?: GuideViewData): PublicBrandAppearance {
+  if (!data) return {};
+  if (data.branding && "appearance" in data.branding) {
+    return data.branding.appearance || {};
   }
+  return (data.branding as PublicBrandAppearance | undefined) || data.brandingSettings || {};
 }
 
-function DrillVisual({ breakdown }: { breakdown: DrillBreakdown }) {
-  return (
-    <div className="mt-4 bg-gradient-to-br from-orange-50 to-amber-50 border border-orange-200 rounded-lg p-4">
-      <h4 className="text-lg font-semibold text-orange-800 mb-3 flex items-center">
-        <Target className="w-5 h-5 mr-2" />
-        Drill Breakdown
-      </h4>
-      
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-        <div className="flex items-start space-x-3 bg-white p-3 rounded-md border border-orange-100">
-          <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
-          <div>
-            <h5 className="font-medium text-gray-800 text-sm">Pain Point</h5>
-            <p className="text-gray-600 text-sm">{breakdown.painPoint}</p>
-          </div>
-        </div>
-        
-        <div className="flex items-start space-x-3 bg-white p-3 rounded-md border border-orange-100">
-          <Zap className="w-5 h-5 text-blue-500 flex-shrink-0 mt-0.5" />
-          <div>
-            <h5 className="font-medium text-gray-800 text-sm">Technique</h5>
-            <p className="text-gray-600 text-sm">{breakdown.technique}</p>
-          </div>
-        </div>
-        
-        <div className="flex items-start space-x-3 bg-white p-3 rounded-md border border-orange-100">
-          <Clock className="w-5 h-5 text-purple-500 flex-shrink-0 mt-0.5" />
-          <div>
-            <h5 className="font-medium text-gray-800 text-sm">Duration</h5>
-            <p className="text-gray-600 text-sm">{breakdown.duration}</p>
-          </div>
-        </div>
-        
-        <div className="flex items-start space-x-3 bg-white p-3 rounded-md border border-orange-100">
-          <CheckCircle className="w-5 h-5 text-orange-500 flex-shrink-0 mt-0.5" />
-          <div>
-            <h5 className="font-medium text-gray-800 text-sm">Key Focus</h5>
-            <p className="text-gray-600 text-sm">{breakdown.focus}</p>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
+function publicBrandName(branding: PublicBrandAppearance) {
+  return branding.displayName || branding.companyName || "VidMagnet";
 }
 
 export default function GuideView() {
   const { guideId } = useParams<{ guideId: string }>();
-  
-  // Progress tracking state
-  const [completedSections, setCompletedSections] = useState<Set<number>>(new Set());
-  const [totalTimeSpent, setTotalTimeSpent] = useState(0);
-  const [sessionStartTime] = useState(Date.now());
-
-  const { data: guideData, isLoading } = useQuery<GuideViewData>({
-    queryKey: ["/api/guide", guideId, "public"],
+  const search = useSearch();
+  const isCreatorPreview = new URLSearchParams(search).get("preview") === "1";
+  const { data, isLoading, isError } = useQuery<GuideViewData>({
+    queryKey: ["/api/guide", guideId, isCreatorPreview ? "creator-preview" : "public"],
     queryFn: async () => {
-      const response = await fetch(`/api/guide/${guideId}/public`);
-      if (!response.ok) {
-        throw new Error(`${response.status}: ${response.statusText}`);
-      }
+      const endpoint = isCreatorPreview
+        ? `/api/guides/${guideId}/preview`
+        : `/api/guide/${guideId}/public`;
+      const response = await fetch(endpoint, { credentials: "include" });
+      if (!response.ok) throw new Error("Guide not found");
       return response.json();
     },
-    enabled: !!guideId,
+    enabled: Boolean(guideId),
+    retry: false,
   });
 
-  // Update time spent every minute
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setTotalTimeSpent(Math.floor((Date.now() - sessionStartTime) / 1000 / 60));
-    }, 60000);
-    return () => clearInterval(interval);
-  }, [sessionStartTime]);
+  const branding = resolvedBranding(data);
+  const guide = data?.guide;
+  const primaryColor = branding.primaryColor || "#2563EB";
+  const secondaryColor = branding.secondaryColor || "#10B981";
+  const accentColor = branding.accentColor || "#F59E0B";
+  const backgroundColor = branding.backgroundColor || "#F8FAFC";
+  const surfaceColor = branding.surfaceColor || "#FFFFFF";
+  const textColor = branding.textColor || "#0F172A";
+  const bodyFont = branding.bodyFontFamily || branding.fontFamily || "DM Sans, sans-serif";
+  const headingFont = branding.headingFontFamily || bodyFont;
+  const presentationPreset = guide?.presentationProfile?.preset || "editorial";
+  const basketballMode = presentationPreset === "basketball";
+  const recipientBackground = backgroundColor;
+  const recipientSurface = surfaceColor;
+  const recipientText = ensureReadableTextColor(textColor, recipientSurface);
+  const utilityBarSurface = basketballMode ? "#050505" : recipientSurface;
+  const utilityBarText = basketballMode ? "#FFFAF0" : recipientText;
 
-  // Track view when guide loads
   useEffect(() => {
-    if (guideId && guideData) {
-      const trackView = async () => {
-        try {
-          await apiRequest(`/api/guides/${guideId}/view`, "POST", {});
-        } catch (error) {
-          console.error("Failed to track view:", error);
-        }
-      };
-      trackView();
-    }
-  }, [guideId, guideData]);
-
-  // Helper functions for progress tracking
-  const toggleSectionCompletion = (sectionIndex: number) => {
-    setCompletedSections(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(sectionIndex)) {
-        newSet.delete(sectionIndex);
-      } else {
-        newSet.add(sectionIndex);
+    if (!data || !guideId) return;
+    document.title = (isCreatorPreview ? "Preview: " : "") + data.guide.title + " — " + publicBrandName(resolvedBranding(data));
+    const favicon = safePublicAssetUrl(resolvedBranding(data).faviconUrl);
+    if (favicon) {
+      let link = document.querySelector<HTMLLinkElement>("link[rel='icon']");
+      if (!link) {
+        link = document.createElement("link");
+        link.rel = "icon";
+        document.head.appendChild(link);
       }
-      return newSet;
-    });
-  };
+      link.href = favicon;
+    }
+    if (!isCreatorPreview) {
+      apiRequest("/api/guides/" + guideId + "/view", "POST", {}).catch(() => undefined);
+    }
+  }, [data, guideId, isCreatorPreview]);
 
-
-
-  const calculateProgress = () => {
-    if (!guideData?.guide.content.sections) return 0;
-    return Math.round((completedSections.size / guideData.guide.content.sections.length) * 100);
-  };
-
-  const handleShare = () => {
+  const handleShare = async () => {
+    if (!guide) return;
+    const shareUrl = isCreatorPreview
+      ? new URL(`/guide/${guideId}`, window.location.origin).toString()
+      : window.location.href;
     if (navigator.share) {
-      navigator.share({
-        title: guideData?.guide.title,
-        text: guideData?.guide.description,
-        url: window.location.href,
-      });
-    } else {
-      navigator.clipboard.writeText(window.location.href);
+      await navigator.share({ title: guide.title, text: guide.description || undefined, url: shareUrl });
+      return;
     }
+    await navigator.clipboard.writeText(shareUrl);
   };
 
-  const handleWatchVideo = () => {
-    if (guideData?.guide.youtubeUrl) {
-      window.open(guideData.guide.youtubeUrl, '_blank');
-    }
-  };
-
-  const getSectionIcon = (type: string) => {
-    switch (type) {
-      case 'tip':
-        return <Star className="w-5 h-5" />;
-      case 'drill':
-        return <Target className="w-5 h-5" />;
-      case 'technique':
-        return <CheckCircle className="w-5 h-5" />;
-      case 'equipment':
-        return <Users className="w-5 h-5" />;
-      default:
-        return <CheckCircle className="w-5 h-5" />;
-    }
-  };
-
-  const getSectionColor = (type: string, brandingSettings?: any) => {
-    switch (type) {
-      case 'tip':
-        return brandingSettings?.accentColor || "#F59E0B";
-      case 'drill':
-        return brandingSettings?.primaryColor || "#2563EB";
-      case 'technique':
-        return brandingSettings?.secondaryColor || "#10B981";
-      case 'equipment':
-        return "#8B5CF6";
-      default:
-        return brandingSettings?.primaryColor || "#2563EB";
-    }
-  };
+  const ctaUrl = safeHttpUrl(guide?.ctaLink);
+  const websiteUrl = safeHttpUrl(branding.websiteUrl);
+  const privacyUrl = safeHttpUrl(branding.privacyUrl);
+  const termsUrl = safeHttpUrl(branding.termsUrl);
+  const logoUrl = safePublicAssetUrl(branding.logoUrl);
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+      <div className="grid min-h-screen place-items-center bg-slate-50">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-slate-600">Loading guide...</p>
+          <div className="mx-auto h-9 w-9 animate-spin rounded-full border-2 border-slate-200 border-t-blue-600" />
+          <p className="mt-4 text-sm text-slate-600">Loading your guide…</p>
         </div>
       </div>
     );
   }
 
-  if (!guideData) {
+  if (isError || !guide) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
-        <Card className="max-w-md mx-4">
+      <div className="grid min-h-screen place-items-center bg-slate-50 px-4">
+        <Card className="max-w-md">
           <CardContent className="p-8 text-center">
-            <h1 className="text-2xl font-bold text-slate-800 mb-4">Guide Not Found</h1>
-            <p className="text-slate-600">
-              The guide you're looking for doesn't exist or has been removed.
+            <BookOpen className="mx-auto h-9 w-9 text-slate-400" />
+            <h1 className="mt-4 text-2xl font-bold text-slate-900">
+              {isCreatorPreview ? "Preview unavailable" : "Guide not found"}
+            </h1>
+            <p className="mt-2 text-slate-600">
+              {isCreatorPreview
+                ? "Sign in with access to this Guide, then try the preview again."
+                : "This guide is unavailable or has not been published."}
             </p>
-            <Button 
-              onClick={() => window.history.back()} 
-              className="mt-4"
-              variant="outline"
-            >
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Go Back
+            <Button className="mt-5" variant="outline" onClick={() => window.history.back()}>
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Go back
             </Button>
           </CardContent>
         </Card>
@@ -298,310 +185,131 @@ export default function GuideView() {
     );
   }
 
-  const { guide, brandingSettings } = guideData;
-  const customStyles = brandingSettings ? {
-    fontFamily: brandingSettings.fontFamily,
-    '--primary-color': brandingSettings.primaryColor,
-    '--secondary-color': brandingSettings.secondaryColor,
-    '--accent-color': brandingSettings.accentColor,
-  } as React.CSSProperties : {};
-
   return (
-    <div className="min-h-screen bg-slate-50" style={customStyles}>
-      {/* Header */}
-      <header className="bg-white border-b border-slate-200">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              {brandingSettings?.logoUrl && (
-                <img 
-                  src={brandingSettings.logoUrl} 
-                  alt="Logo" 
-                  className="h-20 w-auto object-contain"
-                />
-              )}
-              <div>
-                <h1 className="text-xl font-bold text-slate-800">
-                  {brandingSettings?.companyName || "Practice Guide"}
-                </h1>
-                {brandingSettings?.tagline && (
-                  <p className="text-sm text-slate-600">{brandingSettings.tagline}</p>
-                )}
-              </div>
-            </div>
-            <div className="flex items-center space-x-2">
-              <div className="flex items-center text-sm text-slate-600">
-                <Eye className="w-4 h-4 mr-1" />
-                {guide.views} views
-              </div>
-              <Link href="/library/public">
-                <Button
-                  variant="outline"
-                  size="sm"
-                >
-                  <Target className="w-4 h-4 mr-2" />
-                  Practice Library
-                </Button>
-              </Link>
-              <Button
-                onClick={handleShare}
-                variant="outline"
-                size="sm"
+    <div
+      className="min-h-screen"
+      data-presentation={presentationPreset}
+      style={{
+        backgroundColor: recipientBackground,
+        color: recipientText,
+        fontFamily: bodyFont,
+        backgroundImage: basketballMode
+          ? `radial-gradient(circle at 82% 6%, ${primaryColor}14, transparent 30%)`
+          : presentationPreset === "golf"
+            ? `radial-gradient(ellipse at 90% 4%, ${primaryColor}12 0%, transparent 36%)`
+            : undefined,
+      }}
+    >
+      {isCreatorPreview ? (
+        <aside className="border-b border-violet-200 bg-violet-50 text-violet-950 print:hidden" aria-label="Creator preview">
+          <div className="mx-auto flex min-h-11 max-w-[1440px] flex-wrap items-center justify-between gap-2 px-4 py-2 sm:px-6 lg:px-8">
+            <p className="flex items-center gap-2 text-sm">
+              <Eye className="h-4 w-4 shrink-0 text-violet-600" aria-hidden="true" />
+              <span>
+                <strong>Creator preview.</strong>{" "}
+                You&apos;re viewing the current draft as a lead. This visit is not counted.
+              </span>
+            </p>
+            <a
+              href={`/guide-editor/${guideId}`}
+              className="rounded-md px-2 py-1 text-sm font-semibold text-violet-700 underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 focus-visible:ring-offset-2"
+            >
+              Back to editor
+            </a>
+          </div>
+        </aside>
+      ) : null}
+
+      <header
+        className="border-b print:hidden"
+        style={{ backgroundColor: utilityBarSurface, borderColor: primaryColor + "55", color: utilityBarText }}
+      >
+        <div className="mx-auto flex min-h-14 max-w-[1440px] items-center justify-between gap-3 px-4 py-2.5 sm:px-6 lg:px-8">
+          <div className="flex min-w-0 flex-1 items-center gap-3">
+            {logoUrl ? (
+              <img
+                src={logoUrl}
+                alt={publicBrandName(branding) + " logo"}
+                className="h-8 max-w-[160px] object-contain"
+              />
+            ) : (
+              <span
+                className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-white"
+                style={{ backgroundColor: primaryColor }}
               >
-                <Share2 className="w-4 h-4 mr-2" />
-                Share
-              </Button>
+                <Magnet className="h-4 w-4" aria-hidden="true" />
+              </span>
+            )}
+            <div className="min-w-0">
+              <p className="truncate text-sm font-semibold" style={{ fontFamily: headingFont }}>
+                {publicBrandName(branding)}
+              </p>
+              {branding.tagline ? <p className="hidden truncate text-[11px] opacity-55 lg:block">{branding.tagline}</p> : null}
             </div>
+          </div>
+          <div className="flex shrink-0 items-center gap-1 sm:gap-2">
+            <PublicLibraryLink
+              library={data.library}
+              className="h-8 min-w-8 rounded-full border-transparent px-0 opacity-75 hover:opacity-100 sm:px-2.5"
+              style={{ backgroundColor: "transparent", color: utilityBarText, borderColor: primaryColor + "55" }}
+            />
+            {guide.views !== undefined && guide.views !== null ? (
+              <span className="hidden items-center gap-1 text-xs opacity-50 lg:flex">
+                <Eye className="h-4 w-4" />
+                {guide.views} views
+              </span>
+            ) : null}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleShare}
+              className="h-8 w-8 rounded-full border-transparent p-0 opacity-75 hover:opacity-100 sm:w-auto sm:px-2.5"
+              style={{ backgroundColor: "transparent", color: utilityBarText, borderColor: primaryColor + "55" }}
+            >
+              <Share2 className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Share</span>
+            </Button>
+            {ctaUrl ? (
+              <Button
+                size="sm"
+                className="hidden h-8 rounded-full px-3 md:inline-flex"
+                style={{ backgroundColor: primaryColor, color: branding.onPrimaryColor || "#FFFFFF" }}
+                onClick={() => window.open(ctaUrl, "_blank", "noopener,noreferrer")}
+              >
+                {guide.ctaText || "Take the next step"}
+                <ExternalLink className="ml-2 h-4 w-4" />
+              </Button>
+            ) : null}
           </div>
         </div>
       </header>
 
-      {/* Main Content */}
-      <main className="container mx-auto px-4 py-8 max-w-4xl">
-        {/* Guide Header */}
-        <div className="bg-white rounded-xl shadow-sm p-8 mb-8">
-          <div className="text-center mb-8">
-            <h1 className="text-3xl md:text-4xl font-bold text-slate-800 mb-4">
-              {guide.content.title}
-            </h1>
-            <p className="text-lg text-slate-600 leading-relaxed mb-6">
-              {guide.content.introduction}
-            </p>
-            
-            {/* YouTube Video Embed */}
-            {guide.youtubeVideoId && (
-              <div className="mb-6">
-                <div className="relative w-full h-0 pb-[56.25%] rounded-lg overflow-hidden bg-slate-100">
-                  <iframe
-                    className="absolute top-0 left-0 w-full h-full"
-                    src={`https://www.youtube.com/embed/${guide.youtubeVideoId}?rel=0&showinfo=0&end_screen_mode=3`}
-                    title={guide.title}
-                    frameBorder="0"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                    allowFullScreen
-                  />
-                </div>
-                <div className="flex items-center justify-between mt-4">
-                  <p className="text-sm text-slate-600">
-                    Original video by <span className="font-medium">{guide.channelTitle}</span>
-                  </p>
-                  <Button
-                    onClick={handleWatchVideo}
-                    variant="outline"
-                    size="sm"
-                  >
-                    <ExternalLink className="w-4 h-4 mr-2" />
-                    Watch on YouTube
-                  </Button>
-                </div>
-              </div>
-            )}
-          </div>
+      <main className="mx-auto w-full max-w-[1440px] px-3 py-4 print:max-w-none print:p-0 sm:px-6 sm:py-6 lg:px-8 lg:py-8">
+        <div className="min-w-0 print:p-0">
+          <GuideContentRenderer
+            content={guide.content}
+            youtubeUrl={guide.sourceVideo?.canonicalUrl || guide.youtubeUrl}
+            youtubeChannelTitle={guide.sourceVideo?.channelTitle || guide.channelTitle}
+            primaryColor={primaryColor}
+            secondaryColor={secondaryColor}
+            accentColor={accentColor}
+            headingFontFamily={headingFont}
+            fontFamily={bodyFont}
+            surfaceColor={recipientSurface}
+            textColor={recipientText}
+            presentationPreset={presentationPreset}
+          />
         </div>
-
-        {/* Progress Tracking Section */}
-        <Card className="mb-8">
-          <CardContent className="p-6">
-            <h3 className="text-lg font-semibold text-slate-800 mb-4 flex items-center">
-              <TrendingUp className="w-5 h-5 mr-2" />
-              Your Training Progress
-            </h3>
-            
-            {/* Progress Stats */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-center">
-                <div className="text-2xl font-bold text-blue-600">{calculateProgress()}%</div>
-                <div className="text-sm text-blue-600 font-medium">Complete</div>
-              </div>
-              <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-center">
-                <div className="text-2xl font-bold text-green-600">{completedSections.size}</div>
-                <div className="text-sm text-green-600 font-medium">Sections Done</div>
-              </div>
-              <div className="bg-purple-50 border border-purple-200 rounded-lg p-4 text-center">
-                <div className="text-2xl font-bold text-purple-600 flex items-center justify-center">
-                  <Timer className="w-5 h-5 mr-1" />
-                  {totalTimeSpent}m
-                </div>
-                <div className="text-sm text-purple-600 font-medium">Time Spent</div>
-              </div>
-            </div>
-            
-            {/* Progress Bar */}
-            <div className="mb-4">
-              <div className="flex justify-between items-center mb-2">
-                <span className="text-sm font-medium text-slate-700">Overall Progress</span>
-                <span className="text-sm text-slate-600">{completedSections.size} of {guide.content.sections.length} sections</span>
-              </div>
-              <Progress value={calculateProgress()} className="h-3" />
-            </div>
-            
-            {/* Achievement badge */}
-            {calculateProgress() >= 100 && (
-              <div className="bg-gradient-to-r from-yellow-400 to-orange-500 rounded-lg p-4 text-center">
-                <div className="flex items-center justify-center mb-2">
-                  <Award className="w-8 h-8 text-white" />
-                </div>
-                <div className="text-white font-bold text-lg">🎉 Training Complete!</div>
-                <div className="text-yellow-100 text-sm">You've mastered all techniques in this guide</div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Guide Sections */}
-        <div className="space-y-6">
-          {guide.content.sections.map((section, index) => (
-            <Card key={index} className="overflow-hidden">
-              <CardContent className="p-6">
-                <div className="flex items-start space-x-4 mb-4">
-                  <div 
-                    className="flex-shrink-0 p-3 rounded-lg text-white"
-                    style={{ backgroundColor: getSectionColor(section.type, brandingSettings) }}
-                  >
-                    {getSectionIcon(section.type)}
-                  </div>
-                  <div className="flex-1">
-                    <div className="flex items-center space-x-3 mb-2">
-                      <label className="flex items-center space-x-3 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          className="w-5 h-5 text-blue-600 border-2 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
-                          checked={completedSections.has(index)}
-                          onChange={() => toggleSectionCompletion(index)}
-                        />
-                        <h3 className={`text-xl font-semibold transition-colors ${
-                          completedSections.has(index) 
-                            ? 'text-green-600 line-through' 
-                            : 'text-slate-800'
-                        }`}>
-                          {section.title}
-                        </h3>
-                      </label>
-                      <Badge variant="secondary" className="text-xs">
-                        {section.type.charAt(0).toUpperCase() + section.type.slice(1)}
-                      </Badge>
-                    </div>
-                    
-                    <div className="prose prose-slate max-w-none mb-4">
-                      <div className="whitespace-pre-wrap text-slate-700 leading-relaxed">
-                        {section.content}
-                      </div>
-                    </div>
-
-                    {section.type === 'drill' && (() => {
-                      const drillBreakdown = parseDrillContent(section.content);
-                      return drillBreakdown ? (
-                        <div>
-                          <DrillVisual breakdown={drillBreakdown} />
-                          
-                          {/* Drill Tips and Verbal Steps */}
-                          <div className="mt-4 space-y-3">
-                            {drillBreakdown.tips && drillBreakdown.tips.length > 0 && (
-                              <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                                <h5 className="font-semibold text-green-800 mb-3 flex items-center">
-                                  <CheckCircle className="w-5 h-5 mr-2" />
-                                  Pro Tips
-                                </h5>
-                                <ul className="space-y-2">
-                                  {drillBreakdown.tips.map((tip, tipIndex) => (
-                                    <li key={tipIndex} className="flex items-start">
-                                      <Star className="w-4 h-4 text-green-600 mr-2 mt-0.5 flex-shrink-0" />
-                                      <span className="text-sm text-green-800">{tip}</span>
-                                    </li>
-                                  ))}
-                                </ul>
-                              </div>
-                            )}
-                            
-                            {drillBreakdown.verbalSteps && drillBreakdown.verbalSteps.length > 0 && (
-                              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                                <h5 className="font-semibold text-blue-800 mb-3 flex items-center">
-                                  <Users className="w-5 h-5 mr-2" />
-                                  Step-by-Step Instructions
-                                </h5>
-                                <ol className="space-y-2">
-                                  {drillBreakdown.verbalSteps.map((step, stepIndex) => (
-                                    <li key={stepIndex} className="flex items-start">
-                                      <span className="bg-blue-600 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center mr-3 mt-0.5 flex-shrink-0">
-                                        {stepIndex + 1}
-                                      </span>
-                                      <span className="text-sm text-blue-800">{step}</span>
-                                    </li>
-                                  ))}
-                                </ol>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      ) : null;
-                    })()}
-
-                    {section.timestamp && (
-                      <div className="flex justify-start pt-3 border-t border-slate-100">
-                        <Button
-                          variant="default"
-                          size="sm"
-                          className="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white shadow-md"
-                          onClick={() => {
-                            const iframe = document.querySelector('iframe');
-                            if (iframe && section.timestampSeconds) {
-                              iframe.src = `https://www.youtube.com/embed/${guide.youtubeVideoId}?start=${section.timestampSeconds}&autoplay=1`;
-                              iframe.scrollIntoView({ behavior: 'smooth' });
-                            }
-                          }}
-                        >
-                          <Play className="w-4 h-4 mr-2" />
-                          Watch at {section.timestamp}
-                        </Button>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-
-        {/* Conclusion */}
-        <Card className="mt-8 bg-slate-100">
-          <CardContent className="p-8 text-center">
-            <h3 className="text-2xl font-bold text-slate-800 mb-4">Next Steps</h3>
-            <p className="text-slate-700 leading-relaxed mb-6">
-              {guide.content.conclusion}
-            </p>
-            <div className="bg-white p-6 rounded-lg">
-              <p className="text-slate-800 font-medium mb-4">
-                {guide.content.callToAction}
-              </p>
-              <div className="flex flex-col sm:flex-row gap-3 justify-center">
-                <Link href="/library/public">
-                  <Button className="bg-orange-600 hover:bg-orange-700 text-white">
-                    <Target className="w-4 h-4 mr-2" />
-                    Browse More Practice Guides
-                  </Button>
-                </Link>
-                <Button
-                  onClick={handleWatchVideo}
-                  variant="outline"
-                  className="border-orange-600 text-orange-600 hover:bg-orange-50"
-                >
-                  <ExternalLink className="w-4 h-4 mr-2" />
-                  Watch Original Video
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
       </main>
 
-      {/* Footer */}
-      <footer className="bg-white border-t border-slate-200 mt-16">
-        <div className="container mx-auto px-4 py-8">
-          <div className="text-center text-slate-600">
-            <p>
-              © 2025 {brandingSettings?.companyName || "VidMagnet"}. 
-              Practice guide generated from YouTube content.
-            </p>
+      <footer className="border-t print:hidden" style={{ backgroundColor: recipientSurface, borderColor: primaryColor + "32" }}>
+        <div className="mx-auto flex max-w-[1440px] flex-col gap-4 px-4 py-6 text-xs opacity-65 sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-8">
+          <p>Published by {publicBrandName(branding)}</p>
+          <div className="flex flex-wrap items-center gap-4">
+            {websiteUrl ? <a href={websiteUrl} target="_blank" rel="noreferrer">Website</a> : null}
+            {privacyUrl ? <a href={privacyUrl} target="_blank" rel="noreferrer">Privacy</a> : null}
+            {termsUrl ? <a href={termsUrl} target="_blank" rel="noreferrer">Terms</a> : null}
+            {branding.showPoweredBy !== false ? <span>Powered by VidMagnet</span> : null}
           </div>
         </div>
       </footer>

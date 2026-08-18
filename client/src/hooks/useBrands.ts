@@ -8,6 +8,7 @@ export interface Brand {
   name: string;
   description?: string;
   logoUrl?: string;
+  librarySlug?: string | null;
   isDefault: boolean;
   createdAt: string;
   updatedAt: string;
@@ -36,6 +37,7 @@ export function useCreateBrand() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/brands"] });
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
     },
   });
 }
@@ -64,23 +66,33 @@ export function useSetCurrentBrand() {
     onMutate: async (brandId: number) => {
       // Cancel outgoing refetches to avoid overwriting optimistic update
       await queryClient.cancelQueries({ queryKey: ["/api/auth/user"] });
+      await queryClient.cancelQueries({ queryKey: ["/api/auth/me"] });
       
       // Snapshot the previous value
       const previousUser = queryClient.getQueryData(["/api/auth/user"]);
+      const previousAuth = queryClient.getQueryData(["/api/auth/me"]);
       
       // Optimistically update the user's current brand
       queryClient.setQueryData(["/api/auth/user"], (old: any) => {
         if (!old) return old;
         return { ...old, currentBrandId: brandId };
       });
+
+      queryClient.setQueryData(["/api/auth/me"], (old: any) => {
+        if (!old?.user) return old;
+        return { ...old, user: { ...old.user, currentBrandId: brandId } };
+      });
       
       // Return context object with the snapshotted value
-      return { previousUser };
+      return { previousUser, previousAuth };
     },
     onError: (err, brandId, context) => {
       // If the mutation fails, use the context returned from onMutate to roll back
       if (context?.previousUser) {
         queryClient.setQueryData(["/api/auth/user"], context.previousUser);
+      }
+      if (context?.previousAuth) {
+        queryClient.setQueryData(["/api/auth/me"], context.previousAuth);
       }
       toast({
         title: "Error",
@@ -104,8 +116,10 @@ export function useSetCurrentBrand() {
     onSettled: () => {
       // Always refetch after error or success to ensure server state
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
       // Invalidate brand-specific data but don't wait for it
       queryClient.invalidateQueries({ queryKey: ["/api/guides"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/benefit-assets"] });
       queryClient.invalidateQueries({ queryKey: ["/api/branding"] });
       queryClient.invalidateQueries({ queryKey: ["/api/training-settings"] });
       queryClient.invalidateQueries({ queryKey: ["/api/knowledgebase"] });
@@ -124,23 +138,33 @@ export function useClearCurrentBrand() {
     onMutate: async () => {
       // Cancel outgoing refetches to avoid overwriting optimistic update
       await queryClient.cancelQueries({ queryKey: ["/api/auth/user"] });
+      await queryClient.cancelQueries({ queryKey: ["/api/auth/me"] });
       
       // Snapshot the previous value
       const previousUser = queryClient.getQueryData(["/api/auth/user"]);
+      const previousAuth = queryClient.getQueryData(["/api/auth/me"]);
       
       // Optimistically clear the current brand
       queryClient.setQueryData(["/api/auth/user"], (old: any) => {
         if (!old) return old;
         return { ...old, currentBrandId: null };
       });
+
+      queryClient.setQueryData(["/api/auth/me"], (old: any) => {
+        if (!old?.user) return old;
+        return { ...old, user: { ...old.user, currentBrandId: null } };
+      });
       
       // Return context object with the snapshotted value
-      return { previousUser };
+      return { previousUser, previousAuth };
     },
     onError: (err, variables, context) => {
       // If the mutation fails, use the context returned from onMutate to roll back
       if (context?.previousUser) {
         queryClient.setQueryData(["/api/auth/user"], context.previousUser);
+      }
+      if (context?.previousAuth) {
+        queryClient.setQueryData(["/api/auth/me"], context.previousAuth);
       }
       toast({
         title: "Error",
@@ -157,8 +181,10 @@ export function useClearCurrentBrand() {
     onSettled: () => {
       // Always refetch after error or success to ensure server state
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
       // Invalidate brand-specific data but don't wait for it
       queryClient.invalidateQueries({ queryKey: ["/api/guides"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/benefit-assets"] });
       queryClient.invalidateQueries({ queryKey: ["/api/branding"] });
       queryClient.invalidateQueries({ queryKey: ["/api/training-settings"] });
       queryClient.invalidateQueries({ queryKey: ["/api/knowledgebase"] });

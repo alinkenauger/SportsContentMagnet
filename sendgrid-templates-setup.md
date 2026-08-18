@@ -1,4 +1,6 @@
-# SendGrid Dynamic Templates Setup Guide
+# Legacy ConvertMag SendGrid Template Reference
+
+> **Status: legacy ConvertMag template reference.** Only the welcome and password-reset dynamic template IDs are consumed by the current service. Never add a password to template data. Guide delivery, lead notification, and subscription confirmation currently use inline HTML in `server/services/emailService.ts`.
 
 ## Overview
 This guide shows you how to create dynamic email templates in SendGrid for ConvertMag.net using your verified `getmoreviews.com` domain.
@@ -11,7 +13,7 @@ This guide shows you how to create dynamic email templates in SendGrid for Conve
 
 ### 2. Create Welcome Email Template
 
-**Template Name:** ConvertMag.net Welcome Email
+**Template Name:** VidMagnet Welcome Email
 **Template ID:** (Copy this ID to your environment variables)
 
 **HTML Content:**
@@ -21,7 +23,7 @@ This guide shows you how to create dynamic email templates in SendGrid for Conve
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Welcome to ConvertMag.net</title>
+    <title>Welcome to VidMagnet</title>
     <style>
         body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
         .container { max-width: 600px; margin: 0 auto; padding: 20px; }
@@ -29,28 +31,19 @@ This guide shows you how to create dynamic email templates in SendGrid for Conve
         .content { background: white; padding: 30px; border: 1px solid #ddd; }
         .footer { background: #f8f9fa; padding: 20px; text-align: center; border-radius: 0 0 8px 8px; }
         .button { display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin: 20px 0; }
-        .credentials { background: #f8f9fa; padding: 20px; border-radius: 6px; margin: 20px 0; border-left: 4px solid #667eea; }
-        .warning { color: #e74c3c; font-weight: bold; }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <h1>Welcome to ConvertMag.net!</h1>
+            <h1>Welcome to VidMagnet!</h1>
             <p>Your account has been created successfully</p>
         </div>
         
         <div class="content">
             <h2>Hi {{firstName}},</h2>
             
-            <p>Welcome to ConvertMag.net! We're excited to help you transform ANY content into high-converting lead magnets.</p>
-            
-            <div class="credentials">
-                <h3>Your Login Details:</h3>
-                <p><strong>Email:</strong> {{email}}</p>
-                <p><strong>Temporary Password:</strong> <code>{{tempPassword}}</code></p>
-                <p class="warning">⚠️ Please change your password after your first login for security.</p>
-            </div>
+            <p>Welcome to {{productName}}. Your account is ready, and you can now turn trusted content into a useful Guide or personalized Interactive Quiz.</p>
             
             <div style="text-align: center;">
                 <a href="{{loginUrl}}" class="button">Login to Your Account</a>
@@ -58,20 +51,18 @@ This guide shows you how to create dynamic email templates in SendGrid for Conve
             
             <h3>What's Next?</h3>
             <ul>
-                <li>✅ Create your first guide from a YouTube video</li>
-                <li>✅ Customize your branding and landing pages</li>
-                <li>✅ Start capturing leads with your content</li>
-                <li>✅ Track your conversion analytics</li>
+                <li>Create your first Guide or Interactive Quiz</li>
+                <li>Apply your brand to the recipient experience</li>
+                <li>Add a useful next step for your lead</li>
             </ul>
             
             <p>If you have any questions, feel free to reach out to our support team. We're here to help!</p>
             
-            <p>Best regards,<br>The ConvertMag.net Team</p>
+            <p>Best regards,<br>The VidMagnet Team</p>
         </div>
         
         <div class="footer">
-            <p>&copy; {{currentYear}} ConvertMag.net. All rights reserved.</p>
-            <p>Transform ANY content into high-converting lead magnets.</p>
+            <p>&copy; {{currentYear}} VidMagnet. All rights reserved.</p>
         </div>
     </div>
 </body>
@@ -80,7 +71,7 @@ This guide shows you how to create dynamic email templates in SendGrid for Conve
 
 ### 3. Create Password Reset Template
 
-**Template Name:** ConvertMag.net Password Reset
+**Template Name:** VidMagnet Password Reset
 **Template ID:** (Copy this ID to your environment variables)
 
 **HTML Content:**
@@ -90,7 +81,7 @@ This guide shows you how to create dynamic email templates in SendGrid for Conve
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Reset Your ConvertMag.net Password</title>
+    <title>Reset Your VidMagnet Password</title>
     <style>
         body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
         .container { max-width: 600px; margin: 0 auto; padding: 20px; }
@@ -110,7 +101,7 @@ This guide shows you how to create dynamic email templates in SendGrid for Conve
         <div class="content">
             <h2>Hi {{firstName}},</h2>
             
-            <p>We received a request to reset your ConvertMag.net account password.</p>
+            <p>We received a request to reset your VidMagnet account password.</p>
             
             <div style="text-align: center;">
                 <a href="{{resetUrl}}" class="button">Reset Your Password</a>
@@ -125,21 +116,20 @@ This guide shows you how to create dynamic email templates in SendGrid for Conve
             <p>If you're having trouble clicking the button, copy and paste this URL into your browser:</p>
             <p style="word-break: break-all; color: #666;">{{resetUrl}}</p>
             
-            <p>Best regards,<br>The ConvertMag.net Team</p>
+            <p>Best regards,<br>The VidMagnet Team</p>
         </div>
         
         <div class="footer">
-            <p>&copy; {{currentYear}} ConvertMag.net. All rights reserved.</p>
+            <p>&copy; {{currentYear}} VidMagnet. All rights reserved.</p>
         </div>
     </div>
 </body>
 </html>
 ```
 
-### 4. Create Guide Delivery Template
+### 4. Historical Guide Delivery Mockup
 
-**Template Name:** ConvertMag.net Guide Delivery
-**Template ID:** (Copy this ID to your environment variables)
+The HTML below is retained only as an archived design reference. The current `sendGuideDeliveryEmail` path does not consume a SendGrid dynamic template ID; edit the inline implementation instead of configuring an unused environment value.
 
 **HTML Content:**
 ```html
@@ -209,14 +199,11 @@ This guide shows you how to create dynamic email templates in SendGrid for Conve
 
 ## Step 2: Set Up Environment Variables
 
-Add these environment variables to your Replit project:
+Only these two dynamic-template environment variables are currently consumed:
 
 ```
 SENDGRID_WELCOME_TEMPLATE_ID=d-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 SENDGRID_PASSWORD_RESET_TEMPLATE_ID=d-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-SENDGRID_GUIDE_DELIVERY_TEMPLATE_ID=d-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-SENDGRID_LEAD_NOTIFICATION_TEMPLATE_ID=d-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-SENDGRID_SUBSCRIPTION_CONFIRMATION_TEMPLATE_ID=d-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 ```
 
 ## Step 3: Dynamic Template Variables
@@ -225,8 +212,8 @@ SENDGRID_SUBSCRIPTION_CONFIRMATION_TEMPLATE_ID=d-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 - `{{firstName}}` - User's first name
 - `{{lastName}}` - User's last name
 - `{{email}}` - User's email address
-- `{{tempPassword}}` - Temporary password
 - `{{loginUrl}}` - Login URL
+- `{{productName}}` - Product name (`VidMagnet`)
 - `{{currentYear}}` - Current year for copyright
 
 ### Password Reset Variables:
@@ -234,12 +221,9 @@ SENDGRID_SUBSCRIPTION_CONFIRMATION_TEMPLATE_ID=d-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 - `{{resetUrl}}` - Password reset URL with token
 - `{{currentYear}}` - Current year for copyright
 
-### Guide Delivery Variables:
-- `{{firstName}}` - User's first name
-- `{{guideTitle}}` - Name of the guide
-- `{{landingPageUrl}}` - Landing page URL
-- `{{guideUrl}}` - Guide preview URL
-- `{{currentYear}}` - Current year for copyright
+### Guide Delivery Variables
+
+Not applicable to a dynamic template in the current code. Guide delivery uses inline HTML.
 
 ## Step 4: Testing Templates
 
@@ -250,10 +234,10 @@ SENDGRID_SUBSCRIPTION_CONFIRMATION_TEMPLATE_ID=d-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
 ## Step 5: Implementation Notes
 
-- Templates will automatically use `noreply@getmoreviews.com` as the sender
-- The system falls back to HTML emails if template IDs are not provided
-- All templates are mobile-responsive and professionally designed
-- Variables are automatically escaped to prevent XSS attacks
+- SendGrid uses the exact `EmailService.defaultFromEmail` value; verify that address in the provider before release.
+- Welcome and password-reset messages fall back to inline HTML when their template IDs are absent.
+- Other current messages use inline HTML regardless of the unused legacy template environment names.
+- Treat dynamic data as untrusted and avoid raw, unescaped interpolation in SendGrid templates. Current inline HTML escapes recipient-controlled text and subject control characters.
 
 ## Common Issues & Solutions
 
@@ -268,7 +252,7 @@ SENDGRID_SUBSCRIPTION_CONFIRMATION_TEMPLATE_ID=d-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
 ## Next Steps
 
-1. Create the templates in SendGrid using the HTML above
-2. Copy the template IDs to your environment variables
-3. Test each template with sample data
-4. Your ConvertMag.net emails will automatically use the dynamic templates!
+1. Create only the VidMagnet welcome and password-reset templates.
+2. Set their two consumed template IDs in the environment.
+3. Verify the sender and test both templates with non-sensitive sample data.
+4. Exercise inline account-completion, Guide-delivery, lead-notification, and subscription messages separately.

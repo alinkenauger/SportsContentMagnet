@@ -1,4 +1,6 @@
-# Subscription Management Testing Guide
+# Legacy Subscription Management Testing Checklist
+
+> **Status: legacy manual checklist.** Verify plan names, prices, limits, and Stripe configuration against the current deployed billing data before using this as release evidence. The v1.1 release gate is documented in `replit.md` and `TODOS.md`.
 
 ## Feature Testing Checklist
 
@@ -39,6 +41,6 @@
 - [ ] Update billing information
 
 ## Test Results Log
-- Feature: 
-- Status: 
-- Notes: 
+- Feature:
+- Status:
+- Notes:

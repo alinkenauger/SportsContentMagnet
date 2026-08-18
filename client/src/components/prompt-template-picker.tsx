@@ -8,6 +8,8 @@ import {
   GraduationCap, 
   Dumbbell, 
   Brain,
+  Files,
+  NotebookPen,
   Plus,
   Check
 } from "lucide-react";
@@ -25,8 +27,8 @@ export interface PromptTemplate {
 const DEFAULT_TEMPLATES: PromptTemplate[] = [
   {
     id: "full_report",
-    name: "Full Report",
-    description: "Comprehensive analysis with detailed sections and deep dive insights",
+    name: "Implementation Report",
+    description: "A substantial report with decisions, actions, scorecards, and troubleshooting",
     category: "full_report",
     analysisPrompt: `Analyze this video content and extract every major point, technique, drill, and insight. Focus on:
 - Key techniques and methodologies
@@ -138,8 +140,8 @@ Include specific numbers for sets, reps, rest periods, and progression.`,
 
   {
     id: "deeper_dive",
-    name: "Deeper Dive",
-    description: "Advanced analysis with theory, science, and expert insights",
+    name: "Expert Deep Dive",
+    description: "Advanced principles paired with concrete applications and progress measures",
     category: "deeper_dive",
     analysisPrompt: `Provide an advanced, technical analysis of this content. Focus on:
 - Scientific principles and theory behind techniques
@@ -163,6 +165,24 @@ Target this for experienced practitioners and experts.`,
 Target experienced practitioners with technical depth and expert insights.`,
     
     personalizationPrompt: "Customize the technical depth and focus areas based on the user's expertise and specific interests."
+  },
+  {
+    id: "workbook",
+    name: "Interactive Workbook",
+    description: "Reflection prompts, exercises, worksheets, and scorecards the lead can complete",
+    category: "workbook",
+    analysisPrompt: `Find the decisions, reflection points, measurements, and exercises that help a reader apply this content. Keep every prompt tied to the supplied source.`,
+    guidePrompt: `Create an implementation workbook with a quick start, focused exercises, fillable worksheet prompts, an observable scorecard, troubleshooting guidance, and a clear next action.`,
+    personalizationPrompt: "Adjust the prompts and exercises to the reader's experience, constraints, and desired outcome."
+  },
+  {
+    id: "template_pack",
+    name: "Template Pack",
+    description: "Copy-ready scripts, trackers, worksheets, or swipe files with examples",
+    category: "template_pack",
+    analysisPrompt: `Identify repeatable language, processes, trackers, scripts, and frameworks that can become reusable templates without inventing unsupported details.`,
+    guidePrompt: `Create a useful template pack with copy-ready bodies, clearly named placeholders, when-to-use guidance, source-grounded examples, and an implementation checklist.`,
+    personalizationPrompt: "Adapt placeholders and examples to the reader's audience and use case."
   }
 ];
 
@@ -173,6 +193,8 @@ const getTemplateIcon = (category: string) => {
     case "step_by_step": return GraduationCap;
     case "workout": return Dumbbell;
     case "deeper_dive": return Brain;
+    case "workbook": return NotebookPen;
+    case "template_pack": return Files;
     default: return FileText;
   }
 };
@@ -184,6 +206,8 @@ const getTemplateColor = (category: string) => {
     case "step_by_step": return "bg-purple-500";
     case "workout": return "bg-orange-500";
     case "deeper_dive": return "bg-red-500";
+    case "workbook": return "bg-teal-600";
+    case "template_pack": return "bg-amber-600";
     default: return "bg-gray-500";
   }
 };

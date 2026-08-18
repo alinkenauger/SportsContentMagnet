@@ -166,6 +166,40 @@ Teach for deep understanding and long-term growth.`,
 // Guide Structure Templates - Format and layout of the guide itself
 export const GUIDE_STRUCTURE_TEMPLATES: PromptTemplate[] = [
   {
+    id: "full_report",
+    name: "Full Report",
+    description: "Comprehensive analysis with detailed sections and implementation tools",
+    templateType: "guide_structure",
+    category: "full_report",
+    analysisPrompt: `Inventory every source-supported principle, procedure, example, warning,
+metric, decision point, and implementation opportunity. Preserve useful nuance instead of
+compressing the source into a summary. Identify where a checklist, worksheet, scorecard,
+action plan, or reusable template would help the recipient act.`,
+    guidePrompt: `Create a comprehensive implementation report with:
+1. A quick-start outcome and prerequisites
+2. Clear explanations of the essential ideas
+3. Concrete steps and observable success criteria
+4. At least one checklist, worksheet, scorecard, example, or troubleshooting tool
+5. A realistic next-action plan grounded in the source
+
+Make it useful as a standalone lead magnet rather than a review of the original content.`,
+    personalizationPrompt: "Adjust examples and action depth to the recipient's experience and goal.",
+  },
+  {
+    id: "deeper_dive",
+    name: "Deeper Dive",
+    description: "Advanced analysis with theory, nuance, and practical application",
+    templateType: "guide_structure",
+    category: "deeper_dive",
+    analysisPrompt: `Extract the underlying principles, mechanisms, tradeoffs, edge cases,
+advanced applications, and unresolved questions supported by the source. Distinguish sourced
+claims from recommended extensions and do not invent research or evidence.`,
+    guidePrompt: `Create an advanced but practical deep-dive report. Explain why the ideas work,
+show where they apply, include nuanced examples and troubleshooting, and translate the analysis
+into concrete actions, a scorecard, or a worksheet. Keep every factual claim source-grounded.`,
+    personalizationPrompt: "Scale technical depth based on the recipient's expertise and intended application.",
+  },
+  {
     id: "step_by_step",
     name: "Step-By-Step", 
     description: "Clear numbered instructions with one-click video timestamps",

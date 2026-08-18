@@ -50,6 +50,7 @@ import BillingManagement from "@/components/BillingManagement";
 
 const fontOptions = [
   { value: "Inter", label: "Inter" },
+  { value: "Barlow Condensed", label: "Barlow Condensed" },
   { value: "Roboto", label: "Roboto" },
   { value: "Open Sans", label: "Open Sans" },
   { value: "Montserrat", label: "Montserrat" },

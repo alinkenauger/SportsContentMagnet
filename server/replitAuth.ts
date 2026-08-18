@@ -5,6 +5,7 @@ import passport from "passport";
 import session from "express-session";
 import type { Express, RequestHandler } from "express";
 import memoize from "memoizee";
+import { attachCanonicalRequestUser, destroyAuthenticatedSession } from "./requestUser";
 import connectPg from "connect-pg-simple";
 import { storage } from "./storage";
 
@@ -81,6 +82,7 @@ export async function setupAuth(app: Express) {
     const user = {};
     updateUserSession(user, tokens);
     const claims = tokens.claims();
+    if (!claims) throw new Error("OIDC provider returned no identity claims");
     
     // Set role based on email for super admin
     const role = claims.email === 'adamLinkenauger@gmail.com' ? 'super_admin' : 'user';
@@ -124,27 +126,48 @@ export async function setupAuth(app: Express) {
     })(req, res, next);
   });
 
-  app.get("/api/logout", (req, res) => {
-    req.logout(() => {
-      res.redirect(
-        client.buildEndSessionUrl(config, {
-          client_id: process.env.REPL_ID!,
-          post_logout_redirect_uri: `${req.protocol}://${req.hostname}`,
-        }).href
-      );
-    });
-  });
+  const logoutHandler: RequestHandler = async (req, res, next) => {
+    const oidcUser = req.user as any;
+    const shouldEndOidcSession = Boolean(
+      oidcUser?.access_token || oidcUser?.refresh_token || oidcUser?.expires_at,
+    );
+
+    try {
+      await destroyAuthenticatedSession(req);
+      res.clearCookie("connect.sid");
+
+      if (shouldEndOidcSession) {
+        res.redirect(
+          client.buildEndSessionUrl(config, {
+            client_id: process.env.REPL_ID!,
+            post_logout_redirect_uri: `${req.protocol}://${req.hostname}`,
+          }).href,
+        );
+        return;
+      }
+
+      res.redirect("/");
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  app.get("/api/logout", logoutHandler);
+  app.get("/api/auth/logout", logoutHandler);
 }
 
 export const isAuthenticated: RequestHandler = async (req, res, next) => {
   try {
     // Check session-based authentication first (for users who completed account setup)
     if (req.session && req.session.userId && req.session.user) {
+      attachCanonicalRequestUser(req, req.session.userId);
       return next();
     }
 
     // Check Google OAuth (for users signed in with Google)
-    if (req.isAuthenticated && req.isAuthenticated() && req.user && req.user.id) {
+    const passportUser = req.user as { id?: string } | undefined;
+    if (req.isAuthenticated && req.isAuthenticated() && passportUser?.id) {
+      attachCanonicalRequestUser(req, passportUser.id);
       return next();
     }
     

@@ -1,144 +1,170 @@
-import { useState, useEffect } from "react";
-import { useParams } from "wouter";
+import { useEffect } from "react";
+import { useParams, useSearch } from "wouter";
 import { useQuery } from "@tanstack/react-query";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
-import { 
-  Download, 
-  Share2, 
-  Star, 
-  CheckCircle, 
-  Clock,
-  Target,
-  Users,
-  PlayCircle,
-  BookOpen
+import {
+  CheckCircle2,
+  ExternalLink,
+  Magnet,
+  Share2,
 } from "lucide-react";
+import GuideContentRenderer from "@/components/guide-content-renderer";
+import { PublicLibraryLink } from "@/components/public-library-link";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { ensureReadableTextColor } from "@/lib/color-contrast";
+import { safeHttpUrl, safePublicAssetUrl } from "@/lib/safe-url";
+import type { LibraryContext } from "@shared/library";
 
-interface DeliveryPageData {
+interface PublicBrandAppearance {
+  displayName?: string | null;
+  companyName?: string | null;
+  tagline?: string | null;
+  logoUrl?: string | null;
+  faviconUrl?: string | null;
+  primaryColor?: string | null;
+  secondaryColor?: string | null;
+  accentColor?: string | null;
+  backgroundColor?: string | null;
+  surfaceColor?: string | null;
+  textColor?: string | null;
+  headingFontFamily?: string | null;
+  bodyFontFamily?: string | null;
+  fontFamily?: string | null;
+  websiteUrl?: string | null;
+  privacyUrl?: string | null;
+  termsUrl?: string | null;
+  onPrimaryColor?: string | null;
+  showPoweredBy?: boolean;
+}
+
+interface DeliveryData {
   guide: {
     id: number;
     title: string;
-    description: string;
-    thumbnailUrl: string;
-    youtubeUrl: string;
-    content: {
-      title: string;
-      introduction: string;
-      sections: Array<{
-        title: string;
-        content: string;
-        type: 'tip' | 'drill' | 'technique' | 'equipment';
-      }>;
-      conclusion: string;
-      callToAction: string;
+    description?: string | null;
+    thumbnailUrl?: string | null;
+    youtubeUrl?: string | null;
+    youtubeVideoId?: string | null;
+    channelTitle?: string | null;
+    ctaLink?: string | null;
+    ctaText?: string | null;
+    content: unknown;
+    category?: string | null;
+    presentationProfile?: {
+      version: 1;
+      mode: "auto" | "manual";
+      preset: "editorial" | "basketball" | "golf" | "performance";
     };
-  };
-  brandingSettings?: {
-    logoUrl?: string;
-    primaryColor: string;
-    secondaryColor: string;
-    accentColor: string;
-    fontFamily: string;
-    companyName?: string;
-    tagline?: string;
+    sourceVideo?: { canonicalUrl: string; videoId: string; channelTitle?: string } | null;
   };
   lead: {
-    id: number;
-    firstName?: string;
-    email: string;
-    customFieldData?: Record<string, any>;
+    firstName?: string | null;
+    customFieldData?: Record<string, unknown> | null;
   };
+  brandingSettings?: PublicBrandAppearance;
+  branding?: PublicBrandAppearance | { appearance?: PublicBrandAppearance };
+  library?: LibraryContext | null;
+}
+
+function resolvedBranding(data?: DeliveryData): PublicBrandAppearance {
+  if (!data) return {};
+  if (data.branding && "appearance" in data.branding) {
+    return data.branding.appearance || {};
+  }
+  return (data.branding as PublicBrandAppearance | undefined) || data.brandingSettings || {};
+}
+
+function publicBrandName(branding: PublicBrandAppearance) {
+  return branding.displayName || branding.companyName || "VidMagnet";
 }
 
 export default function GuideDelivery() {
   const { customUrl, leadId } = useParams<{ customUrl: string; leadId: string }>();
-
-  const { data: deliveryData, isLoading } = useQuery<DeliveryPageData>({
-    queryKey: ["/api/delivery", customUrl, leadId],
+  const search = useSearch();
+  const accessToken = new URLSearchParams(search).get("access");
+  const { data, isLoading, isError } = useQuery<DeliveryData>({
+    queryKey: ["/api/delivery", customUrl, leadId, accessToken],
     queryFn: async () => {
-      const response = await fetch(`/api/delivery/${customUrl}/${leadId}`, {
-        credentials: "include",
-      });
-      
-      if (!response.ok) {
-        throw new Error(`${response.status}: ${response.statusText}`);
-      }
-      
+      const accessQuery = accessToken ? `?access=${encodeURIComponent(accessToken)}` : "";
+      const response = await fetch("/api/delivery/" + customUrl + "/" + leadId + accessQuery);
+      if (!response.ok) throw new Error("Guide delivery not found");
       return response.json();
     },
-    enabled: !!(customUrl && leadId),
+    enabled: Boolean(customUrl && leadId),
+    retry: false,
   });
 
-  const handleShare = () => {
+  const branding = resolvedBranding(data);
+  const guide = data?.guide;
+  const primaryColor = branding.primaryColor || "#2563EB";
+  const secondaryColor = branding.secondaryColor || "#10B981";
+  const accentColor = branding.accentColor || "#F59E0B";
+  const backgroundColor = branding.backgroundColor || "#F8FAFC";
+  const surfaceColor = branding.surfaceColor || "#FFFFFF";
+  const textColor = branding.textColor || "#0F172A";
+  const bodyFont = branding.bodyFontFamily || branding.fontFamily || "DM Sans, sans-serif";
+  const headingFont = branding.headingFontFamily || bodyFont;
+  const presentationPreset = guide?.presentationProfile?.preset || "editorial";
+  const basketballMode = presentationPreset === "basketball";
+  const recipientBackground = backgroundColor;
+  const recipientSurface = surfaceColor;
+  const recipientText = ensureReadableTextColor(textColor, recipientSurface);
+  const utilityBarSurface = basketballMode ? "#050505" : recipientSurface;
+  const utilityBarText = basketballMode ? "#FFFAF0" : recipientText;
+
+  useEffect(() => {
+    if (!data) return;
+    document.title = data.guide.title + " — " + publicBrandName(resolvedBranding(data));
+    const favicon = safePublicAssetUrl(resolvedBranding(data).faviconUrl);
+    if (favicon) {
+      let link = document.querySelector<HTMLLinkElement>("link[rel='icon']");
+      if (!link) {
+        link = document.createElement("link");
+        link.rel = "icon";
+        document.head.appendChild(link);
+      }
+      link.href = favicon;
+    }
+  }, [data]);
+
+  const handleShare = async () => {
+    if (!guide) return;
     if (navigator.share) {
-      navigator.share({
-        title: deliveryData?.guide.title,
-        text: deliveryData?.guide.description,
+      await navigator.share({
+        title: guide.title,
+        text: guide.description || undefined,
         url: window.location.href,
       });
-    } else {
-      navigator.clipboard.writeText(window.location.href);
+      return;
     }
+    await navigator.clipboard.writeText(window.location.href);
   };
 
-  const handleWatchVideo = () => {
-    if (deliveryData?.guide.youtubeUrl) {
-      window.open(deliveryData.guide.youtubeUrl, '_blank');
-    }
-  };
-
-  const getSectionIcon = (type: string) => {
-    switch (type) {
-      case 'tip':
-        return <Star className="w-5 h-5" />;
-      case 'drill':
-        return <Target className="w-5 h-5" />;
-      case 'technique':
-        return <CheckCircle className="w-5 h-5" />;
-      case 'equipment':
-        return <Users className="w-5 h-5" />;
-      default:
-        return <CheckCircle className="w-5 h-5" />;
-    }
-  };
-
-  const getSectionColor = (type: string, brandingSettings?: any) => {
-    switch (type) {
-      case 'tip':
-        return brandingSettings?.accentColor || "#F59E0B";
-      case 'drill':
-        return brandingSettings?.primaryColor || "#2563EB";
-      case 'technique':
-        return brandingSettings?.secondaryColor || "#10B981";
-      case 'equipment':
-        return "#8B5CF6";
-      default:
-        return brandingSettings?.primaryColor || "#2563EB";
-    }
-  };
+  const ctaUrl = safeHttpUrl(guide?.ctaLink);
+  const websiteUrl = safeHttpUrl(branding.websiteUrl);
+  const privacyUrl = safeHttpUrl(branding.privacyUrl);
+  const termsUrl = safeHttpUrl(branding.termsUrl);
+  const logoUrl = safePublicAssetUrl(branding.logoUrl);
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+      <div className="grid min-h-screen place-items-center bg-slate-50">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-slate-600">Loading your personalized guide...</p>
+          <div className="mx-auto h-9 w-9 animate-spin rounded-full border-2 border-slate-200 border-t-blue-600" />
+          <p className="mt-4 text-sm text-slate-600">Preparing your guide…</p>
         </div>
       </div>
     );
   }
 
-  if (!deliveryData) {
+  if (isError || !data || !guide) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
-        <Card className="max-w-md mx-4">
+      <div className="grid min-h-screen place-items-center bg-slate-50 px-4">
+        <Card className="max-w-md">
           <CardContent className="p-8 text-center">
-            <h1 className="text-2xl font-bold text-slate-800 mb-4">Access Denied</h1>
-            <p className="text-slate-600">
-              You don't have access to this guide or the link has expired.
+            <h1 className="text-2xl font-bold text-slate-900">This guide is unavailable</h1>
+            <p className="mt-2 text-slate-600">
+              Check the delivery link or request a fresh copy from the publisher.
             </p>
           </CardContent>
         </Card>
@@ -146,333 +172,123 @@ export default function GuideDelivery() {
     );
   }
 
-  const { guide, brandingSettings, lead } = deliveryData;
-  const customStyles = brandingSettings ? {
-    fontFamily: brandingSettings.fontFamily,
-    '--primary-color': brandingSettings.primaryColor,
-    '--secondary-color': brandingSettings.secondaryColor,
-    '--accent-color': brandingSettings.accentColor,
-  } as React.CSSProperties : {};
-
   return (
-    <div 
-      className="min-h-screen bg-slate-50"
-      style={customStyles}
+    <div
+      className="min-h-screen"
+      data-presentation={presentationPreset}
+      style={{
+        backgroundColor: recipientBackground,
+        color: recipientText,
+        fontFamily: bodyFont,
+        backgroundImage: basketballMode
+          ? `radial-gradient(circle at 82% 6%, ${primaryColor}14, transparent 30%)`
+          : presentationPreset === "golf"
+            ? `radial-gradient(ellipse at 90% 4%, ${primaryColor}12 0%, transparent 36%)`
+            : undefined,
+      }}
     >
-      {/* Header Navigation */}
-      <header className="bg-white border-b border-slate-200 sticky top-0 z-10">
-        <div className="container mx-auto px-4 py-4 max-w-4xl">
-          <div className="flex items-center justify-between">
-            {/* Left Side - Library Button + Logo */}
-            <div className="flex items-center space-x-4">
-              <Button 
-                variant="outline"
-                size="sm"
-                onClick={() => window.location.href = '/public/library'}
-                className="flex items-center space-x-2 border-slate-300 hover:bg-slate-50"
+      <header
+        className="border-b print:hidden"
+        style={{ backgroundColor: utilityBarSurface, borderColor: primaryColor + "55", color: utilityBarText }}
+      >
+        <div className="mx-auto flex min-h-14 max-w-[1440px] items-center justify-between gap-3 px-4 py-2.5 sm:px-6 lg:px-8">
+          <div className="flex min-w-0 flex-1 items-center gap-3">
+            {logoUrl ? (
+              <img
+                src={logoUrl}
+                alt={publicBrandName(branding) + " logo"}
+                className="h-8 max-w-[160px] object-contain"
+              />
+            ) : (
+              <span
+                className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-white"
+                style={{ backgroundColor: primaryColor }}
               >
-                <BookOpen className="w-4 h-4" />
-                <span>Library</span>
-              </Button>
-              
-              <div className="flex items-center space-x-3">
-                {brandingSettings?.logoUrl && (
-                  <img 
-                    src={brandingSettings.logoUrl} 
-                    alt="Logo" 
-                    className="h-8 object-contain"
-                  />
-                )}
-                {brandingSettings?.companyName && (
-                  <h1 
-                    className="text-xl font-bold"
-                    style={{ 
-                      color: brandingSettings.primaryColor,
-                      fontFamily: brandingSettings.fontFamily 
-                    }}
-                  >
-                    {brandingSettings.companyName}
-                  </h1>
-                )}
-              </div>
+                <Magnet className="h-4 w-4" aria-hidden="true" />
+              </span>
+            )}
+            <div className="min-w-0">
+              <p className="truncate text-sm font-semibold" style={{ fontFamily: headingFont }}>
+                {publicBrandName(branding)}
+              </p>
+              {branding.tagline ? <p className="hidden truncate text-[11px] opacity-55 lg:block">{branding.tagline}</p> : null}
             </div>
-            
-            {/* Right Side - Custom Navigation + CTA Button */}
-            <div className="flex items-center space-x-3">
-              {/* Custom Navigation Links */}
-              {guide.navigationLinks && Array.isArray(guide.navigationLinks) && 
-                guide.navigationLinks.map((link: any, index: number) => (
-                  <Button
-                    key={index}
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => window.open(link.url, '_blank')}
-                    className="text-slate-600 hover:text-slate-800"
-                  >
-                    {link.text}
-                  </Button>
-                ))
-              }
-              
-              <Button variant="outline" size="sm" onClick={handleShare}>
-                <Share2 className="w-4 h-4 mr-2" />
-                Share
-              </Button>
-              
-              {/* Main CTA Button */}
-              {guide.ctaLink && (
-                <Button 
-                  size="sm"
-                  onClick={() => window.open(guide.ctaLink, '_blank')}
-                  className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 font-semibold"
-                >
-                  {guide.ctaText || "Take Action"}
-                </Button>
-              )}
-              <Button 
+          </div>
+          <div className="flex shrink-0 items-center gap-1 sm:gap-2">
+            <PublicLibraryLink
+              library={data.library}
+              className="h-8 min-w-8 rounded-full border-transparent px-0 opacity-75 hover:opacity-100 sm:px-2.5"
+              style={{ backgroundColor: "transparent", color: utilityBarText, borderColor: primaryColor + "55" }}
+            />
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleShare}
+              className="h-8 w-8 rounded-full border-transparent p-0 opacity-75 hover:opacity-100 sm:w-auto sm:px-2.5"
+              style={{ backgroundColor: "transparent", color: utilityBarText, borderColor: primaryColor + "55" }}
+            >
+              <Share2 className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Share</span>
+            </Button>
+            {ctaUrl ? (
+              <Button
                 size="sm"
-                style={{ backgroundColor: brandingSettings?.primaryColor || "#2563EB" }}
+                className="hidden h-8 rounded-full px-3 md:inline-flex"
+                style={{ backgroundColor: primaryColor, color: branding.onPrimaryColor || "#FFFFFF" }}
+                onClick={() => window.open(ctaUrl, "_blank", "noopener,noreferrer")}
               >
-                <Download className="w-4 h-4 mr-2" />
-                Download PDF
+                {guide.ctaText || "Take the next step"}
+                <ExternalLink className="ml-2 h-4 w-4" />
               </Button>
-            </div>
+            ) : null}
           </div>
         </div>
       </header>
 
-      <div className="container mx-auto px-4 py-8 max-w-4xl">
-        {/* Welcome Message */}
-        <Card className="mb-8">
-          <CardContent className="p-8 text-center">
-            {/* Success status banner */}
-            <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
-              <div className="flex items-center justify-center space-x-2">
-                <CheckCircle className="w-6 h-6 text-green-600" />
-                <p className="text-green-800 font-bold text-lg">
-                  ✅ Access Granted! Your guide is now unlocked and ready
-                </p>
-              </div>
-            </div>
-            
-            <h2 
-              className="text-3xl font-bold text-slate-800 mb-4"
-              style={{ fontFamily: brandingSettings?.fontFamily }}
-            >
-              Welcome{lead.firstName ? `, ${lead.firstName}` : ''}! You're all set 🎉
-            </h2>
-            <p 
-              className="text-xl text-slate-600 mb-6"
-              style={{ fontFamily: brandingSettings?.fontFamily }}
-            >
-              Your personalized practice guide is now accessible. This guide has been customized based on proven techniques from the original video.
-            </p>
-            
-            {/* Video Preview */}
-            <div className="relative max-w-2xl mx-auto mb-6">
-              <img 
-                src={guide.thumbnailUrl || "/api/placeholder/600/338"} 
-                alt={guide.title}
-                className="w-full rounded-lg shadow-lg"
-              />
-              <button
-                onClick={handleWatchVideo}
-                className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-30 rounded-lg hover:bg-opacity-40 transition-all"
-              >
-                <PlayCircle 
-                  className="w-16 h-16 text-white"
-                  style={{ color: brandingSettings?.primaryColor || "#2563EB" }}
-                />
-              </button>
-            </div>
-            
-            <Button 
-              onClick={handleWatchVideo}
-              variant="outline"
-              className="mb-4"
-            >
-              <PlayCircle className="w-4 h-4 mr-2" />
-              Watch Original Video
-            </Button>
-          </CardContent>
-        </Card>
-
-        {/* Guide Content */}
-        <Card className="mb-8">
-          <CardHeader>
-            <CardTitle 
-              className="text-2xl"
-              style={{ 
-                fontFamily: brandingSettings?.fontFamily,
-                color: brandingSettings?.primaryColor 
-              }}
-            >
-              {guide.content.title}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-8">
-            {/* Introduction */}
-            <div className="mb-8">
-              <p 
-                className="text-lg text-slate-700 leading-relaxed"
-                style={{ fontFamily: brandingSettings?.fontFamily }}
-              >
-                {guide.content.introduction}
-              </p>
-            </div>
-
-            <Separator className="mb-8" />
-
-            {/* Sections */}
-            <div className="space-y-8">
-              {guide.content.sections.map((section, index) => (
-                <div key={index} className="relative">
-                  <div className="flex items-start space-x-4 mb-4">
-                    <div 
-                      className="p-3 rounded-lg"
-                      style={{ 
-                        backgroundColor: `${getSectionColor(section.type, brandingSettings)}20`,
-                        color: getSectionColor(section.type, brandingSettings)
-                      }}
-                    >
-                      {getSectionIcon(section.type)}
-                    </div>
-                    <div className="flex-1">
-                      <div className="flex items-center space-x-3 mb-2">
-                        <h3 
-                          className="text-xl font-bold text-slate-800"
-                          style={{ fontFamily: brandingSettings?.fontFamily }}
-                        >
-                          {section.title}
-                        </h3>
-                        <Badge 
-                          variant="outline"
-                          style={{ 
-                            borderColor: getSectionColor(section.type, brandingSettings),
-                            color: getSectionColor(section.type, brandingSettings)
-                          }}
-                        >
-                          {section.type.charAt(0).toUpperCase() + section.type.slice(1)}
-                        </Badge>
-                      </div>
-                      <div 
-                        className="prose prose-slate max-w-none"
-                        style={{ fontFamily: brandingSettings?.fontFamily }}
-                        dangerouslySetInnerHTML={{ 
-                          __html: section.content.replace(/\n/g, '<br/>') 
-                        }}
-                      />
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <Separator className="my-8" />
-
-            {/* Conclusion */}
-            <div className="mb-8">
-              <h3 
-                className="text-xl font-bold text-slate-800 mb-4"
-                style={{ fontFamily: brandingSettings?.fontFamily }}
-              >
-                Next Steps
-              </h3>
-              <p 
-                className="text-lg text-slate-700 leading-relaxed"
-                style={{ fontFamily: brandingSettings?.fontFamily }}
-              >
-                {guide.content.conclusion}
-              </p>
-            </div>
-
-            {/* Call to Action */}
-            <Card 
-              className="p-6"
-              style={{ 
-                backgroundColor: `${brandingSettings?.primaryColor || "#2563EB"}10`,
-                borderColor: brandingSettings?.primaryColor || "#2563EB"
-              }}
-            >
-              <div className="text-center">
-                <h4 
-                  className="text-xl font-bold mb-4"
-                  style={{ 
-                    fontFamily: brandingSettings?.fontFamily,
-                    color: brandingSettings?.primaryColor 
-                  }}
-                >
-                  Ready to Take Your Skills to the Next Level?
-                </h4>
-                <p 
-                  className="text-slate-700 mb-6"
-                  style={{ fontFamily: brandingSettings?.fontFamily }}
-                >
-                  {guide.content.callToAction}
-                </p>
-                <Button 
-                  size="lg"
-                  style={{ 
-                    backgroundColor: brandingSettings?.primaryColor || "#2563EB",
-                    fontFamily: brandingSettings?.fontFamily 
-                  }}
-                >
-                  Learn More
-                </Button>
-              </div>
-            </Card>
-          </CardContent>
-        </Card>
-
-        {/* Personalization Info */}
-        {lead.customFieldData && Object.keys(lead.customFieldData).length > 0 && (
-          <Card className="mb-8">
-            <CardHeader>
-              <CardTitle 
-                style={{ fontFamily: brandingSettings?.fontFamily }}
-              >
-                Your Profile
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {Object.entries(lead.customFieldData).map(([key, value]) => (
-                  <div key={key} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
-                    <span 
-                      className="font-medium text-slate-700"
-                      style={{ fontFamily: brandingSettings?.fontFamily }}
-                    >
-                      {key.charAt(0).toUpperCase() + key.slice(1).replace(/([A-Z])/g, ' $1')}:
-                    </span>
-                    <span 
-                      className="text-slate-600"
-                      style={{ fontFamily: brandingSettings?.fontFamily }}
-                    >
-                      {value as string}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Footer */}
-        <div className="text-center py-8">
-          <p 
-            className="text-slate-500 mb-4"
-            style={{ fontFamily: brandingSettings?.fontFamily }}
-          >
-            {brandingSettings?.tagline || "Elevate Your Game"}
+      <main className="mx-auto w-full max-w-[1440px] px-3 py-4 print:max-w-none print:p-0 sm:px-6 sm:py-6 lg:px-8 lg:py-8">
+        <section
+          className="mb-3 inline-flex max-w-full items-center gap-2 rounded-full px-3 py-2 print:hidden"
+          style={{
+            backgroundColor: secondaryColor + "18",
+          }}
+        >
+          <CheckCircle2 className="h-4 w-4 shrink-0" style={{ color: secondaryColor }} aria-hidden="true" />
+          <p className="min-w-0 truncate text-xs sm:text-sm">
+            <span className="font-semibold" style={{ fontFamily: headingFont }}>
+              {data.lead.firstName ? "Ready for you, " + data.lead.firstName + "." : "Your guide is ready."}
+            </span>{" "}
+            <span className="hidden opacity-60 sm:inline">Your progress stays with this link.</span>
           </p>
-          <p 
-            className="text-sm text-slate-400"
-            style={{ fontFamily: brandingSettings?.fontFamily }}
-          >
-            © {new Date().getFullYear()} {brandingSettings?.companyName || "CoachCraft"}. All rights reserved.
-          </p>
+        </section>
+
+        <div className="min-w-0 print:p-0">
+          <GuideContentRenderer
+            content={guide.content}
+            youtubeUrl={guide.sourceVideo?.canonicalUrl || guide.youtubeUrl}
+            youtubeChannelTitle={guide.sourceVideo?.channelTitle || guide.channelTitle}
+            primaryColor={primaryColor}
+            secondaryColor={secondaryColor}
+            accentColor={accentColor}
+            headingFontFamily={headingFont}
+            fontFamily={bodyFont}
+            surfaceColor={recipientSurface}
+            textColor={recipientText}
+            presentationPreset={presentationPreset}
+          />
         </div>
-      </div>
+      </main>
+
+      <footer className="border-t print:hidden" style={{ backgroundColor: recipientSurface, borderColor: primaryColor + "32" }}>
+        <div className="mx-auto flex max-w-[1440px] flex-col gap-4 px-4 py-6 text-xs opacity-65 sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-8">
+          <p>Published by {publicBrandName(branding)}</p>
+          <div className="flex flex-wrap items-center gap-4">
+            {websiteUrl ? <a href={websiteUrl} target="_blank" rel="noreferrer">Website</a> : null}
+            {privacyUrl ? <a href={privacyUrl} target="_blank" rel="noreferrer">Privacy</a> : null}
+            {termsUrl ? <a href={termsUrl} target="_blank" rel="noreferrer">Terms</a> : null}
+            {branding.showPoweredBy !== false ? <span>Powered by VidMagnet</span> : null}
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }

@@ -17,19 +17,20 @@ import {
   CreditCard,
   UserCog,
   Mail,
-  ChevronDown
+  ChevronDown,
+  Gift
 } from "lucide-react";
 import { useState } from "react";
 import { useBrands, useSetCurrentBrand, useClearCurrentBrand } from "@/hooks/useBrands";
 import { useBranding } from "@/hooks/useBranding";
 import { useToast } from "@/hooks/use-toast";
-import type { Brand } from "@shared/schema";
 
 
 const navigation = [
   { name: "Dashboard", href: "/", icon: Home },
-  { name: "Create Guide", href: "/create", icon: Plus },
-  { name: "Content Library", href: "/content-library", icon: Book },
+  { name: "Create Magnet", href: "/create", icon: Plus },
+  { name: "Lead Magnet Library", href: "/content-library", icon: Book },
+  { name: "Benefit Library", href: "/benefit-library", icon: Gift },
   { name: "Analytics", href: "/analytics", icon: BarChart3 },
   { name: "Leads", href: "/leads", icon: Users },
 ];
@@ -49,15 +50,7 @@ export default function Sidebar() {
   const [isSettingsExpanded, setIsSettingsExpanded] = useState(false);
   const { brands } = useBrands();
   
-  // Use admin-aware brands only for the specific admin user
-  const isSpecificAdmin = user?.email === 'adamLinkenauger@gmail.com' && user?.role === 'admin';
-  const adminBrands = isSpecificAdmin ? [
-    { id: 16, name: "ILB Elite", description: "Elite fitness training" },
-    { id: 17, name: "AthleticMotion Golf", description: "Golf instruction" },
-    { id: 12, name: "My Brand", description: "Default workspace" }
-  ] : null;
-  
-  const displayBrands = isSpecificAdmin ? adminBrands : brands;
+  const displayBrands = brands;
   const { brandingSettings, logoUrl, companyName } = useBranding();
   const { toast } = useToast();
   const setCurrentBrandMutation = useSetCurrentBrand();
@@ -70,13 +63,7 @@ export default function Sidebar() {
   const currentBrand = currentBrandId ? brands?.find(brand => brand.id === currentBrandId) : null;
 
   const handleLogout = () => {
-    // Use different logout endpoint only for the specific admin user
-    const isSpecificAdmin = user?.email === 'adamLinkenauger@gmail.com' && user?.role === 'admin';
-    if (isSpecificAdmin) {
-      window.location.href = "/api/auth/logout";
-    } else {
-      window.location.href = "/api/logout";
-    }
+    window.location.href = "/api/logout";
   };
 
   return (

@@ -40,7 +40,7 @@ export default function AdminDashboard() {
   const { user, isAuthenticated, isLoading } = useAuth();
   
   // Check if user is super admin
-  const { data: adminCheck, isLoading: isCheckingAdmin } = useQuery({
+  const { data: adminCheck, isLoading: isCheckingAdmin } = useQuery<{ isAdmin: boolean }>({
     queryKey: ['/api/admin/check'],
     enabled: isAuthenticated && !!user,
   });
@@ -387,8 +387,9 @@ export default function AdminDashboard() {
                             </SelectTrigger>
                             <SelectContent>
                               <SelectItem value="user">User</SelectItem>
-                              <SelectItem value="admin">Admin</SelectItem>
-                              <SelectItem value="global_admin">Global Admin</SelectItem>
+                              <SelectItem value="brand_admin">Brand Admin</SelectItem>
+                              <SelectItem value="account_admin">Account Admin</SelectItem>
+                              <SelectItem value="super_admin">Super Admin</SelectItem>
                             </SelectContent>
                           </Select>
                         </TableCell>
@@ -1193,8 +1194,9 @@ export default function AdminDashboard() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="user">User</SelectItem>
-                  <SelectItem value="admin">Admin</SelectItem>
-                  <SelectItem value="global_admin">Global Admin</SelectItem>
+                  <SelectItem value="brand_admin">Brand Admin</SelectItem>
+                  <SelectItem value="account_admin">Account Admin</SelectItem>
+                  <SelectItem value="super_admin">Super Admin</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -1288,8 +1290,9 @@ export default function AdminDashboard() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="user">User</SelectItem>
-                      <SelectItem value="admin">Admin</SelectItem>
-                      <SelectItem value="global_admin">Global Admin</SelectItem>
+                      <SelectItem value="brand_admin">Brand Admin</SelectItem>
+                      <SelectItem value="account_admin">Account Admin</SelectItem>
+                      <SelectItem value="super_admin">Super Admin</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>

@@ -1,17 +1,16 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import Sidebar from "@/components/sidebar";
-import GuideCard from "@/components/guide-card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Search, Filter, Plus, Book, Grid, List, Eye, Users, ExternalLink, Edit, BarChart3, Download, Layout } from "lucide-react";
+import { Search, Plus, Book, Grid, List, Eye, Users, ExternalLink, Edit, BarChart3, Download, Layout, FileQuestion } from "lucide-react";
 import { Guide } from "@shared/schema";
 
 const categories = [
@@ -31,13 +30,16 @@ const statusOptions = [
   "archived"
 ];
 
+const magnetTypeOptions = ["all", "guide", "quiz"];
+
 export default function ContentLibrary() {
   const { toast } = useToast();
   const { user } = useAuth();
-  const [location, navigate] = useLocation();
+  const [, navigate] = useLocation();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [selectedStatus, setSelectedStatus] = useState("all");
+  const [selectedMagnetType, setSelectedMagnetType] = useState("all");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
 
   const { data: guides, isLoading, error } = useQuery<Guide[]>({
@@ -77,11 +79,14 @@ export default function ContentLibrary() {
     if (selectedStatus !== "all" && guide.status !== selectedStatus) {
       return false;
     }
+    if (selectedMagnetType !== "all" && (guide.magnetType || "guide") !== selectedMagnetType) {
+      return false;
+    }
     return true;
   }) || [];
 
   const handleEditGuide = (guide: Guide) => {
-    navigate(`/guide-editor/${guide.id}`);
+    navigate((guide.magnetType || "guide") === "quiz" ? `/quiz-editor/${guide.id}` : `/guide-editor/${guide.id}`);
   };
 
   const handleEditLandingPage = async (guide: Guide) => {
@@ -116,7 +121,9 @@ export default function ContentLibrary() {
       if (response.ok) {
         const landingPage = await response.json();
 
-        const url = `/landing/${landingPage.customUrl}`;
+        const url = (guide.magnetType || "guide") === "quiz"
+          ? `/quiz/${landingPage.customUrl}`
+          : `/landing/${landingPage.customUrl}`;
 
         
         const newWindow = window.open(url, '_blank');
@@ -155,8 +162,8 @@ export default function ContentLibrary() {
   const handleDownloadPDF = async (guide: Guide) => {
     try {
       toast({
-        title: "Generating PDF",
-        description: "Creating your branded guide PDF...",
+        title: "Preparing workbook",
+        description: "Creating a branded, print-ready version of your guide...",
       });
 
       const response = await fetch(`/api/guides/${guide.id}/download-pdf`, {
@@ -179,14 +186,14 @@ export default function ContentLibrary() {
         throw new Error(`Failed to download PDF: ${response.statusText}`);
       }
 
-      // Get the PDF blob
+      const isPrintHtml = response.headers.get("content-type")?.includes("text/html") ?? false;
       const blob = await response.blob();
       
       // Create download link
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `${guide.title.replace(/[^a-z0-9]/gi, '-').toLowerCase()}-guide.pdf`;
+      a.download = `${guide.title.replace(/[^a-z0-9]/gi, '-').toLowerCase()}-guide.${isPrintHtml ? "html" : "pdf"}`;
       document.body.appendChild(a);
       a.click();
       
@@ -195,8 +202,10 @@ export default function ContentLibrary() {
       document.body.removeChild(a);
 
       toast({
-        title: "PDF Downloaded",
-        description: `Your branded guide "${guide.title}" has been downloaded successfully.`,
+        title: "Workbook downloaded",
+        description: isPrintHtml
+          ? "Open it in your browser to print it or save it as a PDF."
+          : `Your branded guide "${guide.title}" has been downloaded successfully.`,
       });
     } catch (error) {
       console.error('Error downloading PDF:', error);
@@ -217,14 +226,14 @@ export default function ContentLibrary() {
         <header className="bg-card border-b border-border px-6 py-4">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-2xl font-bold text-foreground">Content Library</h2>
+              <h2 className="text-2xl font-bold text-foreground">Lead Magnet Library</h2>
               <p className="text-muted-foreground mt-1">
-                Manage and organize all your practice guides
+                Manage your guides and interactive quizzes in one place
               </p>
             </div>
-            <Button className="gradient-primary text-white">
+            <Button className="gradient-primary text-white" onClick={() => navigate("/create")}>
               <Plus className="w-4 h-4 mr-2" />
-              Create New Guide
+              Create New Magnet
             </Button>
           </div>
         </header>
@@ -239,7 +248,7 @@ export default function ContentLibrary() {
                   <div className="relative">
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
                     <Input
-                      placeholder="Search guides..."
+                      placeholder="Search lead magnets..."
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                       className="pl-10 h-9"
@@ -273,6 +282,19 @@ export default function ContentLibrary() {
                   </SelectContent>
                 </Select>
 
+                <Select value={selectedMagnetType} onValueChange={setSelectedMagnetType}>
+                  <SelectTrigger className="w-full lg:w-36 h-9">
+                    <SelectValue placeholder="Type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {magnetTypeOptions.map(type => (
+                      <SelectItem key={type} value={type}>
+                        {type === "all" ? "All Types" : type === "guide" ? "Guides" : "Quizzes"}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
                 <div className="flex items-center space-x-2">
                   <Button
                     variant={viewMode === "grid" ? "default" : "outline"}
@@ -301,10 +323,38 @@ export default function ContentLibrary() {
               <CardContent className="p-3">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-xs text-muted-foreground">Total Guides</p>
+                    <p className="text-xs text-muted-foreground">Total Magnets</p>
                     <p className="text-lg font-bold">{guides?.length || 0}</p>
                   </div>
                   <Book className="w-5 h-5 text-primary" />
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardContent className="p-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs text-muted-foreground">Guides</p>
+                    <p className="text-lg font-bold">
+                      {guides?.filter(g => (g.magnetType || "guide") === "guide").length || 0}
+                    </p>
+                  </div>
+                  <Book className="w-5 h-5 text-secondary" />
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardContent className="p-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs text-muted-foreground">Quizzes</p>
+                    <p className="text-lg font-bold">
+                      {guides?.filter(g => g.magnetType === "quiz").length || 0}
+                    </p>
+                  </div>
+                  <FileQuestion className="w-5 h-5 text-accent" />
                 </div>
               </CardContent>
             </Card>
@@ -318,35 +368,7 @@ export default function ContentLibrary() {
                       {guides?.filter(g => g.status === "published").length || 0}
                     </p>
                   </div>
-                  <Badge className="bg-secondary/10 text-secondary text-xs px-1.5 py-0.5">Live</Badge>
-                </div>
-              </CardContent>
-            </Card>
-            
-            <Card>
-              <CardContent className="p-3">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-xs text-muted-foreground">Drafts</p>
-                    <p className="text-lg font-bold">
-                      {guides?.filter(g => g.status === "draft").length || 0}
-                    </p>
-                  </div>
-                  <Badge className="bg-accent/10 text-accent text-xs px-1.5 py-0.5">Draft</Badge>
-                </div>
-              </CardContent>
-            </Card>
-            
-            <Card>
-              <CardContent className="p-3">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-xs text-muted-foreground">Total Views</p>
-                    <p className="text-lg font-bold">
-                      {guides?.reduce((sum, g) => sum + (g.views || 0), 0).toLocaleString() || 0}
-                    </p>
-                  </div>
-                  <Badge variant="outline" className="text-xs px-1.5 py-0.5">Views</Badge>
+                  <Badge variant="outline" className="text-xs px-1.5 py-0.5">Live</Badge>
                 </div>
               </CardContent>
             </Card>
@@ -357,7 +379,7 @@ export default function ContentLibrary() {
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle>
-                  Your Guides ({filteredGuides.length})
+                  Your Lead Magnets ({filteredGuides.length})
                 </CardTitle>
                 <div className="flex items-center space-x-2">
                   {selectedCategory !== "all" && (
@@ -393,11 +415,11 @@ export default function ContentLibrary() {
                   <table className="w-full">
                     <thead className="bg-muted/50 border-b">
                       <tr>
-                        <th className="text-left p-4 font-medium text-sm text-muted-foreground">Guide</th>
+                        <th className="text-left p-4 font-medium text-sm text-muted-foreground">Magnet</th>
                         <th className="text-left p-4 font-medium text-sm text-muted-foreground">Views</th>
                         <th className="text-left p-4 font-medium text-sm text-muted-foreground">Leads</th>
                         <th className="text-left p-4 font-medium text-sm text-muted-foreground">Landing Page</th>
-                        <th className="text-left p-4 font-medium text-sm text-muted-foreground">Guide Preview</th>
+                        <th className="text-left p-4 font-medium text-sm text-muted-foreground">Preview</th>
                         <th className="text-left p-4 font-medium text-sm text-muted-foreground">Actions</th>
                       </tr>
                     </thead>
@@ -416,15 +438,24 @@ export default function ContentLibrary() {
                                   />
                                 ) : (
                                   <div className="w-full h-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
-                                    <Book className="w-6 h-6 text-white" />
+                                    {(guide.magnetType || "guide") === "quiz" ? (
+                                      <FileQuestion className="w-6 h-6 text-white" />
+                                    ) : (
+                                      <Book className="w-6 h-6 text-white" />
+                                    )}
                                   </div>
                                 )}
                               </div>
                               <div className="min-w-0 flex-1">
                                 <p className="font-medium text-foreground truncate">{guide.title}</p>
-                                <p className="text-sm text-muted-foreground truncate">
-                                  {guide.createdAt ? new Date(guide.createdAt).toLocaleDateString() : 'No date'}
-                                </p>
+                                <div className="flex items-center gap-2 mt-1">
+                                  <Badge variant="secondary" className="text-[10px] uppercase tracking-wide">
+                                    {(guide.magnetType || "guide") === "quiz" ? "Quiz" : "Guide"}
+                                  </Badge>
+                                  <p className="text-xs text-muted-foreground truncate">
+                                    {guide.createdAt ? new Date(guide.createdAt).toLocaleDateString() : 'No date'}
+                                  </p>
+                                </div>
                               </div>
                             </div>
                           </td>
@@ -463,10 +494,16 @@ export default function ContentLibrary() {
                             <Button
                               variant="ghost"
                               size="sm"
-                              onClick={() => window.open(`/guide/${guide.id}`, '_blank')}
+                              onClick={() => (guide.magnetType || "guide") === "quiz"
+                                ? handleViewLanding(guide)
+                                : window.open(`/guide/${guide.id}`, '_blank')}
                               className="text-green-600 hover:text-green-700 hover:bg-green-50"
                             >
-                              <Book className="w-4 h-4 mr-1" />
+                              {(guide.magnetType || "guide") === "quiz" ? (
+                                <FileQuestion className="w-4 h-4 mr-1" />
+                              ) : (
+                                <Book className="w-4 h-4 mr-1" />
+                              )}
                               Preview
                             </Button>
                           </td>
@@ -474,15 +511,17 @@ export default function ContentLibrary() {
                           {/* Actions */}
                           <td className="p-4">
                             <div className="flex items-center space-x-2">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleDownloadPDF(guide)}
-                                className="text-orange-600 hover:text-orange-700 hover:bg-orange-50"
-                                title="Download PDF"
-                              >
-                                <Download className="w-4 h-4" />
-                              </Button>
+                              {(guide.magnetType || "guide") !== "quiz" && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleDownloadPDF(guide)}
+                                  className="text-orange-600 hover:text-orange-700 hover:bg-orange-50"
+                                  title="Download printable workbook"
+                                >
+                                  <Download className="w-4 h-4" />
+                                </Button>
+                              )}
                               <Button
                                 variant="ghost"
                                 size="sm"
@@ -492,15 +531,17 @@ export default function ContentLibrary() {
                               >
                                 <Edit className="w-4 h-4" />
                               </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleEditLandingPage(guide)}
-                                className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                                title="Edit Landing Page"
-                              >
-                                <Layout className="w-4 h-4" />
-                              </Button>
+                              {(guide.magnetType || "guide") !== "quiz" && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleEditLandingPage(guide)}
+                                  className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                  title="Edit Landing Page"
+                                >
+                                  <Layout className="w-4 h-4" />
+                                </Button>
+                              )}
                               <Button
                                 variant="ghost"
                                 size="sm"
@@ -520,16 +561,16 @@ export default function ContentLibrary() {
               ) : (
                 <div className="text-center py-12 p-6">
                   <Book className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
-                  <h3 className="text-lg font-semibold text-foreground mb-2">No guides found</h3>
+                  <h3 className="text-lg font-semibold text-foreground mb-2">No lead magnets found</h3>
                   <p className="text-muted-foreground mb-4">
                     {searchQuery || selectedCategory !== "all" || selectedStatus !== "all"
                       ? "Try adjusting your filters or search query"
-                      : "Create your first practice guide to get started"
+                      : "Create your first guide or interactive quiz to get started"
                     }
                   </p>
-                  <Button className="gradient-primary text-white">
+                  <Button className="gradient-primary text-white" onClick={() => navigate("/create")}>
                     <Plus className="w-4 h-4 mr-2" />
-                    Create New Guide
+                    Create New Magnet
                   </Button>
                 </div>
               )}

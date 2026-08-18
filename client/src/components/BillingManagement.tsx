@@ -130,7 +130,7 @@ export default function BillingManagement() {
                 </div>
               </div>
               <Button 
-                onClick={resumeAccount} 
+                onClick={() => resumeAccount()}
                 disabled={isResuming}
                 className="mt-3"
                 size="sm"
